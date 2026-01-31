@@ -1,6 +1,6 @@
 README.md
 
-# Notes - Learning App
+# Share Notes
 
 Ứng dụng ghi chú học tập với giao diện giống Notepad++, sử dụng MockAPI để lưu trữ dữ liệu.
 
