@@ -1,47 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Bookmarks</title>
-    <link rel="stylesheet" href="index.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <title>Notes - BiBo</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="richtext-editor.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="nav-content">
-            <h1>My Bookmarks</h1>
-            <div class="nav-actions">
-                <button id="importBtn" class="nav-button">
-                    <i class="fas fa-file-import"></i> Import CSV
-                </button>
-                <button id="exportBtn" class="nav-button">
-                    <i class="fas fa-file-export"></i> Export CSV
-                </button>
-                <button id="saveChangesBtn" class="save-button">
-                    <i class="fas fa-save"></i> Save Changes
-                </button>
-                <a href="add.html" class="add-button">
-                    <i class="fas fa-plus"></i> Add New Bookmark
-                </a>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>NOTES</h3>
+                <button class="btn-new" onclick="newNote()">+</button>
+            </div>
+            <div class="search-box">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" placeholder="Search..." class="search-input">
+                    <button class="btn-clear-search" id="clearSearch" onclick="clearSearch()" style="display: none;">×</button>
+                </div>
+            </div>
+            <div class="notes-list-container" id="notesList">
+                <div style="padding: 20px; text-align: center; color: #858585;">Loading...</div>
             </div>
         </div>
-    </nav>
 
-    <div class="container">
-        <div class="categories">
-            <div class="category active" data-category="all">All Bookmarks</div>
-            <div class="category" data-category="work">Work</div>
-            <div class="category" data-category="personal">Personal</div>
-            <div class="category" data-category="social">Social</div>
-            <div class="category" data-category="other">Other</div>
-        </div>
-
-        <div class="bookmarks-grid" id="bookmarksContainer">
-            <!-- Bookmarks will be added here dynamically -->
+        <!-- Editor -->
+        <div class="editor-container">
+            <div id="editorView" class="editor-content">
+                <div class="empty-editor">
+                    Select a note or create a new one
+                </div>
+            </div>
         </div>
     </div>
-    <script src="index.js"></script>
+
+    <script src="storage.js"></script>
+    <script src="richtext-editor.js"></script>
+    <script src="app.js"></script>
 </body>
 </html>

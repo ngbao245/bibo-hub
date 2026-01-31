@@ -1,0 +1,134 @@
+encoder.html
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Encoder</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .encoder-container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            padding: 30px;
+        }
+        
+        .encoder-title {
+            font-size: var(--font-xxl);
+            margin-bottom: var(--spacing-xl);
+            color: var(--color-accent-primary);
+        }
+        
+        .encoder-output {
+            background: var(--color-bg-primary);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--color-border);
+            margin-top: var(--spacing-sm);
+            word-break: break-all;
+            font-size: var(--font-sm);
+            color: var(--color-accent-secondary);
+            min-height: 100px;
+            cursor: pointer;
+            user-select: all;
+            transition: all var(--transition-normal);
+        }
+        
+        .encoder-output:hover {
+            background: var(--color-bg-hover);
+        }
+        
+        .encoder-note {
+            margin-top: var(--spacing-xl);
+            padding: var(--spacing-lg);
+            background: var(--color-bg-elevated);
+            border-left: 3px solid var(--color-accent-primary);
+            font-size: var(--font-sm);
+            line-height: 1.6;
+        }
+        
+        .encoder-note strong {
+            color: var(--color-accent-primary);
+        }
+    </style>
+</head>
+<body>
+    <div class="encoder-container">
+        <h1 class="encoder-title">🔐 API Encoder</h1>
+        
+        <div class="form-group">
+            <label>API Base URL</label>
+            <input type="text" id="apiInput" placeholder="https://example.mockapi.io">
+        </div>
+        
+        <button class="btn btn-primary" onclick="encode()">Encode</button>
+        
+        <div class="form-group" style="margin-top: 20px;">
+            <label>Encoded String (Click to copy)</label>
+            <div class="encoder-output" id="output" onclick="copyOutput()">b2kuaXBhY29tLmVscG1heGUvL3NwdHRo</div>
+        </div>
+        
+        <div class="encoder-note">
+            <strong>Hướng dẫn:</strong><br>
+            1. Nhập API URL vào ô trên<br>
+            2. Click "Encode"<br>
+            3. Click vào output để copy<br>
+            4. Paste vào app.js thay thế giá trị API_BASE_ENCODED<br>
+            5. App sẽ tự động decode khi chạy
+        </div>
+    </div>
+    
+    <script>
+        function encode() {
+            const input = document.getElementById('apiInput').value.trim();
+            if (!input) {
+                alert('Vui lòng nhập API URL');
+                return;
+            }
+            
+            // Simple encoding: Base64 + reverse
+            const encoded = btoa(input.split('').reverse().join(''));
+            document.getElementById('output').textContent = encoded;
+        }
+        
+        function copyOutput() {
+            const output = document.getElementById('output');
+            const text = output.textContent;
+            
+            if (!text || text === '✓ Copied!') {
+                return;
+            }
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const originalText = output.textContent;
+                output.textContent = '✓ Copied!';
+                setTimeout(() => {
+                    output.textContent = originalText;
+                }, 1000);
+            }).catch(() => {
+                // Fallback for older browsers
+                const range = document.createRange();
+                range.selectNodeContents(output);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            });
+        }
+        
+        // Load fake demo data on page load
+        window.onload = function() {
+            document.getElementById('apiInput').value = 'https://example.mockapi.io';
+        };
+    </script>
+</body>
+</html>
