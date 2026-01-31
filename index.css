@@ -1,0 +1,409 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #281B2D;
+    color: #ffffff;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.navbar {
+    background-color: #814CBF;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(250, 246, 245, 0.2);
+    height: 45px;
+    display: flex;
+    align-items: center;
+}
+
+.nav-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+.nav-content h1 {
+    font-size: 1rem;
+    color: #ffffff;
+    line-height: 1;
+    margin: 0;
+}
+
+.add-button, .back-button {
+    text-decoration: none;
+    color: rgba(255, 255, 255, 0.9);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 400;
+    font-size: 0.9rem;
+    transition: color 0.3s;
+}
+
+.add-button:hover, .back-button:hover {
+    color: #ffffff;
+}
+
+.container {
+    flex: 1;
+    margin: 65px auto 20px;
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+    background: rgba(130, 132, 167, 0.15);
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(250, 246, 245, 0.1);
+    overflow-y: auto;
+    min-height: 200px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.categories {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.category {
+    padding: 8px 16px;
+    background-color: rgba(130, 132, 167, 0.3);
+    color: #ffffff;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+.category.active {
+    background-color: #814CBF;
+    color: white;
+    box-shadow: 0 2px 8px rgba(129, 76, 191, 0.4);
+}
+
+.bookmarks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+    gap: 15px;
+    position: relative;
+    min-height: 50px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+
+.bookmark-card {
+    background-color: rgba(130, 132, 167, 0.2);
+    border-radius: 15px;
+    overflow: hidden;
+    transition: all 0.15s ease-out;
+    backdrop-filter: blur(5px);
+    box-shadow: 
+        0 4px 6px rgba(0, 0, 0, 0.3),
+        0 1px 3px rgba(0, 0, 0, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    text-align: center;
+    padding: 8px;
+    cursor: move;
+    position: relative;
+    user-select: none;
+    transform-origin: center;
+    will-change: transform;
+    z-index: 1;
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(250, 246, 245, 0.1);
+}
+
+.bookmark-card-chosen {
+    opacity: 0.9;
+    transform: scale(1.1);
+    box-shadow: 
+        0 10px 20px rgba(84, 43, 133, 0.3),
+        0 6px 6px rgba(0, 0, 0, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    z-index: 1000;
+    background-color: rgba(84, 43, 133, 0.3);
+}
+
+.bookmark-card-ghost {
+    border: 2px dashed rgba(84, 43, 133, 0.6);
+    background-color: rgba(84, 43, 133, 0.1);
+    opacity: 0.5;
+    backdrop-filter: blur(2px);
+}
+
+.bookmark-card-drag {
+    opacity: 1;
+    transform: scale(1.05);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+}
+
+.bookmark-card:hover {
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 
+        0 8px 15px rgba(0, 0, 0, 0.2),
+        0 3px 6px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    background-color: rgba(129, 76, 191, 0.2);
+    z-index: 2;
+}
+
+.bookmark-title {
+    display: none;
+}
+
+.bookmark-icon {
+    width: 32px;
+    height: 32px;
+    margin: 0 auto;
+    border-radius: 10px;
+    transition: transform 0.2s ease;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.bookmark-card:hover .bookmark-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+}
+
+.bookmark-actions {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 3;
+}
+
+.bookmark-card:hover .bookmark-actions {
+    opacity: 1;
+}
+
+.delete-btn {
+    background-color: rgba(255, 82, 82, 0.9);
+    color: white;
+    border: none;
+    padding: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    font-size: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.delete-btn:hover {
+    background-color: rgba(255, 82, 82, 1);
+    transform: scale(1.1);
+}
+
+.bookmark-card a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+/* Add Form Styles */
+.add-form {
+    background-color: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 1rem;
+}
+
+.form-group input[type="color"] {
+    height: 40px;
+    padding: 2px;
+}
+
+.submit-btn {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.3s;
+}
+
+.submit-btn:hover {
+    background-color: #45a049;
+}
+
+.nav-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    height: 100%;
+}
+
+.nav-button {
+    background: none;
+    border: 1px solid rgba(177, 168, 185, 0.6);
+    color: rgba(255, 255, 255, 0.9);
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    transition: all 0.3s;
+    height: 28px;
+}
+
+.nav-button:hover {
+    background-color: rgba(177, 168, 185, 0.2);
+    border-color: #b1a8b9;
+    color: white;
+}
+
+.nav-button i {
+    font-size: 0.8rem;
+}
+
+.save-button {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: #E4B246;
+    color: #281B2D;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 30px;
+    opacity: 0;
+    visibility: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    backdrop-filter: blur(10px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.95rem;
+    margin: 0;
+    transform: none;
+}
+
+.save-button.show {
+    opacity: 1;
+    visibility: visible;
+    animation: none;
+}
+
+.save-button:hover {
+    background-color: #814CBF;
+    color: #FAF6F5;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes smoke {
+    0% {
+        opacity: 0;
+        transform: scale(1);
+        filter: blur(5px) brightness(0.8);
+    }
+    10% {
+        opacity: 0.95;
+        filter: blur(6px) brightness(0.9);
+    }
+    30% {
+        opacity: 1;
+        transform: scale(1.5) translate(0, -20px);
+        filter: blur(8px) brightness(0.7);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(2) translate(0, -40px);
+        filter: blur(10px) brightness(0.5);
+    }
+}
+
+.smoke-particle {
+    position: absolute;
+    width: 10px;
+    height: 10px;
+    background: rgba(34, 28, 39, 0.95);
+    border-radius: 50%;
+    filter: blur(6px);
+    mix-blend-mode: multiply;
+    box-shadow: 
+        0 0 15px rgba(99, 99, 98, 0.95),
+        0 0 25px rgba(34, 28, 39, 0.9),
+        inset 0 0 10px rgba(20, 15, 25, 0.9);
+}
+
+#fileInput {
+    display: none;
+}
+
+/* Custom scrollbar */
+.container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.container::-webkit-scrollbar-track {
+    background: rgba(130, 132, 167, 0.1);
+}
+
+.container::-webkit-scrollbar-thumb {
+    background: rgba(129, 76, 191, 0.5);
+    border-radius: 4px;
+}
+
+.container::-webkit-scrollbar-thumb:hover {
+    background: rgba(129, 76, 191, 0.7);
+}
