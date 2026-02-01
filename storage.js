@@ -3,7 +3,8 @@ const StorageManager = {
     KEYS: {
         CURRENT_NOTE_ID: 'notes_currentNoteId',
         EDITOR_STATE: 'notes_editorState',
-        CACHED_NOTE: 'notes_cachedNote'
+        CACHED_NOTE: 'notes_cachedNote',
+        CURRENT_TAB: 'app_currentTab'
     },
 
     // Save current note ID
@@ -131,6 +132,25 @@ const StorageManager = {
             });
         } catch (error) {
             console.error('Error clearing storage:', error);
+        }
+    },
+
+    // Save current tab state
+    saveCurrentTab(tabName) {
+        try {
+            localStorage.setItem(this.KEYS.CURRENT_TAB, tabName);
+        } catch (error) {
+            console.error('Error saving current tab:', error);
+        }
+    },
+
+    // Load current tab state
+    loadCurrentTab() {
+        try {
+            return localStorage.getItem(this.KEYS.CURRENT_TAB) || 'notes';
+        } catch (error) {
+            console.error('Error loading current tab:', error);
+            return 'notes';
         }
     }
 };

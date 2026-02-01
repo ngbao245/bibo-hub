@@ -51,7 +51,10 @@ async function loadTasks() {
         renderTasksList();
     } catch (error) {
         console.error('Error loading tasks:', error);
-        document.getElementById('tasksList').innerHTML = '<div style="padding: 20px; text-align: center; color: #c5000b;">Error loading tasks</div>';
+        const tasksList = document.getElementById('tasksList');
+        if (tasksList) {
+            tasksList.innerHTML = '<div style="padding: 20px; text-align: center; color: #c5000b;">Error loading tasks</div>';
+        }
     }
 }
 
@@ -313,6 +316,11 @@ function renderCustomLists() {
 function renderTasksList() {
     const filteredTasks = getFilteredTasks();
     const tasksList = document.getElementById('tasksList');
+    
+    if (!tasksList) {
+        console.error('tasksList element not found in DOM');
+        return;
+    }
     
     console.log('Rendering tasks:', { 
         totalTasks: tasks.length, 
@@ -1366,9 +1374,13 @@ function setupTaskSearch() {
 
 function clearTaskSearch() {
     const searchInput = document.getElementById('taskSearchInput');
+    const clearBtn = document.getElementById('clearTaskSearch');
+    
+    if (!searchInput || !clearBtn) return;
+    
     searchInput.value = '';
     taskSearchQuery = '';
-    document.getElementById('clearTaskSearch').style.display = 'none';
+    clearBtn.style.display = 'none';
     renderTasksList();
     searchInput.focus();
 }
@@ -1442,6 +1454,22 @@ function getListId(listIdOrName) {
 // Initialize Tasks
 async function initTasks() {
     console.log('Initializing tasks...');
+    
+    // Wait for DOM to be fully ready
+    if (document.readyState === 'loading') {
+        await new Promise(resolve => {
+            document.addEventListener('DOMContentLoaded', resolve);
+        });
+    }
+    
+    // Check if required elements exist
+    const tasksList = document.getElementById('tasksList');
+    if (!tasksList) {
+        console.error('Required DOM elements not found, retrying...');
+        setTimeout(initTasks, 100);
+        return;
+    }
+    
     setupTaskSearch();
     await loadTasks(); // This now loads both tasks and lists
     setupTaskEventListeners(); // Setup event listeners after loading

@@ -38,6 +38,14 @@ A notes and tasks management application with Microsoft To Do style interface, s
 - **Context Menus**: Right-click to rename/delete lists (normal color, not red)
 - **Inline List Editing**: Click to edit list names, auto-save on blur/enter
 
+### 📱 Mobile Interface (Smart Header)
+- **Smart Header**: Compact header with navigation, list selection, and toggle
+- **Navigation Tabs**: Switch between Notes and Tasks directly from header
+- **List Selector**: Quick access to task lists without opening sidebar
+- **Hamburger Toggle**: Show/hide sidebar with smooth animation
+- **Search Integration**: Mobile search synced with desktop functionality
+- **Responsive Design**: Optimized for mobile screens (≤768px)
+- **Touch-Friendly**: Large touch targets and smooth interactions
 ### 🎨 UI/UX Features
 - **Dark Theme**: Professional dark interface with CSS variables
 - **Edge-style Tabs**: Navigation tabs close together without gaps
@@ -103,6 +111,7 @@ Uses single table approach with `type` field to differentiate:
 ├── tasks.html             # Tasks page  
 ├── app.js                 # Notes logic
 ├── tasks.js               # Tasks logic
+├── mobile.js              # Mobile-specific enhancements
 ├── style.css              # Base styles + Notes styles
 ├── tasks.css              # Tasks-specific styles (extends style.css)
 ├── richtext-editor.js     # Rich text editor class
@@ -336,18 +345,79 @@ function toggleImportantButton() {
 - **Offline**: No offline support (requires internet)
 - **Auto-save**: Only saves when title exists (prevents empty tasks)
 
+## 📱 Mobile Interface
+
+### Smart Header Design
+The mobile interface features a compact smart header that includes:
+
+**Header Components:**
+- **Hamburger Toggle**: ☰/✕ button to show/hide sidebar
+- **Navigation Tabs**: Switch between Notes and Tasks
+- **Search Bar** (Notes): Mobile search input synced with desktop
+- **List Selector** (Tasks): Dropdown to switch between task lists
+
+**Mobile Navigation:**
+```
+[☰] [Notes|Tasks] .................... [Search/List Selector]
+```
+
+**Features:**
+- **Responsive**: Automatically activates on screens ≤768px
+- **Touch-Friendly**: Large touch targets (44px minimum)
+- **Smooth Animations**: 0.3s sidebar slide, 0.15s dropdown
+- **Synchronized**: Mobile actions sync with desktop functionality
+- **Overlay**: Dark overlay when sidebar is open
+- **Auto-Close**: Sidebar closes when clicking outside
+
+### Mobile Workflow
+1. **Toggle Sidebar**: Tap ☰ to open/close sidebar
+2. **Switch Apps**: Tap Notes/Tasks tabs in header
+3. **Search** (Notes): Use header search bar
+4. **Select List** (Tasks): Tap list selector dropdown
+5. **Navigate**: All desktop features available in mobile
+
+### Technical Implementation
+```javascript
+// Mobile interface automatically initializes
+class MobileInterface {
+    constructor() {
+        this.isMobile = window.innerWidth <= 768;
+        this.init();
+    }
+    
+    // Smart header creation
+    createMobileHeader() {
+        // Navigation + Search/List selector
+    }
+    
+    // Sidebar management
+    toggleSidebar() {
+        // Smooth slide animation
+    }
+}
+```
+
 ## 📱 Responsive Design
 
 ### Breakpoints
-- **Desktop**: > 768px - Full 3-column layout
-- **Tablet**: 768px - Collapsed sidebar  
-- **Mobile**: < 768px - Stack layout, always show task actions
+- **Desktop**: > 768px - Full 3-column layout with sidebar
+- **Mobile**: ≤ 768px - Smart header + collapsible sidebar
 
 ### Mobile Optimizations
-- Task actions always visible (no hover needed)
-- Sidebar width reduced to 240px
-- Form elements stack vertically
-- Touch-friendly button sizes (min 44px)
+- **Smart Header**: Compact navigation and controls
+- **Fixed Sidebar**: Slides in from left with overlay
+- **Touch Targets**: Minimum 44px for all interactive elements
+- **Simplified Layout**: Single column with smart header
+- **Synchronized Search**: Mobile search syncs with desktop
+- **List Management**: Quick list switching via header dropdown
+
+### Mobile-Specific Features
+- **Hamburger Menu**: ☰/✕ toggle for sidebar
+- **Header Tabs**: Direct navigation between Notes/Tasks
+- **Dropdown Lists**: Quick task list selection
+- **Overlay Background**: Dark backdrop when sidebar open
+- **Auto-Close**: Sidebar closes on outside click
+- **Responsive Text**: Smaller fonts on very small screens (<480px)
 
 ## 🚀 Future Enhancements
 

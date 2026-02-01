@@ -193,7 +193,7 @@ function showViewMode() {
             
             <div class="content-section">
                 <h3>Content</h3>
-                <div class="content-text editable-content" ondblclick="editContent(this)">${currentNote.content || '<span style="color: var(--color-text-muted); font-style: italic;">blank</span>'}</div>
+                <div class="content-text editable-content" ondblclick="editContent(this)">${currentNote.content ? currentNote.content : '<span style="color: var(--color-text-muted); font-style: italic;">blank</span>'}</div>
             </div>
             
             ${currentNote.example ? `
@@ -252,7 +252,7 @@ function showEditMode(restoreData = null) {
 
                 <div class="form-group">
                     <label>Content</label>
-                    <textarea id="noteContent" placeholder="Start typing...">${escapeHtml(note.content || '')}</textarea>
+                    <textarea id="noteContent" placeholder="Start typing...">${note.content ? htmlToPlainText(note.content) : ''}</textarea>
                 </div>
 
                 <div class="form-row">
@@ -360,7 +360,17 @@ function cancelEdit() {
 
 function saveCurrentNote() {
     const title = document.getElementById('noteTitle').value.trim();
-    const content = document.getElementById('noteContent').value.trim();
+    const contentTextarea = document.getElementById('noteContent');
+    let content = contentTextarea.value.trim();
+    
+    // Convert plain text to HTML for storage (preserve line breaks)
+    if (content) {
+        content = content.replace(/\n/g, '<br>');
+        // Wrap in div if not already wrapped
+        if (!content.startsWith('<div>')) {
+            content = `<div>${content}</div>`;
+        }
+    }
     
     // Use placeholder text as default title if empty
     const placeholder = document.getElementById('noteTitle').placeholder;
@@ -488,6 +498,28 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+function htmlToPlainText(html) {
+    if (!html) return '';
+    
+    // Create a temporary div to parse HTML
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    
+    // Replace <br> and </div> with line breaks
+    temp.innerHTML = temp.innerHTML
+        .replace(/<br\s*\/?>/gi, '\n')
+        .replace(/<\/div>/gi, '\n')
+        .replace(/<div>/gi, '');
+    
+    // Get plain text content
+    let plainText = temp.textContent || temp.innerText || '';
+    
+    // Clean up multiple consecutive line breaks
+    plainText = plainText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+    
+    return plainText;
+}
+
 function hasAnyUrl(note) {
     return note.url1 || note.url2 || note.url3 || note.url4 || note.url5;
 }
@@ -541,10 +573,26 @@ function editContent(element) {
     const editorContainer = document.createElement('div');
     document.body.appendChild(editorContainer);
     
+    // Sanitize content before passing to editor
+    let contentToEdit = currentNote.content || '';
+    
+    // If content looks like it might have malformed HTML, clean it
+    if (contentToEdit.includes('<') && contentToEdit.includes('>')) {
+        const temp = document.createElement('div');
+        try {
+            temp.innerHTML = contentToEdit;
+            contentToEdit = temp.innerHTML;
+        } catch (error) {
+            // If parsing fails, treat as plain text
+            temp.textContent = contentToEdit;
+            contentToEdit = temp.innerHTML;
+        }
+    }
+    
     // Initialize rich text editor
     const editor = new RichTextEditor(
         editorContainer,
-        currentNote.content || '',
+        contentToEdit,
         async (newContent) => {
             // Save callback
             if (newContent !== currentNote.content) {

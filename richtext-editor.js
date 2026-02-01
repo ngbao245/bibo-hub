@@ -27,7 +27,7 @@ class RichTextEditor {
                             <button class="btn-close" data-action="close">×</button>
                         </div>
                     </div>
-                    <div class="richtext-editor" contenteditable="true" id="richtextEditor">${content}</div>
+                    <div class="richtext-editor" contenteditable="true" id="richtextEditor"></div>
                     <div class="richtext-actions">
                         <button class="btn btn-primary" data-action="save">Save</button>
                         <button class="btn" data-action="close">Cancel</button>
@@ -37,6 +37,12 @@ class RichTextEditor {
         `;
 
         this.editor = this.container.querySelector('#richtextEditor');
+        
+        // Set content safely
+        if (content) {
+            this.editor.innerHTML = this.sanitizeContent(content);
+        }
+        
         this.setupEventListeners();
         
         // Focus editor
@@ -172,6 +178,43 @@ class RichTextEditor {
 
     getContent() {
         return this.editor.innerHTML;
+    }
+
+    sanitizeContent(content) {
+        if (!content) return '';
+        
+        try {
+            // Create a temporary div to parse and clean HTML
+            const temp = document.createElement('div');
+            temp.innerHTML = content;
+            
+            // Remove script tags and other dangerous elements
+            const dangerousElements = temp.querySelectorAll('script, iframe, object, embed, link, meta, style');
+            dangerousElements.forEach(el => el.remove());
+            
+            // Remove dangerous attributes
+            const allElements = temp.querySelectorAll('*');
+            allElements.forEach(el => {
+                // Keep only safe attributes
+                const safeAttributes = ['class', 'style'];
+                const attributes = [...el.attributes];
+                attributes.forEach(attr => {
+                    if (!safeAttributes.includes(attr.name.toLowerCase()) && 
+                        !attr.name.startsWith('data-')) {
+                        el.removeAttribute(attr.name);
+                    }
+                });
+            });
+            
+            // Clean up malformed HTML by getting innerHTML again
+            return temp.innerHTML;
+        } catch (error) {
+            console.error('Error sanitizing content:', error);
+            // If sanitization fails, return plain text
+            const temp = document.createElement('div');
+            temp.textContent = content;
+            return temp.innerHTML;
+        }
     }
 
     save() {
