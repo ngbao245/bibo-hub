@@ -342,7 +342,7 @@ function renderTasksList() {
                        class="task-check">
             </div>
             <div class="task-content" data-task-id="${task.id}">
-                <div class="task-title ${task.status === 'completed' ? 'strikethrough' : ''}">${escapeHtml(task.title)}</div>
+                <div class="task-title ${task.status === 'completed' ? 'strikethrough' : ''}">${escapeHtml(task.title || 'Untitled')}</div>
                 ${task.description ? `<div class="task-description">${escapeHtml(task.description)}</div>` : ''}
                 <div class="task-meta">
                     ${task.priority === 'high' ? `<span class="task-recurring">Important</span>` : ''}
@@ -449,8 +449,60 @@ function updateTaskCounts() {
 }
 
 // Task Actions
-function createNewTask() {
-    showTaskEditor();
+async function createNewTask() {
+    // Tạo task "Untitled" nhưng chưa hiển thị trong danh sách
+    const newTaskData = {
+        title: 'Untitled',
+        description: '',
+        dueDate: null,
+        category: '',
+        important: false,
+        recurring: false,
+        url1: '',
+        url2: '',
+        url3: '',
+        parentId: isCustomList(currentTaskList) ? getListId(currentTaskList) : null
+    };
+    
+    console.log('Creating new untitled task:', newTaskData);
+    
+    try {
+        // Tạo task thật trên API trước
+        const response = await fetch(API_TASKS, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                ...newTaskData, 
+                type: 'task',
+                status: 'pending',
+                priority: 'normal',
+                createdAt: new Date().toISOString(), 
+                updatedAt: new Date().toISOString() 
+            })
+        });
+        const savedTask = await response.json();
+        
+        console.log('Task created on API:', savedTask);
+        
+        // Thêm vào array local
+        tasks.unshift(savedTask);
+        console.log('Added task to local array:', savedTask);
+        
+        // Mở editor ngay lập tức (task sẽ hiện trong danh sách khi editor mở)
+        showTaskEditor(savedTask);
+        
+        // Focus vào title input để user có thể sửa tên ngay
+        setTimeout(() => {
+            const titleInput = document.getElementById('taskTitle');
+            if (titleInput) {
+                titleInput.select(); // Select all text để user có thể ghi đè
+            }
+        }, 100);
+        
+    } catch (error) {
+        console.error('Error creating new task:', error);
+        alert('Error creating task');
+    }
 }
 
 function createNewList() {
@@ -676,6 +728,11 @@ function showTaskEditor(task = null) {
         console.log('Task parentId:', taskData.parentId);
         console.log('Current list:', currentTaskList);
     }
+    
+    // Refresh task list when editor opens to ensure data is up to date
+    console.log('Refreshing task list before opening editor...');
+    renderTasksList();
+    updateTaskCounts();
     
     // Show task editor in right panel
     const taskDetailsPanel = document.getElementById('taskDetailsPanel');
@@ -908,7 +965,12 @@ function autoSaveTask() {
     
     console.log('Auto-saving task:', taskData);
     
-    saveTask(taskData).catch(error => {
+    saveTask(taskData).then(() => {
+        // Refresh task list after auto-save to show updated data
+        console.log('Refreshing task list after auto-save...');
+        renderTasksList();
+        updateTaskCounts();
+    }).catch(error => {
         console.error('Error auto-saving task:', error);
     });
 }
@@ -1065,6 +1127,7 @@ async function moveTaskToList(listId) {
             await saveTask(taskData);
             
             // Refresh task list to show updated data
+            console.log('Refreshing task list after moving task to different list...');
             renderTasksList();
             updateTaskCounts();
             
@@ -1262,9 +1325,10 @@ function cancelTaskEdit() {
         taskDetailsPanel.style.display = 'none';
     }
     
-    // Make sure tasks are rendered properly
-    console.log('Re-rendering tasks after cancel, total tasks:', tasks.length);
+    // Refresh task list when editor closes to ensure data is up to date
+    console.log('Refreshing task list after closing editor...');
     renderTasksList();
+    updateTaskCounts();
 }
 
 // List Navigation

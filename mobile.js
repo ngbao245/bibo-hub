@@ -7,6 +7,59 @@ class MobileInterface {
         this.sidebarVisible = false;
         this.currentPage = this.getCurrentPage();
         this.init();
+        this.setupSafeAreaSupport();
+    }
+
+    setupSafeAreaSupport() {
+        // Enhanced safe area support for mobile browsers
+        if (this.isMobile) {
+            // Add viewport height adjustment for mobile browsers
+            const setViewportHeight = () => {
+                const vh = window.innerHeight * 0.01;
+                document.documentElement.style.setProperty('--vh', `${vh}px`);
+                
+                // Detect if browser supports safe-area-inset
+                const testEl = document.createElement('div');
+                testEl.style.paddingBottom = 'env(safe-area-inset-bottom)';
+                document.body.appendChild(testEl);
+                const computedPadding = window.getComputedStyle(testEl).paddingBottom;
+                document.body.removeChild(testEl);
+                
+                // If env() is not supported, add fallback padding
+                if (computedPadding === '0px') {
+                    // Add fallback safe area for older browsers
+                    document.documentElement.style.setProperty('--fallback-safe-bottom', '20px');
+                    document.body.classList.add('no-safe-area-support');
+                } else {
+                    document.documentElement.style.setProperty('--fallback-safe-bottom', '0px');
+                    document.body.classList.remove('no-safe-area-support');
+                }
+            };
+
+            // Set initial viewport height
+            setViewportHeight();
+
+            // Update on resize and orientation change
+            window.addEventListener('resize', setViewportHeight);
+            window.addEventListener('orientationchange', () => {
+                setTimeout(setViewportHeight, 100);
+            });
+
+            // Handle iOS Safari address bar hide/show
+            let ticking = false;
+            const updateViewportHeight = () => {
+                if (!ticking) {
+                    requestAnimationFrame(() => {
+                        setViewportHeight();
+                        ticking = false;
+                    });
+                    ticking = true;
+                }
+            };
+
+            window.addEventListener('scroll', updateViewportHeight);
+            window.addEventListener('touchmove', updateViewportHeight);
+        }
     }
 
     getCurrentPage() {
@@ -110,19 +163,34 @@ class MobileInterface {
     }
 
     createTasksHeaderContent() {
+        // Get current active list to show correct name and highlighting
+        const currentList = window.currentTaskList || 'today';
+        const listNames = {
+            'today': 'My Day',
+            'all': 'All Tasks',
+            'important': 'Important',
+            'completed': 'Completed'
+        };
+        
+        // Get display name for current list
+        let currentListName = listNames[currentList] || 'My Day';
+        if (!listNames[currentList]) {
+            // If it's a custom list, still show the custom list name in header
+            const customList = window.customLists?.find(l => l.id === currentList);
+            currentListName = customList ? (customList.title || customList.name) : 'My Day';
+        }
+        
         return `
             <div class="mobile-list-section">
                 <div class="mobile-list-selector" id="mobileListSelector">
-                    <span class="mobile-list-name" id="mobileListName">My Day</span>
+                    <span class="mobile-list-name" id="mobileListName">${currentListName}</span>
                     <span class="mobile-list-arrow">▼</span>
                 </div>
                 <div class="mobile-list-dropdown" id="mobileListDropdown">
-                    <div class="mobile-list-option" data-list="today">My Day</div>
-                    <div class="mobile-list-option" data-list="all">All Tasks</div>
-                    <div class="mobile-list-option" data-list="important">Important</div>
-                    <div class="mobile-list-option" data-list="completed">Completed</div>
-                    <div class="mobile-list-divider"></div>
-                    <div id="mobileCustomLists"></div>
+                    <div class="mobile-list-option ${currentList === 'today' ? 'active' : ''}" data-list="today">My Day</div>
+                    <div class="mobile-list-option ${currentList === 'all' ? 'active' : ''}" data-list="all">All Tasks</div>
+                    <div class="mobile-list-option ${currentList === 'important' ? 'active' : ''}" data-list="important">Important</div>
+                    <div class="mobile-list-option ${currentList === 'completed' ? 'active' : ''}" data-list="completed">Completed</div>
                 </div>
             </div>
         `;
@@ -214,8 +282,9 @@ class MobileInterface {
             if (e.target.closest('.mobile-list-option')) {
                 e.preventDefault();
                 e.stopPropagation();
-                const listType = e.target.dataset.list;
-                console.log('Mobile list option clicked:', listType);
+                const optionElement = e.target.closest('.mobile-list-option');
+                const listType = optionElement.dataset.list;
+                console.log('Mobile list option clicked:', listType, optionElement);
                 if (listType) {
                     this.selectList(listType);
                 }
@@ -231,6 +300,70 @@ class MobileInterface {
         // Close sidebar when clicking outside
         if (this.sidebarVisible && !e.target.closest('.sidebar') && !e.target.closest('#mobileToggle')) {
             this.hideSidebar();
+        }
+        
+        // Close sidebar when clicking on task list items (mobile)
+        if (this.isMobile && this.sidebarVisible && e.target.closest('.task-list-item')) {
+            console.log('Task list item clicked on mobile, closing sidebar...');
+            
+            // Get the list type that was clicked
+            const clickedItem = e.target.closest('.task-list-item');
+            const listType = clickedItem.dataset.list;
+            const listName = clickedItem.querySelector('.list-name')?.textContent;
+            
+            console.log('Clicked list:', listType, listName);
+            
+            // Clear all active states first
+            document.querySelectorAll('.task-list-item.active').forEach(item => {
+                item.classList.remove('active');
+                // Clear any inline styles
+                item.style.background = '';
+                item.style.color = '';
+                const count = item.querySelector('.list-count');
+                if (count) {
+                    count.style.background = '';
+                    count.style.color = '';
+                }
+            });
+            document.querySelectorAll('.mobile-list-option.active').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            // Set active state on clicked item with immediate visual feedback
+            clickedItem.classList.add('active');
+            clickedItem.style.background = 'var(--color-accent-primary)';
+            clickedItem.style.color = 'white';
+            
+            const clickedListCount = clickedItem.querySelector('.list-count');
+            if (clickedListCount) {
+                clickedListCount.style.background = 'rgba(255, 255, 255, 0.2)';
+                clickedListCount.style.color = 'white';
+            }
+            
+            // Update mobile dropdown header immediately
+            const mobileListName = document.querySelector('#mobileListName');
+            if (mobileListName && listName) {
+                mobileListName.textContent = listName;
+                console.log('Updated mobile dropdown header to:', listName);
+            }
+            
+            // Update dropdown highlighting
+            this.updateMobileDropdownHighlighting(listType);
+            
+            // Remove inline styles after CSS takes over
+            setTimeout(() => {
+                clickedItem.style.background = '';
+                clickedItem.style.color = '';
+                if (clickedListCount) {
+                    clickedListCount.style.background = '';
+                    clickedListCount.style.color = '';
+                }
+            }, 300);
+            
+            // Add a small delay to let the click action complete first
+            setTimeout(() => {
+                this.hideSidebar();
+            }, 100);
         }
     }
 
@@ -256,6 +389,63 @@ class MobileInterface {
             if (toggleBtn) {
                 toggleBtn.textContent = '✕';
             }
+            
+            // Force refresh active state when sidebar opens on mobile
+            if (this.isMobile) {
+                setTimeout(() => {
+                    this.refreshSidebarHighlighting();
+                    
+                    // Additional force refresh - find and highlight current active item
+                    const currentActiveItem = document.querySelector('.task-list-item.active');
+                    if (currentActiveItem) {
+                        // Force style application
+                        currentActiveItem.style.background = 'var(--color-accent-primary)';
+                        currentActiveItem.style.color = 'white';
+                        
+                        const listCount = currentActiveItem.querySelector('.list-count');
+                        if (listCount) {
+                            listCount.style.background = 'rgba(255, 255, 255, 0.2)';
+                            listCount.style.color = 'white';
+                        }
+                        
+                        // Remove inline styles after a moment to let CSS take over
+                        setTimeout(() => {
+                            currentActiveItem.style.background = '';
+                            currentActiveItem.style.color = '';
+                            if (listCount) {
+                                listCount.style.background = '';
+                                listCount.style.color = '';
+                            }
+                        }, 200);
+                    }
+                }, 100);
+            }
+        }
+    }
+
+    refreshSidebarHighlighting() {
+        // Find currently active list and force refresh its highlighting
+        const activeListItem = document.querySelector('.task-list-item.active');
+        if (activeListItem) {
+            const listType = activeListItem.dataset.list;
+            console.log('Refreshing sidebar highlighting for:', listType);
+            
+            // Force CSS refresh by temporarily removing and re-adding classes
+            activeListItem.classList.remove('active');
+            
+            // Force a reflow to ensure the class removal takes effect
+            activeListItem.offsetHeight;
+            
+            setTimeout(() => {
+                activeListItem.classList.add('active');
+                console.log('Refreshed active class for:', listType);
+                
+                // Additional force refresh by adding a temporary class
+                activeListItem.classList.add('force-active');
+                setTimeout(() => {
+                    activeListItem.classList.remove('force-active');
+                }, 100);
+            }, 10);
         }
     }
 
@@ -325,14 +515,40 @@ class MobileInterface {
 
         const mobileListName = document.querySelector('#mobileListName');
         if (mobileListName) {
-            mobileListName.textContent = listNames[listType] || listType;
+            // Check if it's a custom list
+            if (!listNames[listType]) {
+                // Find custom list name
+                const customList = window.customLists?.find(l => l.id === listType);
+                mobileListName.textContent = customList ? (customList.title || customList.name) : listType;
+            } else {
+                mobileListName.textContent = listNames[listType];
+            }
         }
 
-        // Trigger desktop list switch
+        // Clear all active states first to prevent conflicts
+        document.querySelectorAll('.task-list-item.active').forEach(item => {
+            item.classList.remove('active');
+        });
+        document.querySelectorAll('.mobile-list-option.active').forEach(option => {
+            option.classList.remove('active');
+        });
+
+        // Update highlighting in dropdown
+        this.updateMobileDropdownHighlighting(listType);
+
+        // Update sidebar highlighting
+        const sidebarItem = document.querySelector(`.task-list-item[data-list="${listType}"]`);
+        if (sidebarItem) {
+            sidebarItem.classList.add('active');
+            console.log('Added active to sidebar item:', listType);
+        }
+
+        // Trigger desktop list switch (this will also update task list)
         if (window.switchTaskList) {
             window.switchTaskList(listType);
         }
 
+        // Close dropdown after selection
         this.closeListDropdown();
     }
 
@@ -346,10 +562,27 @@ class MobileInterface {
                         const listType = target.dataset.list;
                         const listName = target.querySelector('.list-name')?.textContent;
                         
+                        console.log('Desktop list changed to:', listType, listName);
+                        
+                        // Clear all other active states first
+                        document.querySelectorAll('.task-list-item.active').forEach(item => {
+                            if (item !== target) {
+                                item.classList.remove('active');
+                            }
+                        });
+                        document.querySelectorAll('.mobile-list-option.active').forEach(option => {
+                            option.classList.remove('active');
+                        });
+                        
+                        // Update mobile dropdown header name
                         const mobileListName = document.querySelector('#mobileListName');
                         if (mobileListName && listName) {
                             mobileListName.textContent = listName;
+                            console.log('Updated mobile header to:', listName);
                         }
+                        
+                        // Update mobile dropdown highlighting (only for built-in lists)
+                        this.updateMobileDropdownHighlighting(listType);
                     }
                 }
             });
@@ -357,12 +590,140 @@ class MobileInterface {
 
         // Observe task list items for active state changes
         const taskListItems = document.querySelectorAll('.task-list-item');
+        console.log('Setting up observers for', taskListItems.length, 'task list items');
         taskListItems.forEach(item => {
-            observer.observe(item, { attributes: true });
+            observer.observe(item, { 
+                attributes: true, 
+                attributeFilter: ['class'],
+                subtree: false 
+            });
         });
 
-        // Update custom lists in mobile dropdown
-        this.updateMobileCustomLists();
+        // Also observe custom lists container for dynamic lists (for sidebar only)
+        const customListsContainer = document.querySelector('#customLists');
+        if (customListsContainer) {
+            const customObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    if (mutation.type === 'childList') {
+                        // Re-setup observers when custom lists change
+                        setTimeout(() => {
+                            this.syncWithDesktopTasks();
+                        }, 100);
+                    }
+                });
+            });
+            customObserver.observe(customListsContainer, { childList: true });
+        }
+        
+        // Initial sync - set correct name based on current active list
+        this.syncMobileHeaderWithDesktop();
+    }
+
+    updateMobileDropdownHighlighting(activeListType) {
+        // Wait a bit to ensure DOM is ready
+        setTimeout(() => {
+            // Clear ALL mobile-list-option active states first
+            document.querySelectorAll('.mobile-list-option.active').forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            // Update highlighting in mobile dropdown - only for built-in lists
+            const dropdown = document.querySelector('#mobileListDropdown');
+            if (!dropdown) {
+                console.log('Mobile dropdown not found');
+                return;
+            }
+            
+            // Only highlight if it's a built-in list (not custom lists)
+            const builtInLists = ['today', 'all', 'important', 'completed'];
+            if (!builtInLists.includes(activeListType)) {
+                console.log('Not highlighting custom list in dropdown:', activeListType);
+                return;
+            }
+            
+            const allOptions = dropdown.querySelectorAll('.mobile-list-option');
+            console.log('Updating mobile dropdown highlighting for:', activeListType);
+            console.log('Found options in dropdown:', allOptions.length);
+            
+            // Add active to the correct one
+            allOptions.forEach(option => {
+                const optionListType = option.dataset.list;
+                if (optionListType === activeListType) {
+                    option.classList.add('active');
+                    console.log('Added active to option:', option.textContent, 'with list type:', optionListType);
+                }
+            });
+        }, 50);
+    }
+
+    syncMobileHeaderWithDesktop() {
+        // Find currently active list in desktop
+        const activeListItem = document.querySelector('.task-list-item.active');
+        if (activeListItem) {
+            const listName = activeListItem.querySelector('.list-name')?.textContent;
+            const listType = activeListItem.dataset.list;
+            
+            console.log('Syncing mobile header with desktop active list:', listType, listName);
+            
+            // Update dropdown header name
+            const mobileListName = document.querySelector('#mobileListName');
+            if (mobileListName && listName) {
+                mobileListName.textContent = listName;
+                console.log('Synced mobile header name to:', listName);
+            }
+            
+            // Update dropdown highlighting
+            if (listType) {
+                this.updateMobileDropdownHighlighting(listType);
+            }
+        }
+    }
+
+    // Force sync mobile header - can be called manually
+    forceSyncMobileHeader() {
+        console.log('Force syncing mobile header...');
+        this.syncMobileHeaderWithDesktop();
+        
+        // Also force refresh sidebar highlighting with enhanced method
+        setTimeout(() => {
+            this.refreshSidebarHighlighting();
+            
+            // Additional manual highlighting for mobile
+            if (this.isMobile && this.sidebarVisible) {
+                const activeItem = document.querySelector('.task-list-item.active');
+                if (activeItem) {
+                    console.log('Manually applying mobile highlighting to:', activeItem.dataset.list);
+                    
+                    // Clear all other active states first
+                    document.querySelectorAll('.task-list-item').forEach(item => {
+                        if (item !== activeItem) {
+                            item.classList.remove('active');
+                        }
+                    });
+                    
+                    // Force the active class and styles
+                    activeItem.classList.add('active');
+                    activeItem.style.background = 'var(--color-accent-primary)';
+                    activeItem.style.color = 'white';
+                    
+                    const listCount = activeItem.querySelector('.list-count');
+                    if (listCount) {
+                        listCount.style.background = 'rgba(255, 255, 255, 0.2)';
+                        listCount.style.color = 'white';
+                    }
+                    
+                    // Remove inline styles after CSS takes over
+                    setTimeout(() => {
+                        activeItem.style.background = '';
+                        activeItem.style.color = '';
+                        if (listCount) {
+                            listCount.style.background = '';
+                            listCount.style.color = '';
+                        }
+                    }, 300);
+                }
+            }
+        }, 100);
     }
 
     updateMobileCustomLists() {
@@ -373,6 +734,9 @@ class MobileInterface {
             // Clear existing
             mobileCustomLists.innerHTML = '';
             
+            // Get current active list for highlighting
+            const currentList = window.currentTaskList || 'today';
+            
             // Copy custom lists
             const customListItems = desktopCustomLists.querySelectorAll('.task-list-item');
             customListItems.forEach(item => {
@@ -381,7 +745,7 @@ class MobileInterface {
                 
                 if (listName && listId) {
                     const option = document.createElement('div');
-                    option.className = 'mobile-list-option';
+                    option.className = `mobile-list-option ${currentList === listId ? 'active' : ''}`;
                     option.dataset.list = listId;
                     option.textContent = listName;
                     mobileCustomLists.appendChild(option);

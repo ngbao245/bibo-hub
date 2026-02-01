@@ -33,6 +33,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .list-header h2 {
@@ -709,6 +714,11 @@ input[type="date"]:focus {
     margin-bottom: 15px;
     border-bottom: 1px solid var(--color-border-light);
     position: relative;
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .nav-link {
@@ -757,6 +767,11 @@ input[type="date"]:focus {
 .task-lists {
     padding: 0 15px;
     margin-bottom: 15px;
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .task-list-item {
@@ -805,6 +820,11 @@ input[type="date"]:focus {
 .custom-lists-section {
     padding: 0 15px;
     margin-top: 20px;
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .section-header {
@@ -826,6 +846,11 @@ input[type="date"]:focus {
 .add-list-container {
     padding: 0 5px;
     margin-top: 8px;
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .add-list-input {
@@ -859,6 +884,11 @@ input[type="date"]:focus {
     padding: 15px;
     border-top: 1px solid var(--color-border);
     background: var(--color-bg-primary);
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .add-task-input {
@@ -964,6 +994,11 @@ input[type="date"]:focus {
     border-bottom: 1px solid var(--color-border-light);
     transition: all 0.2s ease;
     cursor: pointer;
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .task-item:hover {
@@ -1181,10 +1216,6 @@ input[type="date"]:focus {
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-    .mobile-header {
-        display: block;
-    }
-
     .container {
         flex-direction: column;
     }
@@ -1193,16 +1224,28 @@ input[type="date"]:focus {
         position: fixed;
         top: 0;
         left: 0;
-        height: 100vh;
+        height: var(--mobile-vh);
         width: 280px;
         z-index: 100;
         transform: translateX(-100%);
         transition: transform 0.3s ease;
+        /* Safe area support */
+        top: var(--safe-area-inset-top);
+        height: calc(var(--mobile-vh) - var(--safe-area-inset-top));
+    }
+
+    /* Ensure sidebar content is visible and interactive on mobile */
+    .mobile-sidebar-visible .task-list-item {
+        pointer-events: auto;
+        visibility: visible;
     }
 
     .main-content {
         flex: 1;
         width: 100%;
+        /* Enhanced mobile safe area support */
+        min-height: calc(var(--mobile-vh) - 120px);
+        min-height: calc(var(--mobile-vh) - 120px - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
     }
 
     .task-lists {
@@ -1211,6 +1254,61 @@ input[type="date"]:focus {
 
     .task-list-item {
         padding: 8px 10px;
+    }
+
+    /* Consolidated mobile active state rules with maximum specificity */
+    @media (max-width: 768px) {
+
+        /* Base mobile active state - highest specificity */
+        body .sidebar .task-list-item.active,
+        body .mobile-sidebar-visible .task-list-item.active,
+        .sidebar .task-list-item.active,
+        .mobile-sidebar-visible .task-list-item.active,
+        .task-lists .task-list-item.active,
+        .custom-lists .task-list-item.active,
+        .task-list-item.active {
+            background: var(--color-accent-primary) !important;
+            color: white !important;
+        }
+
+        /* List count styling for active items */
+        body .sidebar .task-list-item.active .list-count,
+        body .mobile-sidebar-visible .task-list-item.active .list-count,
+        .sidebar .task-list-item.active .list-count,
+        .mobile-sidebar-visible .task-list-item.active .list-count,
+        .task-lists .task-list-item.active .list-count,
+        .custom-lists .task-list-item.active .list-count,
+        .task-list-item.active .list-count {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+        }
+
+        /* Ensure active state is not overridden by hover on mobile */
+        body .sidebar .task-list-item.active:hover,
+        body .mobile-sidebar-visible .task-list-item.active:hover,
+        .sidebar .task-list-item.active:hover,
+        .mobile-sidebar-visible .task-list-item.active:hover,
+        .task-lists .task-list-item.active:hover,
+        .custom-lists .task-list-item.active:hover,
+        .task-list-item.active:hover {
+            background: var(--color-accent-primary) !important;
+            color: white !important;
+        }
+
+        /* Temporary force-active class for refresh operations */
+        .task-list-item.force-active,
+        .sidebar .task-list-item.force-active,
+        .mobile-sidebar-visible .task-list-item.force-active {
+            background: var(--color-accent-primary) !important;
+            color: white !important;
+        }
+
+        .task-list-item.force-active .list-count,
+        .sidebar .task-list-item.force-active .list-count,
+        .mobile-sidebar-visible .task-list-item.force-active .list-count {
+            background: rgba(255, 255, 255, 0.2) !important;
+            color: white !important;
+        }
     }
 
     .list-name {
@@ -1263,9 +1361,78 @@ input[type="date"]:focus {
         width: 100%;
         z-index: 200;
         background: var(--color-bg-primary);
+        /* Enhanced safe area support */
+        padding-bottom: 20px;
+        padding-bottom: calc(var(--mobile-safe-bottom) + 20px);
+        padding-top: var(--safe-area-inset-top);
     }
-}
-}
+
+    /* Add safe area padding for main content */
+    .main-content {
+        padding-bottom: calc(env(safe-area-inset-bottom, 10px) + 15px);
+    }
+
+    .tasks-container {
+        padding-bottom: calc(env(safe-area-inset-bottom, 10px) + 20px);
+    }
+
+    /* Enhanced mobile safe area for add-task container */
+    .add-task-container {
+        padding-bottom: calc(15px + env(safe-area-inset-bottom, 10px));
+    }
+
+    /* Allow text selection in inputs and textareas */
+    input,
+    textarea,
+    .task-title-input,
+    .task-description-input,
+    .list-name-input,
+    .search-input,
+    .mobile-search-input {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+    }
+
+    /* Allow text selection in content areas where users need to select text */
+    .view-mode .content-text,
+    .rich-editor,
+    .edit-modal-textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+    }
+
+    @media (max-width: 768px) {
+        .no-safe-area-support .add-task-container {
+            padding-bottom: calc(15px + var(--fallback-safe-bottom)) !important;
+        }
+
+        .no-safe-area-support .main-content {
+            padding-bottom: calc(20px + var(--fallback-safe-bottom)) !important;
+        }
+
+        .no-safe-area-support .tasks-container {
+            padding-bottom: calc(40px + var(--fallback-safe-bottom)) !important;
+        }
+
+        .no-safe-area-support .view-mode {
+            padding-bottom: calc(20px + var(--fallback-safe-bottom)) !important;
+        }
+
+        .no-safe-area-support .view-mode .content-text {
+            padding-bottom: calc(var(--spacing-lg) + var(--fallback-safe-bottom)) !important;
+        }
+    }
+
+    /* Remove debug indicator in production */
+    @media (max-width: 768px) {
+        .add-task-container::after {
+            display: none;
+        }
+    }
 }
 
 /* Empty state */
@@ -1662,4 +1829,34 @@ input[type="date"]:focus {
 
 .btn-danger:hover {
     background: var(--color-danger-hover);
+}
+
+/* Fallback styles for browsers without safe-area-inset support */
+@media (max-width: 768px) {
+    .no-safe-area-support .add-task-container {
+        padding-bottom: calc(15px + 10px) !important;
+    }
+
+    .no-safe-area-support .main-content {
+        padding-bottom: calc(15px + 10px) !important;
+    }
+
+    .no-safe-area-support .tasks-container {
+        padding-bottom: calc(20px + 10px) !important;
+    }
+
+    .no-safe-area-support .view-mode {
+        padding-bottom: calc(20px + 10px) !important;
+    }
+
+    .no-safe-area-support .view-mode .content-text {
+        padding-bottom: calc(var(--spacing-lg) + 10px) !important;
+    }
+}
+
+/* Remove debug indicator in production */
+@media (max-width: 768px) {
+    .add-task-container::after {
+        display: none;
+    }
 }

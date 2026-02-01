@@ -1,6 +1,6 @@
 # BiBo - Notes & Tasks Management App
 
-A notes and tasks management application with Microsoft To Do style interface, supporting rich text editing and task management with custom lists. Latest version features auto-save task editor and fullscreen rich text mode.
+A comprehensive notes and tasks management application with Microsoft To Do style interface, featuring rich text editing, auto-save task management, and responsive mobile design with smart header navigation.
 
 ## 🚀 Key Features
 
@@ -17,7 +17,7 @@ A notes and tasks management application with Microsoft To Do style interface, s
 ### ✅ Tasks Management (Microsoft To Do Style)
 - **3-Column Layout**: Lists → Tasks → Editor (like Microsoft To Do desktop)
 - **Default View**: "My Day" instead of "All Tasks" when opening app
-- **🆕 Auto-save Task Editor**: No Save/Cancel buttons needed, auto-saves when:
+- **Auto-save Task Editor**: No Save/Cancel buttons needed, auto-saves when:
   - **Text Inputs**: Auto-save on blur (click outside)
   - **Dropdowns**: Auto-save on option selection (due date, move to list)
   - **Toggle Buttons**: Auto-save on click (Important, Daily Recurring)
@@ -38,14 +38,19 @@ A notes and tasks management application with Microsoft To Do style interface, s
 - **Context Menus**: Right-click to rename/delete lists (normal color, not red)
 - **Inline List Editing**: Click to edit list names, auto-save on blur/enter
 
-### 📱 Mobile Interface (Smart Header)
+### 📱 Mobile Interface (Smart Header + Fixed Sidebar Highlighting)
 - **Smart Header**: Compact header with navigation, list selection, and toggle
 - **Navigation Tabs**: Switch between Notes and Tasks directly from header
-- **List Selector**: Quick access to task lists without opening sidebar
+- **List Selector**: Quick access to task lists without opening sidebar (4 built-in lists only)
 - **Hamburger Toggle**: Show/hide sidebar with smooth animation
+- **Fixed Mobile Highlighting**: Task list items now properly highlight when active on mobile
+- **Sidebar Sync**: Mobile dropdown and sidebar selection stay synchronized
+- **Auto-Close Sidebar**: Sidebar closes when selecting task lists on mobile
 - **Search Integration**: Mobile search synced with desktop functionality
 - **Responsive Design**: Optimized for mobile screens (≤768px)
 - **Touch-Friendly**: Large touch targets and smooth interactions
+- **Safe Area Support**: Enhanced mobile browser compatibility with safe area padding
+
 ### 🎨 UI/UX Features
 - **Dark Theme**: Professional dark interface with CSS variables
 - **Edge-style Tabs**: Navigation tabs close together without gaps
@@ -55,6 +60,7 @@ A notes and tasks management application with Microsoft To Do style interface, s
 - **Responsive Design**: Compatible with mobile and desktop
 - **No Border Radius**: Form inputs use border-bottom only
 - **Silent Operations**: No toast notifications when moving tasks
+- **Text Selection Disabled**: UI elements are not selectable (except input fields)
 
 ## 🏗️ Technical Architecture
 
@@ -139,8 +145,8 @@ const API_CONFIG = {
 
 ## 🎯 Key Implementation Details
 
-### 🆕 Auto-save Task Editor
-**Brand New**: Task editor no longer has Save/Cancel buttons, automatically saves all changes:
+### Auto-save Task Editor
+Task editor no longer has Save/Cancel buttons, automatically saves all changes:
 
 ```javascript
 // Auto-save triggers:
@@ -156,6 +162,64 @@ const API_CONFIG = {
 - No worry about losing data when forgetting to save
 - More natural editing flow
 - Reduced cognitive load for users
+
+### Mobile Sidebar Highlighting Fix
+**Problem Solved**: Task list items in mobile sidebar were not highlighting properly when active.
+
+**Solution Implemented:**
+```css
+/* Consolidated mobile active state rules with maximum specificity */
+@media (max-width: 768px) {
+    body .sidebar .task-list-item.active,
+    body .mobile-sidebar-visible .task-list-item.active,
+    .sidebar .task-list-item.active,
+    .mobile-sidebar-visible .task-list-item.active,
+    .task-lists .task-list-item.active,
+    .custom-lists .task-list-item.active,
+    .task-list-item.active {
+        background: var(--color-accent-primary) !important;
+        color: white !important;
+    }
+}
+```
+
+**JavaScript Enhancements:**
+- **Immediate Visual Feedback**: Uses temporary inline styles while CSS loads
+- **Force Refresh**: Removes and re-adds active class to force style updates
+- **Cleanup Mechanism**: Removes inline styles after CSS takes over
+- **Enhanced Specificity**: Multiple CSS selector combinations ensure styles apply
+
+### Mobile Interface Architecture
+```javascript
+class MobileInterface {
+    constructor() {
+        this.isMobile = window.innerWidth <= 768;
+        this.sidebarVisible = false;
+        this.currentPage = this.getCurrentPage();
+        this.init();
+        this.setupSafeAreaSupport();
+    }
+    
+    // Smart header with navigation and controls
+    createMobileHeader() {
+        // Creates navigation tabs + search/list selector
+    }
+    
+    // Enhanced sidebar highlighting
+    showSidebar() {
+        // Force refresh active state with immediate visual feedback
+        // Apply temporary inline styles for instant highlighting
+    }
+    
+    // Synchronized dropdown and sidebar
+    selectList(listType) {
+        // Update mobile dropdown header
+        // Clear all active states to prevent conflicts
+        // Update both sidebar and dropdown highlighting
+        // Trigger desktop list switch
+    }
+}
+```
 
 ### Tasks Management Architecture
 - **Single Table Design**: Tasks and Lists in same table, differentiated by `type` field
@@ -182,6 +246,7 @@ case 'today':
 - **Fullscreen Mode**: Toggle with ⛶/🗗 button or F11 key
 - **Window Controls**: `.window-controls` div contains fullscreen + close buttons
 - **Toolbar State**: Dynamic update button states based on selection
+- **HTML Sanitization**: Enhanced content cleaning to prevent HTML display bugs
 - **Keyboard Shortcuts**: 
   - Ctrl+B/I/U (formatting)
   - Ctrl+S (save)
@@ -195,6 +260,7 @@ case 'today':
 - **Form Styling**: No border-radius, only border-bottom for inputs
 - **Navigation**: Edge-style tabs with `margin-left: -1px` to connect
 - **Context Menu**: Delete items have normal color, not red
+- **Text Selection**: Disabled on UI elements, enabled only in input fields
 
 ### Performance Optimizations
 - **Event Delegation**: Avoid attaching many event listeners
@@ -225,7 +291,7 @@ case 'today':
    - Click on name for inline edit, auto-save on blur/enter
    - Right-click to rename/delete (normal color)
 3. **Create task**: Click "Add a task" at bottom of task list
-4. **🆕 Edit task**: Click on task to open editor on right
+4. **Edit task**: Click on task to open editor on right
    - **Auto-save**: No Save/Cancel buttons needed
    - **Text Fields**: Auto-save when clicking outside (blur)
    - **Due Date**: Auto-save when selecting Today/Tomorrow/Custom date
@@ -235,7 +301,17 @@ case 'today':
 5. **Complete**: Click circular checkbox to mark complete
 6. **Keyboard**: Only Escape to close (no Ctrl+S needed)
 
-### 🆕 Auto-save Workflow
+### Mobile Usage
+1. **Navigation**: Tap Notes/Tasks tabs in smart header
+2. **Sidebar**: Tap ☰ to open sidebar, tap outside or ✕ to close
+3. **Task Lists**: 
+   - Use dropdown in header for quick switching (4 built-in lists)
+   - Use sidebar for all lists including custom ones
+   - Sidebar items now properly highlight when active
+4. **Search** (Notes): Use search bar in mobile header
+5. **Auto-Close**: Sidebar automatically closes when selecting task lists
+
+### Auto-save Workflow
 ```
 User Action → Auto-save Trigger → Silent Save → UI Update
 ├── Edit title/description → onBlur → Save task → Refresh list
@@ -277,7 +353,7 @@ User Action → Auto-save Trigger → Silent Save → UI Update
 
 ### Global
 - `Escape` - Close editor/modal
-- `Double Click` - Edit title hoặc content
+- `Double Click` - Edit title or content
 
 ### Rich Text Editor
 - `Ctrl + B` - Bold text
@@ -285,18 +361,17 @@ User Action → Auto-save Trigger → Silent Save → UI Update
 - `Ctrl + U` - Underline text
 - `Tab` - Insert 4 spaces
 - `F11` - Toggle fullscreen
-- `Ctrl + S` - Save và close
-- `Escape` - Close (không save)
+- `Ctrl + S` - Save and close
+- `Escape` - Close (without save)
 
-### 🆕 Task Editor (Auto-save)
-- `Escape` - Close editor (auto-save đã hoạt động)
-- ~~`Ctrl + S`~~ - **Không cần** (auto-save)
-- `Tab` - Navigate giữa fields
+### Task Editor (Auto-save)
+- `Escape` - Close editor (auto-save already works)
+- `Tab` - Navigate between fields
 - `Enter` - Confirm dropdown selections
 
 ## 🔧 Development Notes
 
-### 🆕 Auto-save Implementation
+### Auto-save Implementation
 ```javascript
 // Setup auto-save event listeners
 function setupAutoSave() {
@@ -327,25 +402,70 @@ function toggleImportantButton() {
 }
 ```
 
+### Mobile Sidebar Highlighting Implementation
+```javascript
+// Enhanced highlighting with immediate visual feedback
+showSidebar() {
+    // ... sidebar show logic ...
+    
+    // Force refresh active state with immediate visual feedback
+    setTimeout(() => {
+        const currentActiveItem = document.querySelector('.task-list-item.active');
+        if (currentActiveItem) {
+            // Apply immediate inline styles
+            currentActiveItem.style.background = 'var(--color-accent-primary)';
+            currentActiveItem.style.color = 'white';
+            
+            // Remove inline styles after CSS takes over
+            setTimeout(() => {
+                currentActiveItem.style.background = '';
+                currentActiveItem.style.color = '';
+            }, 200);
+        }
+    }, 100);
+}
+
+// Force refresh method with reflow
+refreshSidebarHighlighting() {
+    const activeListItem = document.querySelector('.task-list-item.active');
+    if (activeListItem) {
+        // Force CSS refresh by temporarily removing and re-adding classes
+        activeListItem.classList.remove('active');
+        activeListItem.offsetHeight; // Force reflow
+        
+        setTimeout(() => {
+            activeListItem.classList.add('active');
+            // Additional force refresh with temporary class
+            activeListItem.classList.add('force-active');
+            setTimeout(() => {
+                activeListItem.classList.remove('force-active');
+            }, 100);
+        }, 10);
+    }
+}
+```
+
 ### LocalStorage Keys
 - `notes_currentNoteId` - ID of currently open note
 - `notes_editorState` - Editor state and form data
 - `notes_cachedNote` - Cache note data for instant display
+- `currentTab` - Current active tab (notes/tasks) for mobile sync
 
 ### Browser Compatibility
 - **Modern Browsers**: Chrome, Firefox, Safari, Edge (latest versions)
 - **ContentEditable**: Rich text editor requires modern browser support
 - **CSS Variables**: Uses CSS custom properties
+- **Safe Area**: Enhanced mobile browser support with safe-area-inset
 - **Backdrop Filter**: Modal blur effect (may not support older browsers)
 
 ### Known Limitations
 - **MockAPI Rate Limits**: Free tier has request limits
 - **Rich Text**: No image support, only text formatting
-- **Mobile UX**: Optimized for desktop, basic mobile experience
+- **Mobile UX**: Optimized for desktop, enhanced mobile experience
 - **Offline**: No offline support (requires internet)
 - **Auto-save**: Only saves when title exists (prevents empty tasks)
 
-## 📱 Mobile Interface
+## 📱 Mobile Interface Details
 
 ### Smart Header Design
 The mobile interface features a compact smart header that includes:
@@ -354,7 +474,7 @@ The mobile interface features a compact smart header that includes:
 - **Hamburger Toggle**: ☰/✕ button to show/hide sidebar
 - **Navigation Tabs**: Switch between Notes and Tasks
 - **Search Bar** (Notes): Mobile search input synced with desktop
-- **List Selector** (Tasks): Dropdown to switch between task lists
+- **List Selector** (Tasks): Dropdown to switch between task lists (4 built-in only)
 
 **Mobile Navigation:**
 ```
@@ -367,14 +487,23 @@ The mobile interface features a compact smart header that includes:
 - **Smooth Animations**: 0.3s sidebar slide, 0.15s dropdown
 - **Synchronized**: Mobile actions sync with desktop functionality
 - **Overlay**: Dark overlay when sidebar is open
-- **Auto-Close**: Sidebar closes when clicking outside
+- **Auto-Close**: Sidebar closes when clicking outside or selecting lists
+- **Fixed Highlighting**: Task list items properly highlight when active
 
-### Mobile Workflow
-1. **Toggle Sidebar**: Tap ☰ to open/close sidebar
-2. **Switch Apps**: Tap Notes/Tasks tabs in header
-3. **Search** (Notes): Use header search bar
-4. **Select List** (Tasks): Tap list selector dropdown
-5. **Navigate**: All desktop features available in mobile
+### Mobile Sidebar Behavior
+- **Slide Animation**: Smooth slide-in from left with transform
+- **Overlay Background**: Dark backdrop when open
+- **Auto-Close**: Closes when selecting task lists or clicking outside
+- **Proper Highlighting**: Active task lists now show blue background and white text
+- **Sync with Dropdown**: Selection syncs between sidebar and header dropdown
+- **All Lists Available**: Sidebar shows all lists (built-in + custom)
+
+### Mobile vs Desktop Differences
+- **Header Dropdown**: Mobile shows only 4 built-in lists (My Day, All Tasks, Important, Completed)
+- **Sidebar**: Mobile sidebar shows all lists including custom ones
+- **Navigation**: Mobile uses smart header, desktop uses traditional sidebar navigation
+- **Search**: Mobile search in header, desktop search in sidebar/main content
+- **Touch Optimization**: Larger touch targets and simplified interactions on mobile
 
 ### Technical Implementation
 ```javascript
@@ -382,42 +511,29 @@ The mobile interface features a compact smart header that includes:
 class MobileInterface {
     constructor() {
         this.isMobile = window.innerWidth <= 768;
+        this.sidebarVisible = false;
+        this.currentPage = this.getCurrentPage();
         this.init();
+        this.setupSafeAreaSupport();
     }
     
-    // Smart header creation
+    // Smart header creation with navigation and controls
     createMobileHeader() {
-        // Navigation + Search/List selector
+        // Creates navigation tabs + search/list selector based on current page
     }
     
-    // Sidebar management
+    // Enhanced sidebar management with proper highlighting
     toggleSidebar() {
-        // Smooth slide animation
+        // Smooth slide animation with proper active state management
+    }
+    
+    // Synchronized list selection between dropdown and sidebar
+    selectList(listType) {
+        // Updates both mobile dropdown header and sidebar highlighting
+        // Clears conflicts and ensures proper visual feedback
     }
 }
 ```
-
-## 📱 Responsive Design
-
-### Breakpoints
-- **Desktop**: > 768px - Full 3-column layout with sidebar
-- **Mobile**: ≤ 768px - Smart header + collapsible sidebar
-
-### Mobile Optimizations
-- **Smart Header**: Compact navigation and controls
-- **Fixed Sidebar**: Slides in from left with overlay
-- **Touch Targets**: Minimum 44px for all interactive elements
-- **Simplified Layout**: Single column with smart header
-- **Synchronized Search**: Mobile search syncs with desktop
-- **List Management**: Quick list switching via header dropdown
-
-### Mobile-Specific Features
-- **Hamburger Menu**: ☰/✕ toggle for sidebar
-- **Header Tabs**: Direct navigation between Notes/Tasks
-- **Dropdown Lists**: Quick task list selection
-- **Overlay Background**: Dark backdrop when sidebar open
-- **Auto-Close**: Sidebar closes on outside click
-- **Responsive Text**: Smaller fonts on very small screens (<480px)
 
 ## 🚀 Future Enhancements
 
@@ -470,12 +586,20 @@ class MobileInterface {
 3. **New list not saving**: Fixed logic to always save even with empty names
 4. **Different hover colors**: Unified all to `#2d2d30`
 5. **Slow animations**: Optimized to `0.15s ease`
-6. **🆕 Auto-save not working**: 
+6. **Auto-save not working**: 
    - Check title is not empty
    - See console logs for errors
    - Verify API connection
+7. **Mobile sidebar not highlighting**: Fixed with enhanced CSS specificity and JavaScript refresh
+8. **Rich text showing HTML**: Fixed with enhanced content sanitization
 
-### 🆕 Auto-save Debug
+### Mobile-Specific Issues
+1. **Sidebar not highlighting**: Fixed with consolidated CSS rules and immediate visual feedback
+2. **Dropdown not syncing**: Fixed synchronization between header dropdown and sidebar
+3. **Safe area padding**: Enhanced support for mobile browsers with safe-area-inset
+4. **Touch targets too small**: All interactive elements minimum 44px
+
+### Auto-save Debug
 ```javascript
 // Enable debug logging
 window.DEBUG_AUTOSAVE = true;
@@ -490,27 +614,50 @@ document.getElementById('taskTitle').addEventListener('blur', () => {
 });
 ```
 
+### Mobile Debug
+```javascript
+// Enable mobile debug logging
+window.DEBUG_MOBILE = true;
+
+// Check mobile highlighting
+console.log('Mobile sidebar visible:', this.sidebarVisible);
+console.log('Active list item:', document.querySelector('.task-list-item.active'));
+
+// Force refresh mobile highlighting
+window.mobileInterface.forceSyncMobileHeader();
+```
+
 ### Debug Tips
 - Open browser console to see logs
 - Check API calls in Network tab
 - Verify localStorage data
 - Test with `encoder.html` if API issues
 - **Auto-save**: Check console for auto-save events
+- **Mobile**: Test on actual mobile device or browser dev tools mobile mode
 
 ---
 
-**Version**: 2.3.0 🆕  
+**Version**: 2.4.0  
 **Last Updated**: February 2026  
 **Tech Stack**: Vanilla JavaScript, MockAPI, CSS Variables  
 **License**: MIT  
 **Author**: BiBo Development Team
 
-### 🆕 Changelog v2.3.0
-- ✅ **Auto-save Task Editor**: Removed Save/Cancel buttons
-- ✅ **Seamless UX**: Auto-save on blur, change, click
-- ✅ **Silent Operations**: No notifications when auto-saving
-- ✅ **Enhanced Workflow**: Microsoft To Do-like editing experience
-- ✅ **Updated Documentation**: Comprehensive auto-save guide
+### Changelog v2.4.0
+- ✅ **Fixed Mobile Sidebar Highlighting**: Task list items now properly highlight on mobile
+- ✅ **Enhanced CSS Specificity**: Consolidated mobile active state rules with maximum specificity
+- ✅ **Immediate Visual Feedback**: Uses temporary inline styles for instant highlighting
+- ✅ **Force Refresh Mechanism**: Removes and re-adds classes to force style updates
+- ✅ **Synchronized Mobile Interface**: Dropdown and sidebar selection stay in sync
+- ✅ **Auto-Close Sidebar**: Sidebar closes when selecting task lists on mobile
+- ✅ **Cleanup Redundant Code**: Removed duplicate CSS rules and optimized mobile interface
+- ✅ **Enhanced Documentation**: Comprehensive mobile interface and troubleshooting guide
+
+### Previous Versions
+- **v2.3.0**: Auto-save Task Editor, Silent Operations, Enhanced UX
+- **v2.2.0**: Mobile Interface with Smart Header, Safe Area Support
+- **v2.1.0**: Rich Text Editor Fullscreen Mode, Window Controls
+- **v2.0.0**: Tasks Management System, Microsoft To Do Style Interface
 
 ## 📞 Support
 
@@ -519,3 +666,4 @@ If you encounter issues or have questions:
 2. Check browser console for debugging
 3. Verify API URLs in `config.js`
 4. Test with `encoder.html` if need to update API
+5. For mobile issues, test on actual device and check mobile debug logs

@@ -5,7 +5,7 @@
     --color-bg-tertiary: #2b2b2b;
     --color-bg-elevated: #2d2d30;
     --color-bg-input: #3c3c3c;
-    --color-bg-hover: #2a2d2e;
+    --color-bg-hover: #2d2d30;
     --color-bg-active: #37373d;
 
     --color-border: #3e3e42;
@@ -52,6 +52,20 @@
     --transition-fast: 0.15s ease;
     --transition-normal: 0.2s ease;
     --transition-slow: 0.3s ease;
+
+    /* Safe area insets for mobile */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+
+    /* Mobile safe area fallbacks */
+    --mobile-safe-bottom: max(20px, var(--safe-area-inset-bottom));
+    --mobile-safe-top: max(0px, var(--safe-area-inset-top));
+
+    /* Dynamic viewport height for mobile browsers */
+    --vh: 1vh;
+    --mobile-vh: calc(var(--vh, 1vh) * 100);
 }
 
 * {
@@ -62,6 +76,11 @@
 
 html {
     scroll-behavior: smooth;
+    /* Enhanced mobile browser support */
+    -webkit-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    /* Prevent horizontal scrolling on mobile */
+    overflow-x: hidden;
 }
 
 body {
@@ -74,6 +93,11 @@ body {
     flex-direction: column;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* Enhanced safe area support for mobile browsers */
+    padding-top: var(--safe-area-inset-top);
+    padding-bottom: var(--safe-area-inset-bottom);
+    padding-left: var(--safe-area-inset-left);
+    padding-right: var(--safe-area-inset-right);
 }
 
 .container {
@@ -91,6 +115,11 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    /* Disable text selection for sidebar */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .sidebar-header {
@@ -217,6 +246,11 @@ body {
     overflow-y: auto;
     background: var(--color-bg-primary);
     scroll-behavior: smooth;
+    /* Disable text selection for note items */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .note-item {
@@ -425,6 +459,7 @@ body {
 /* View Mode */
 .view-mode {
     padding: var(--spacing-xl);
+    padding-bottom: 10rem;
 }
 
 .view-mode h2 {
@@ -580,6 +615,13 @@ body {
     position: sticky;
     top: 0;
     z-index: 100;
+    /* Enhanced safe area support */
+    padding-top: var(--safe-area-inset-top);
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .mobile-header-content {
@@ -679,13 +721,6 @@ body {
     padding: 2px 4px;
     border-radius: 3px;
     font-weight: 500;
-}
-
-/* Mobile Notes Section */
-.mobile-notes-section {
-    flex: 1;
-    padding-bottom: 15px;
-    margin-bottom: -1px;
 }
 
 .mobile-search-wrapper {
@@ -814,6 +849,12 @@ body {
     background: var(--color-bg-hover);
 }
 
+.mobile-list-option.active {
+    background: var(--color-accent-primary);
+    color: white;
+    font-weight: 500;
+}
+
 .mobile-list-divider {
     height: 1px;
     background: var(--color-border);
@@ -846,13 +887,19 @@ body {
 
     .container {
         flex-direction: column;
+        /* Use dynamic viewport height for better mobile browser support */
+        height: var(--mobile-vh);
+        min-height: var(--mobile-vh);
+        /* Adjust container height for mobile safe areas */
+        height: calc(var(--mobile-vh) - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
+        min-height: calc(var(--mobile-vh) - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
     }
 
     .sidebar {
         position: fixed;
-        top: 0;
+        top: var(--safe-area-inset-top);
         left: 0;
-        height: 100vh;
+        height: calc(var(--mobile-vh) - var(--safe-area-inset-top));
         width: 280px;
         z-index: 100;
         transform: translateX(-100%);
@@ -863,6 +910,8 @@ body {
     .editor-container {
         flex: 1;
         width: 100%;
+        /* Ensure content doesn't get cut off by browser UI */
+        min-height: calc(var(--mobile-vh) - 120px - var(--safe-area-inset-top) - var(--safe-area-inset-bottom));
     }
 
     .form-row {
@@ -884,7 +933,8 @@ body {
     .view-mode {
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        max-height: calc(100vh - 120px) !important;
+        max-height: calc(var(--mobile-vh) - 120px - var(--safe-area-inset-top) - var(--safe-area-inset-bottom)) !important;
+        padding-bottom: calc(var(--mobile-safe-bottom) + 20px) !important;
     }
 
     /* Mobile code block handling */
@@ -893,7 +943,8 @@ body {
         font-size: var(--font-sm) !important;
         overflow-x: auto !important;
         overflow-y: auto !important;
-        max-height: calc(100vh - 200px) !important;
+        max-height: calc(var(--mobile-vh) - 200px - var(--safe-area-inset-top) - var(--safe-area-inset-bottom)) !important;
+        padding-bottom: calc(var(--mobile-safe-bottom) + var(--spacing-lg)) !important;
     }
 
     /* Override inline styles on mobile for code blocks */
@@ -921,6 +972,28 @@ body {
         justify-content: space-between;
         gap: var(--spacing-sm);
     }
+}
+
+/* Allow text selection in inputs and textareas */
+input,
+textarea,
+.search-input,
+.mobile-search-input,
+.inline-edit-input {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
+}
+
+/* Allow text selection in content areas where users need to select text */
+.view-mode .content-text,
+.rich-editor,
+.edit-modal-textarea {
+    -webkit-user-select: text !important;
+    -moz-user-select: text !important;
+    -ms-user-select: text !important;
+    user-select: text !important;
 }
 
 /* Inline Editing */
@@ -1237,6 +1310,11 @@ body {
     margin-bottom: 15px;
     border-bottom: 1px solid var(--color-border-light);
     position: relative;
+    /* Disable text selection */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .nav-link {

@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tasks - BiBo</title>
     <link rel="icon" type="image/png" href="./assets/icon.png">
     <link rel="stylesheet" href="./style.css">
@@ -25,11 +25,11 @@
             
             <!-- Task Lists -->
             <div class="task-lists">
-                <div class="task-list-item" data-list="today" onclick="switchTaskList('today')">
+                <div class="task-list-item active" data-list="today" onclick="switchTaskList('today')">
                     <div class="list-name">My Day</div>
                     <div class="list-count">0</div>
                 </div>
-                <div class="task-list-item active" data-list="all" onclick="switchTaskList('all')">
+                <div class="task-list-item" data-list="all" onclick="switchTaskList('all')">
                     <div class="list-name">All Tasks</div>
                     <div class="list-count">0</div>
                 </div>
@@ -64,7 +64,7 @@
         <div class="main-content">
             <!-- List Header -->
             <div class="list-header">
-                <h2 id="listTitle">All Tasks</h2>
+                <h2 id="listTitle">My Day</h2>
                 <div class="list-actions">
                     <!-- Search -->
                     <div class="search-box">
