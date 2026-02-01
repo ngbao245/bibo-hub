@@ -22,7 +22,10 @@ class RichTextEditor {
                             <button class="btn-toolbar" data-command="insertUnorderedList" title="Bullet List">• List</button>
                             <button class="btn-toolbar" data-command="insertOrderedList" title="Numbered List">1. List</button>
                         </div>
-                        <button class="btn-close" data-action="close">×</button>
+                        <div class="window-controls">
+                            <button class="btn-close" data-action="fullscreen" title="Toggle Fullscreen">⛶</button>
+                            <button class="btn-close" data-action="close">×</button>
+                        </div>
                     </div>
                     <div class="richtext-editor" contenteditable="true" id="richtextEditor">${content}</div>
                     <div class="richtext-actions">
@@ -60,6 +63,10 @@ class RichTextEditor {
             btn.addEventListener('click', () => this.close());
         });
 
+        this.container.querySelectorAll('[data-action="fullscreen"]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleFullscreen());
+        });
+
         // Keyboard shortcuts
         this.editor.addEventListener('keydown', (e) => this.handleKeydown(e));
         
@@ -81,6 +88,11 @@ class RichTextEditor {
         // Escape: Close
         else if (e.key === 'Escape') {
             this.close();
+        }
+        // F11: Toggle fullscreen
+        else if (e.key === 'F11') {
+            e.preventDefault();
+            this.toggleFullscreen();
         }
         // Ctrl+B: Bold
         else if (e.ctrlKey && e.key === 'b') {
@@ -133,6 +145,29 @@ class RichTextEditor {
         range.collapse(false);
         selection.removeAllRanges();
         selection.addRange(range);
+    }
+
+    toggleFullscreen() {
+        const modal = this.container.querySelector('.richtext-modal');
+        const content = this.container.querySelector('.richtext-modal-content');
+        const btn = this.container.querySelector('[data-action="fullscreen"]');
+        
+        if (modal.classList.contains('fullscreen')) {
+            // Exit fullscreen
+            modal.classList.remove('fullscreen');
+            btn.innerHTML = '⛶';
+            btn.title = 'Fullscreen';
+        } else {
+            // Enter fullscreen
+            modal.classList.add('fullscreen');
+            btn.innerHTML = '🗗';
+            btn.title = 'Exit Fullscreen';
+        }
+        
+        // Refocus editor after toggle
+        setTimeout(() => {
+            this.editor.focus();
+        }, 100);
     }
 
     getContent() {

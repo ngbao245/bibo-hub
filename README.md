@@ -1,177 +1,355 @@
-README.md
+# BiBo - Notes & Tasks Management App
 
-# Share Notes
+Ứng dụng quản lý ghi chú và công việc với giao diện Microsoft To Do style, hỗ trợ rich text editing và quản lý tasks với custom lists.
 
-Ứng dụng ghi chú học tập với giao diện giống Notepad++, sử dụng MockAPI để lưu trữ dữ liệu.
+## 🚀 Tính năng chính
 
-## Tổng quan
+### 📝 Notes Management
+- **Rich Text Editor**: Hỗ trợ bold, italic, underline, bullet lists, numbered lists
+- **Fullscreen Mode**: Chế độ toàn màn hình cho việc viết (F11 hoặc nút ⛶)
+- **Window Controls**: Nút fullscreen (màu xám) và close (màu đỏ) như Windows Explorer
+- **Inline Editing**: Chỉnh sửa trực tiếp title và content
+- **Search**: Tìm kiếm notes theo title và content
+- **Categories & Tags**: Phân loại notes theo type, language, tags
+- **URLs Management**: Lưu trữ tối đa 5 URLs per note
+- **Auto-save**: Tự động lưu form data khi đang chỉnh sửa
 
-Single-page application (SPA) được xây dựng bằng Vanilla JavaScript, không sử dụng framework. App có giao diện 2 panel (sidebar + editor) với theme tối giống VS Code, hỗ trợ tạo/sửa/xóa ghi chú, tìm kiếm, và lưu trạng thái vào localStorage để tiếp tục làm việc sau khi refresh.
+### ✅ Tasks Management (Microsoft To Do Style)
+- **3-Column Layout**: Lists → Tasks → Editor (giống Microsoft To Do desktop)
+- **Default View**: "My Day" thay vì "All Tasks" khi mở app
+- **Auto-save Task Editor**: Không cần nút Save/Cancel, tự động lưu khi:
+  - **Inputs**: Auto-save khi blur (click ra ngoài)
+  - **Dropdowns**: Auto-save khi chọn option
+  - **Toggle buttons**: Auto-save khi click
+- **Custom Lists**: Tạo và quản lý lists tùy chỉnh với auto-naming
+- **Smart Task Management**: 
+  - **My Day**: Tasks có due date hôm nay + overdue + daily recurring tasks
+  - **All Tasks**: Tất cả tasks
+  - **Important**: Tasks có priority = high
+  - **Completed**: Tasks đã hoàn thành
+- **Task Features**:
+  - Due date với dropdown (Today, Tomorrow, Pick a date)
+  - Priority levels (High/Normal) 
+  - **Daily Recurring Tasks**: Luôn xuất hiện trong My Day mỗi ngày
+  - Task descriptions và URLs (tối đa 3)
+- **Move Tasks**: Di chuyển tasks giữa các lists với auto-save và refresh
+- **Circular Checkboxes**: Thiết kế giống Microsoft To Do
+- **Context Menus**: Right-click để rename/delete lists (màu bình thường, không đỏ)
+- **Inline List Editing**: Click để edit list names, auto-save khi blur/enter
 
-## API Configuration
+### 🎨 UI/UX Features
+- **Dark Theme**: Giao diện tối chuyên nghiệp với CSS variables
+- **Edge-style Tabs**: Navigation tabs sát nhau không có gaps
+- **Unified Design**: Cùng sidebar width (280px) và color scheme
+- **Consistent Hover Colors**: Tất cả hover effects dùng #2d2d30 (var(--color-bg-elevated))
+- **Smooth Animations**: Dropdown animations 0.15s ease cho consistency
+- **Responsive Design**: Tương thích mobile và desktop
+- **No Border Radius**: Form inputs sử dụng border-bottom only
+- **Silent Operations**: Không có toast notifications khi move tasks
 
-**MockAPI Endpoint:** Encoded trong code (xem encoder.html để update)
+## 🏗️ Kiến trúc kỹ thuật
 
-### Cách update API URL
+### Database Schema (MockAPI)
+Sử dụng single table approach với field `type` để phân biệt:
 
-1. Mở file `encoder.html` trong browser
+**Notes Table:**
+```json
+{
+  "id": "string",
+  "title": "string",
+  "content": "string (HTML)",
+  "type": "note|vocabulary|code|course",
+  "language": "vi|en",
+  "source": "string",
+  "tags": "string (comma-separated)",
+  "example": "string",
+  "url1": "string",
+  "url2": "string",
+  "url3": "string",
+  "url4": "string", 
+  "url5": "string",
+  "createdAt": "ISO string",
+  "updatedAt": "ISO string"
+}
+```
+
+**Tasks Table (chứa cả tasks và lists):**
+```json
+{
+  "id": "string",
+  "type": "task|list",
+  "title": "string",
+  "name": "string", // For lists compatibility
+  "description": "string", // Tasks only
+  "parentId": "string", // Tasks: parent list ID, Lists: null
+  "status": "pending|completed", // Tasks only
+  "priority": "normal|high", // Tasks only
+  "dueDate": "ISO string", // Tasks only
+  "category": "string", // Tasks only
+  "recurring": boolean, // Tasks only - daily recurring
+  "url1": "string", // Tasks only
+  "url2": "string", // Tasks only
+  "url3": "string", // Tasks only
+  "createdAt": "ISO string",
+  "updatedAt": "ISO string",
+  "completedDate": "ISO string" // Tasks only
+}
+```
+
+### File Structure
+```
+├── index.html              # Notes page
+├── tasks.html             # Tasks page  
+├── app.js                 # Notes logic
+├── tasks.js               # Tasks logic
+├── style.css              # Base styles + Notes styles
+├── tasks.css              # Tasks-specific styles (extends style.css)
+├── richtext-editor.js     # Rich text editor class
+├── richtext-editor.css    # Rich text editor styles
+├── storage.js             # LocalStorage utilities
+├── config.js              # API configuration (encoded)
+├── encoder.html           # API URL encoding tool
+└── README.md              # Documentation
+```
+
+### API Configuration
+File `config.js` chứa centralized API endpoints (encoded):
+```javascript
+const API_CONFIG = {
+    NOTES: 'encoded_url_here',
+    TASKS: 'encoded_url_here'
+};
+```
+
+**Cách update API URL:**
+1. Mở `encoder.html` trong browser
 2. Nhập API URL mới
-3. Click "Encode"
-4. Copy đoạn mã đã encode
-5. Paste vào `config.js` thay thế giá trị `ENCODED` trong object `API_CONFIG`
+3. Click "Encode" 
+4. Copy mã đã encode vào `config.js`
 
-### Tables
+## 🎯 Key Implementation Details
 
-#### 1. `notes` table
-- `id` - auto-generated
-- `title` - tiêu đề ghi chú
-- `content` - nội dung chi tiết
-- `type` - loại (note, vocabulary, code, course)
-- `language` - ngôn ngữ (vi, en)
-- `source` - nguồn (Udemy, YouTube, Book...)
-- `tags` - từ khóa (phân cách bằng dấu phẩy)
-- `example` - ví dụ minh họa
-- `url1` - link tài liệu 1
-- `url2` - link tài liệu 2
-- `url3` - link tài liệu 3
-- `url4` - link tài liệu 4
-- `url5` - link tài liệu 5
-- `createdAt` - datetime
-- `updatedAt` - datetime
+### Tasks Management Architecture
+- **Single Table Design**: Tasks và Lists cùng table, phân biệt bằng `type` field
+- **Parent-Child Relationship**: Tasks có `parentId` trỏ đến List ID
+- **Event Delegation**: Sử dụng event delegation cho task interactions
+- **Optimistic UI**: Update UI trước, sync API sau
+- **Auto-save**: Move tasks giữa lists tự động lưu và refresh task list
+- **Smart Counts**: Custom list counts được update real-time
 
-#### 2. `tags` table
-- `id` - auto-generated
-- `name` - tên tag
-- `color` - màu sắc
-- `count` - số lượng notes
-- `createdAt` - datetime
+### My Day Logic
+```javascript
+case 'today':
+    filtered = filtered.filter(task => 
+        task.status !== 'completed' && (
+            task.recurring === true ||  // Daily recurring tasks always show
+            (task.dueDate && new Date(task.dueDate).toDateString() === today) ||
+            isOverdue(task.dueDate)
+        )
+    );
+```
 
-## Tính năng
+### Rich Text Editor
+- **ContentEditable**: Sử dụng contenteditable với execCommand API
+- **Fullscreen Mode**: Toggle với nút ⛶/🗗 hoặc phím F11
+- **Window Controls**: `.window-controls` div chứa fullscreen + close buttons
+- **Toolbar State**: Dynamic update button states theo selection
+- **Keyboard Shortcuts**: 
+  - Ctrl+B/I/U (formatting)
+  - Ctrl+S (save)
+  - Escape (close)
+  - F11 (toggle fullscreen)
+  - Tab (insert 4 spaces)
 
-- ✅ Tạo/sửa/xóa ghi chú
-- ✅ Tìm kiếm theo tiêu đề và nội dung
-- ✅ Giao diện 2 panel: sidebar (danh sách) + editor (xem/sửa)
-- ✅ Theme tối giống code editor
-- ✅ Hỗ trợ 5 URL để đính kèm tài liệu
-- ✅ Phân loại theo type, language, tags
-- ✅ Keyboard shortcuts
-- ✅ LocalStorage - Lưu trạng thái note đang mở và form đang edit
-- ✅ Inline editing - Double click để edit title
-- ✅ Rich Text Editor - contenteditable với toolbar (Bold, Italic, Underline, Lists)
-- ✅ Auto-save form data khi đang edit
-- ✅ CSS Variables - Dễ dàng customize theme
-- ✅ API Encoding - Mã hóa API URL trong code
+### UI Consistency Patterns
+- **Hover Colors**: Tất cả elements sử dụng `var(--color-bg-elevated)` (#2d2d30)
+- **Animation Timing**: Dropdowns sử dụng `0.15s ease` cho consistency
+- **Form Styling**: Không border-radius, chỉ border-bottom cho inputs
+- **Navigation**: Edge-style tabs với `margin-left: -1px` để sát nhau
+- **Context Menu**: Delete items có màu bình thường, không đỏ
 
-## Keyboard Shortcuts
+### Performance Optimizations
+- **Event Delegation**: Tránh attach nhiều event listeners
+- **Debounced Search**: Search với 300ms delay
+- **Optimistic UI**: Update UI trước, API sau
+- **Cache Strategy**: LocalStorage cache để instant load
+- **Minimal DOM Manipulation**: Batch updates khi có thể
+
+## 🚀 Cách sử dụng
+
+### Notes
+1. **Tạo note mới**: Click "+" trong sidebar
+2. **Chỉnh sửa**: 
+   - Double-click title để inline edit
+   - Double-click content để mở rich text editor
+   - Click "Edit" để mở form mode
+3. **Rich text editing**: 
+   - Sử dụng toolbar hoặc keyboard shortcuts
+   - Click nút ⛶ hoặc nhấn F11 để fullscreen
+   - Ctrl+S để save, Escape để close
+4. **Tìm kiếm**: Gõ trong search box để filter notes
+5. **URLs**: Thêm tối đa 5 URLs vào mỗi note
+
+### Tasks  
+1. **Default View**: App mở với "My Day" view
+2. **Tạo list**: Click "+ New list" trong sidebar
+   - Lists tự động đặt tên "Untitled list", "Untitled list (1)", etc.
+   - Click vào tên để edit inline, auto-save khi blur/enter
+   - Right-click để rename/delete (màu bình thường)
+3. **Tạo task**: Click "Add a task" ở bottom của task list
+4. **Edit task**: Click vào task để mở editor bên phải
+   - **Auto-save**: Không cần nút Save/Cancel
+   - **Inputs**: Tự động lưu khi click ra ngoài (blur)
+   - **Dropdowns**: Tự động lưu khi chọn option
+   - **Toggle buttons**: Tự động lưu khi click
+5. **Move task**: Trong editor, click "In list: [Name]" để chọn list khác
+6. **Due date**: Click "Pick a date" để set due date với dropdown
+7. **Daily Recurring**: Check để task luôn xuất hiện trong My Day
+8. **Complete**: Click circular checkbox để mark complete
+
+### My Day Logic
+- **Tasks hôm nay**: Tasks có due date = today
+- **Overdue tasks**: Tasks quá hạn chưa complete
+- **Daily recurring tasks**: Luôn hiện mỗi ngày (bất kể due date)
+
+## 🎨 Customization
+
+### Theme Colors
+```css
+:root {
+  --color-accent-primary: #007acc;    /* Màu chủ đạo */
+  --color-bg-primary: #1e1e1e;        /* Màu nền chính */
+  --color-bg-elevated: #2d2d30;       /* Màu hover (consistent) */
+  --color-text-primary: #d4d4d4;      /* Màu chữ chính */
+  --color-bg-secondary: #252526;      /* Màu nền phụ */
+  --color-border: #3e3e42;            /* Màu viền */
+}
+```
+
+### Animation Timing
+```css
+:root {
+  --transition-fast: 0.15s ease;      /* Dropdowns, quick interactions */
+  --transition-normal: 0.2s ease;     /* Modals, standard transitions */
+  --transition-slow: 0.3s ease;       /* Complex animations */
+}
+```
+
+## ⌨️ Keyboard Shortcuts
 
 ### Global
-- `Ctrl + S` - Lưu note (khi đang edit form)
-- `Esc` - Hủy edit
-- `Double Click` - Edit title (ở header) hoặc content (mở rich text editor)
+- `Escape` - Cancel/Close
+- `Double Click` - Edit title hoặc content
 
-### Rich Text Editor (Modal)
+### Rich Text Editor
 - `Ctrl + B` - Bold text
-- `Ctrl + I` - Italic text
+- `Ctrl + I` - Italic text  
 - `Ctrl + U` - Underline text
 - `Tab` - Insert 4 spaces
-- `Ctrl + S` - Save và đóng editor
-- `Esc` - Đóng editor (không save)
+- `F11` - Toggle fullscreen
+- `Ctrl + S` - Save và close
+- `Escape` - Close (không save)
 
-## Cách sử dụng
+## 🔧 Development Notes
 
-1. Mở file `index.html` trong trình duyệt
-2. Click nút `+` để tạo note mới
-3. Click vào note trong sidebar để xem
-4. Click `Edit` để sửa note (form mode)
-5. Double click vào title để edit nhanh
-6. Double click vào content để mở Rich Text Editor
-7. Trong Rich Text Editor:
-   - Dùng toolbar hoặc Ctrl+B/I/U để format text
-   - Click nút "• List" hoặc "1. List" để tạo danh sách
-   - Tab để insert spaces
-   - Phải click Save/Cancel hoặc Esc để đóng (không đóng khi click outside)
-8. Nhập URL vào các trường url1-url5 để đính kèm tài liệu
-9. Tắt tab và mở lại - note đang xem sẽ tự động hiển thị
-
-## Files
-
-- `index.html` - giao diện chính
-- `config.js` - cấu hình API chung cho tất cả tính năng (có mã hóa API)
-- `app.js` - logic xử lý chính
-- `storage.js` - quản lý localStorage (lưu trạng thái)
-- `richtext-editor.js` - Rich Text Editor class với contenteditable
-- `richtext-editor.css` - Styles cho rich text editor
-- `style.css` - theme với CSS variables
-- `encoder.html` - tool để mã hóa API URL (không cần deploy, chỉ dùng local)
-- `README.md` - tài liệu này
-
-## Tech Stack
-
-- Vanilla JavaScript (no framework)
-- MockAPI (CRUD operations với REST API)
-- CSS Variables (theme customization)
-- LocalStorage (state persistence + cache)
-- contenteditable API (rich text editing)
-- document.execCommand (text formatting - deprecated nhưng vẫn work)
-
-## LocalStorage Keys
-
+### LocalStorage Keys
 - `notes_currentNoteId` - ID của note đang mở
-- `notes_editorState` - Trạng thái editor và form data khi đang edit
-- `notes_cachedNote` - Cache note data để hiển thị ngay khi refresh (không cần đợi API)
+- `notes_editorState` - Trạng thái editor và form data
+- `notes_cachedNote` - Cache note data để instant display
 
-## CSS Variables
+### Browser Compatibility
+- **Modern Browsers**: Chrome, Firefox, Safari, Edge (latest versions)
+- **ContentEditable**: Rich text editor requires modern browser support
+- **CSS Variables**: Sử dụng CSS custom properties
+- **Backdrop Filter**: Modal blur effect (có thể không support older browsers)
 
-Có thể customize theme bằng cách thay đổi CSS variables trong `:root`:
-- `--color-accent-primary` - Màu chủ đạo (#007acc)
-- `--color-bg-primary` - Màu nền chính (#1e1e1e)
-- `--color-text-primary` - Màu chữ chính (#d4d4d4)
-- Và nhiều biến khác...
+### Known Limitations
+- **MockAPI Rate Limits**: Free tier có giới hạn requests
+- **Rich Text**: Không support images, chỉ text formatting
+- **Mobile UX**: Tối ưu cho desktop, mobile experience cơ bản
+- **Offline**: Không có offline support (cần internet)
 
-## Kiến trúc & Flow
+## 📱 Responsive Design
 
-### Init Flow
-1. **Instant Load**: Restore state từ localStorage cache ngay lập tức (không đợi API)
-2. **Background Sync**: Fetch notes từ MockAPI
-3. **Update**: Cập nhật UI với data mới nhất từ API
+### Breakpoints
+- **Desktop**: > 768px - Full 3-column layout
+- **Tablet**: 768px - Sidebar thu gọn  
+- **Mobile**: < 768px - Stack layout, always show task actions
 
-### State Management
-- **Optimistic UI**: Update UI ngay lập tức, sync API ở background
-- **Cache Strategy**: LocalStorage cache note data để instant display khi refresh
-- **Auto-save**: Form data tự động lưu vào localStorage khi đang edit
+### Mobile Optimizations
+- Task actions luôn visible (không cần hover)
+- Sidebar width giảm xuống 240px
+- Form elements stack vertically
+- Touch-friendly button sizes (min 44px)
 
-### Performance
-- **Debounced Search**: 300ms delay để tránh search quá nhiều lần
-- **Smooth Animations**: CSS transitions với will-change optimization
-- **Lazy Rendering**: Chỉ render filtered notes, không render toàn bộ
+## 🚀 Future Enhancements
 
-## Technical Details
+### Planned Features
+- **Drag & Drop**: Reorder tasks và lists
+- **Keyboard Navigation**: Full keyboard support
+- **Export/Import**: JSON/CSV export
+- **Collaboration**: Real-time sharing
+- **Offline Support**: PWA với service worker
+- **Advanced Search**: Filters, date ranges
+- **Themes**: Multiple color schemes
+- **Attachments**: File upload support
+- **Recurring Logic**: Auto-recreate completed recurring tasks
 
-### API Integration
-- **MockAPI**: REST API với CRUD operations
-- **Error Handling**: Try-catch với fallback UI
-- **Optimistic Updates**: UI update trước, API call sau
+### Technical Improvements
+- **TypeScript**: Type safety
+- **State Management**: Centralized state (Redux/Zustand)
+- **Testing**: Unit và integration tests
+- **Build Process**: Webpack/Vite setup
+- **API Optimization**: GraphQL hoặc optimized REST
+- **Caching**: Smart caching strategies
+- **Performance**: Virtual scrolling cho large lists
 
-### Storage Strategy
-- **Cache-First**: Hiển thị cached data ngay, update sau
-- **State Persistence**: Lưu currentNoteId, editorState, cachedNote
-- **Auto-save**: Form fields auto-save mỗi khi input change
+## 🛠️ Setup & Deployment
 
-### UI/UX Features
-- **Inline Editing**: Double-click title để edit nhanh (inline input)
-- **Rich Text Editor**: Double-click content để mở modal editor với toolbar
-- **Modal Behavior**: Rich text modal KHÔNG đóng khi click outside (phải click Save/Cancel/X hoặc Esc)
-- **Keyboard Shortcuts**: Ctrl+B/I/U (format), Ctrl+S (save), Esc (cancel)
-- **Responsive**: Sidebar collapse trên mobile
-- **Toolbar State**: Buttons highlight khi cursor ở text có format đó
+### Local Development
+1. Clone repository
+2. Mở `index.html` hoặc `tasks.html` trong browser
+3. Không cần build process (vanilla JS)
 
-## Notes
+### API Setup
+1. Tạo MockAPI account tại mockapi.io
+2. Tạo 2 tables: `notes` và `tasks`
+3. Copy API URLs
+4. Mở `encoder.html`, encode URLs
+5. Paste vào `config.js`
 
-- Ứng dụng lưu trữ dữ liệu trên MockAPI (miễn phí, tối đa 2 tables)
-- Không cần backend hay database riêng
-- Có thể truy cập từ bất kỳ đâu có internet
-- LocalStorage lưu trạng thái để tiếp tục làm việc sau khi tắt tab
-- Instant load khi refresh nhờ cache strategy
-- Content được lưu dưới dạng HTML (rich text) trong database
-- Rich text editor KHÔNG có indent/outdent (đã bỏ vì UX phức tạp)
-- API URL được encode trong config.js để bảo mật (dùng encoder.html để update)
+### Deployment
+- **Static Hosting**: Vercel, Netlify, GitHub Pages
+- **No Backend Required**: Chỉ cần serve static files
+- **HTTPS Required**: Để CORS với MockAPI hoạt động
+
+## 🐛 Troubleshooting
+
+### Common Issues
+1. **"No tasks found"**: Kiểm tra My Day logic - cần tasks có due date hôm nay hoặc recurring
+2. **List counts không update**: Đã fix với `updateTaskCounts()` cho custom lists
+3. **New list không save**: Đã fix logic để luôn save dù tên trống
+4. **Hover colors khác nhau**: Đã unify tất cả thành `#2d2d30`
+5. **Animation chậm**: Đã optimize thành `0.15s ease`
+
+### Debug Tips
+- Mở browser console để xem logs
+- Kiểm tra API calls trong Network tab
+- Verify localStorage data
+- Test với `encoder.html` nếu API issues
+
+---
+
+**Phiên bản**: 2.2.0  
+**Cập nhật cuối**: February 2026  
+**Tech Stack**: Vanilla JavaScript, MockAPI, CSS Variables  
+**License**: MIT  
+**Tác giả**: BiBo Development Team
+
+## 📞 Support
+
+Nếu gặp vấn đề hoặc có câu hỏi:
+1. Kiểm tra README này trước
+2. Kiểm tra browser console để debug
+3. Verify API URLs trong `config.js`
+4. Test với `encoder.html` nếu cần update API

@@ -28,6 +28,10 @@ const API_CONFIG = {
         return `${this.BASE}/tags`; 
     },
     
+    get TASKS() { 
+        return `${this.BASE}/tasks`; 
+    },
+    
     // Future endpoints can be added here
     // get USERS() { return `${this.BASE}/users`; },
     // get CATEGORIES() { return `${this.BASE}/categories`; },

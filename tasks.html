@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks - BiBo</title>
+    <link rel="icon" type="image/png" href="./assets/icon.png">
+    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="./tasks.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>TASKS</h3>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="app-nav">
+                <a href="index.html" class="nav-link">Notes</a>
+                <a href="tasks.html" class="nav-link active">Tasks</a>
+                <a href="#" class="nav-link">© BiBo</a>
+            </div>
+            
+            <!-- Task Lists -->
+            <div class="task-lists">
+                <div class="task-list-item" data-list="today" onclick="switchTaskList('today')">
+                    <div class="list-name">My Day</div>
+                    <div class="list-count">0</div>
+                </div>
+                <div class="task-list-item active" data-list="all" onclick="switchTaskList('all')">
+                    <div class="list-name">All Tasks</div>
+                    <div class="list-count">0</div>
+                </div>
+                <div class="task-list-item" data-list="important" onclick="switchTaskList('important')">
+                    <div class="list-name">Important</div>
+                    <div class="list-count">0</div>
+                </div>
+                <div class="task-list-item" data-list="completed" onclick="switchTaskList('completed')">
+                    <div class="list-name">Completed</div>
+                    <div class="list-count">0</div>
+                </div>
+            </div>
+            
+            <!-- Custom Lists -->
+            <div class="custom-lists-section">
+                <div class="section-header">
+                    <span class="section-title">My Lists</span>
+                </div>
+                <div id="customLists" class="custom-lists">
+                    <!-- Custom lists will be rendered here -->
+                </div>
+                <div class="add-list-container">
+                    <div class="add-list-input" onclick="createNewList()">
+                        <span class="add-list-icon">+</span>
+                        <span class="add-list-text">New list</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="main-content">
+            <!-- List Header -->
+            <div class="list-header">
+                <h2 id="listTitle">All Tasks</h2>
+                <div class="list-actions">
+                    <!-- Search -->
+                    <div class="search-box">
+                        <div class="search-wrapper">
+                            <input type="text" id="taskSearchInput" placeholder="Search tasks..." class="search-input">
+                            <button class="btn-clear-search" id="clearTaskSearch" onclick="clearTaskSearch()" style="display: none;">×</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Tasks Container -->
+            <div class="tasks-container">
+                <!-- Tasks List -->
+                <div class="tasks-list-container" id="tasksList">
+                    <div style="padding: 20px; text-align: center; color: #858585;">Loading...</div>
+                </div>
+                
+                <!-- Add Task Input -->
+                <div class="add-task-container">
+                    <div class="add-task-input" onclick="createNewTask()">
+                        <span class="add-task-icon">+</span>
+                        <span class="add-task-text">Add a task</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Task Details Panel (Hidden by default) -->
+        <div class="task-details-panel" id="taskDetailsPanel" style="display: none;">
+            <div id="editorView" class="editor-content">
+                <div class="empty-editor">
+                    Select a task to view details
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./storage.js"></script>
+    <script src="./config.js"></script>
+    <script src="./tasks.js"></script>
+    <script>
+        // Initialize tasks when page loads
+        document.addEventListener('DOMContentLoaded', initTasks);
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Escape: Cancel edit
+            if (e.key === 'Escape' && window.currentEditingTask !== undefined) {
+                cancelTaskEdit();
+            }
+        });
+    </script>
+</body>
+</html>
