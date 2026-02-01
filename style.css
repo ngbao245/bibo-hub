@@ -464,6 +464,30 @@ body {
     background: var(--color-bg-secondary);
     padding: var(--spacing-lg);
     border-left: 3px solid var(--color-accent-primary);
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: 400px;
+    max-width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Override inline styles for code blocks */
+.view-mode .content-text div[style*="white-space: pre"] {
+    white-space: pre !important;
+    overflow-x: auto !important;
+    word-wrap: normal !important;
+    max-width: 100% !important;
+    display: block !important;
+}
+
+/* Handle copied code blocks with inline styles */
+.view-mode .content-text div[style*="font-size"],
+.view-mode .content-text div[style*="line-height"],
+.view-mode .content-text div[style*="background-color"] {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-wrap: normal !important;
+    max-width: 100% !important;
 }
 
 .view-mode .content-text strong {
@@ -854,6 +878,48 @@ body {
     .main-content,
     .editor-container {
         padding-top: 0;
+    }
+
+    /* Fix mobile note content scrolling in view mode */
+    .view-mode {
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        max-height: calc(100vh - 120px) !important;
+    }
+
+    /* Mobile code block handling */
+    .view-mode .content-text {
+        padding: var(--spacing-md) !important;
+        font-size: var(--font-sm) !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        max-height: calc(100vh - 200px) !important;
+    }
+
+    /* Override inline styles on mobile for code blocks */
+    .view-mode .content-text div[style*="white-space: pre"] {
+        white-space: pre !important;
+        overflow-x: auto !important;
+        font-size: 12px !important;
+        max-width: calc(100vw - 60px) !important;
+    }
+
+    .view-mode .content-text div[style*="font-size"] {
+        font-size: 12px !important;
+        max-width: calc(100vw - 60px) !important;
+        overflow-x: auto !important;
+        white-space: pre !important;
+    }
+
+    /* Hide Edit Content label on mobile */
+    .richtext-header h3 {
+        display: none;
+    }
+
+    /* Adjust richtext header spacing without label */
+    .richtext-header {
+        justify-content: space-between;
+        gap: var(--spacing-sm);
     }
 }
 
