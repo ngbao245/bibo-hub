@@ -1,20 +1,6 @@
-// API Configuration
-// Encoded API base - use encoder.html to update
-const API_BASE_ENCODED = 'b2kuaXBha2NvbS43MmM1MWJlZmNlYTFhOTg4ZTcwMWM3OTYvLzpzcHR0aA==';
-
-// Decoder
-function decodeApiBase(encoded) {
-    try {
-        return atob(encoded).split('').reverse().join('');
-    } catch (e) {
-        console.error('Failed to decode API');
-        return '';
-    }
-}
-
-const API_BASE = decodeApiBase(API_BASE_ENCODED);
-const API_NOTES = `${API_BASE}/notes`;
-const API_TAGS = `${API_BASE}/tags`;
+// API Configuration - Using centralized config
+const API_NOTES = API_CONFIG.NOTES;
+const API_TAGS = API_CONFIG.TAGS;
 
 // State
 let notes = [];

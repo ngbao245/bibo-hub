@@ -18,7 +18,7 @@ Single-page application (SPA) được xây dựng bằng Vanilla JavaScript, kh
 2. Nhập API URL mới
 3. Click "Encode"
 4. Copy đoạn mã đã encode
-5. Paste vào `app.js` thay thế giá trị `API_BASE_ENCODED`
+5. Paste vào `config.js` thay thế giá trị `ENCODED` trong object `API_CONFIG`
 
 ### Tables
 
@@ -96,13 +96,13 @@ Single-page application (SPA) được xây dựng bằng Vanilla JavaScript, kh
 ## Files
 
 - `index.html` - giao diện chính
-- `app.js` - logic xử lý chính (có mã hóa API)
+- `config.js` - cấu hình API chung cho tất cả tính năng (có mã hóa API)
+- `app.js` - logic xử lý chính
 - `storage.js` - quản lý localStorage (lưu trạng thái)
 - `richtext-editor.js` - Rich Text Editor class với contenteditable
 - `richtext-editor.css` - Styles cho rich text editor
 - `style.css` - theme với CSS variables
 - `encoder.html` - tool để mã hóa API URL (không cần deploy, chỉ dùng local)
-- `config.js` - file thừa (không dùng)
 - `README.md` - tài liệu này
 
 ## Tech Stack
@@ -174,4 +174,4 @@ Có thể customize theme bằng cách thay đổi CSS variables trong `:root`:
 - Instant load khi refresh nhờ cache strategy
 - Content được lưu dưới dạng HTML (rich text) trong database
 - Rich text editor KHÔNG có indent/outdent (đã bỏ vì UX phức tạp)
-- API URL được encode trong code để bảo mật (dùng encoder.html để update)
+- API URL được encode trong config.js để bảo mật (dùng encoder.html để update)
