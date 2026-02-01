@@ -1,56 +1,57 @@
 # BiBo - Notes & Tasks Management App
 
-Ứng dụng quản lý ghi chú và công việc với giao diện Microsoft To Do style, hỗ trợ rich text editing và quản lý tasks với custom lists.
+A notes and tasks management application with Microsoft To Do style interface, supporting rich text editing and task management with custom lists. Latest version features auto-save task editor and fullscreen rich text mode.
 
-## 🚀 Tính năng chính
+## 🚀 Key Features
 
 ### 📝 Notes Management
-- **Rich Text Editor**: Hỗ trợ bold, italic, underline, bullet lists, numbered lists
-- **Fullscreen Mode**: Chế độ toàn màn hình cho việc viết (F11 hoặc nút ⛶)
-- **Window Controls**: Nút fullscreen (màu xám) và close (màu đỏ) như Windows Explorer
-- **Inline Editing**: Chỉnh sửa trực tiếp title và content
-- **Search**: Tìm kiếm notes theo title và content
-- **Categories & Tags**: Phân loại notes theo type, language, tags
-- **URLs Management**: Lưu trữ tối đa 5 URLs per note
-- **Auto-save**: Tự động lưu form data khi đang chỉnh sửa
+- **Rich Text Editor**: Support for bold, italic, underline, bullet lists, numbered lists
+- **Fullscreen Mode**: Full-screen mode for writing (F11 or ⛶ button)
+- **Window Controls**: Fullscreen button (gray) and close button (red) like Windows Explorer
+- **Inline Editing**: Direct editing of title and content
+- **Search**: Search notes by title and content
+- **Categories & Tags**: Categorize notes by type, language, tags
+- **URLs Management**: Store up to 5 URLs per note
+- **Auto-save**: Automatically save form data while editing
 
 ### ✅ Tasks Management (Microsoft To Do Style)
-- **3-Column Layout**: Lists → Tasks → Editor (giống Microsoft To Do desktop)
-- **Default View**: "My Day" thay vì "All Tasks" khi mở app
-- **Auto-save Task Editor**: Không cần nút Save/Cancel, tự động lưu khi:
-  - **Inputs**: Auto-save khi blur (click ra ngoài)
-  - **Dropdowns**: Auto-save khi chọn option
-  - **Toggle buttons**: Auto-save khi click
-- **Custom Lists**: Tạo và quản lý lists tùy chỉnh với auto-naming
+- **3-Column Layout**: Lists → Tasks → Editor (like Microsoft To Do desktop)
+- **Default View**: "My Day" instead of "All Tasks" when opening app
+- **🆕 Auto-save Task Editor**: No Save/Cancel buttons needed, auto-saves when:
+  - **Text Inputs**: Auto-save on blur (click outside)
+  - **Dropdowns**: Auto-save on option selection (due date, move to list)
+  - **Toggle Buttons**: Auto-save on click (Important, Daily Recurring)
+  - **Silent Operation**: No notifications, saves silently
+- **Custom Lists**: Create and manage custom lists with auto-naming
 - **Smart Task Management**: 
-  - **My Day**: Tasks có due date hôm nay + overdue + daily recurring tasks
-  - **All Tasks**: Tất cả tasks
-  - **Important**: Tasks có priority = high
-  - **Completed**: Tasks đã hoàn thành
+  - **My Day**: Tasks with today's due date + overdue + daily recurring tasks
+  - **All Tasks**: All tasks
+  - **Important**: Tasks with high priority
+  - **Completed**: Completed tasks
 - **Task Features**:
-  - Due date với dropdown (Today, Tomorrow, Pick a date)
+  - Due date with dropdown (Today, Tomorrow, Pick a date)
   - Priority levels (High/Normal) 
-  - **Daily Recurring Tasks**: Luôn xuất hiện trong My Day mỗi ngày
-  - Task descriptions và URLs (tối đa 3)
-- **Move Tasks**: Di chuyển tasks giữa các lists với auto-save và refresh
-- **Circular Checkboxes**: Thiết kế giống Microsoft To Do
-- **Context Menus**: Right-click để rename/delete lists (màu bình thường, không đỏ)
-- **Inline List Editing**: Click để edit list names, auto-save khi blur/enter
+  - **Daily Recurring Tasks**: Always appear in My Day every day
+  - Task descriptions and URLs (up to 3)
+- **Move Tasks**: Move tasks between lists with auto-save and refresh
+- **Circular Checkboxes**: Microsoft To Do style design
+- **Context Menus**: Right-click to rename/delete lists (normal color, not red)
+- **Inline List Editing**: Click to edit list names, auto-save on blur/enter
 
 ### 🎨 UI/UX Features
-- **Dark Theme**: Giao diện tối chuyên nghiệp với CSS variables
-- **Edge-style Tabs**: Navigation tabs sát nhau không có gaps
-- **Unified Design**: Cùng sidebar width (280px) và color scheme
-- **Consistent Hover Colors**: Tất cả hover effects dùng #2d2d30 (var(--color-bg-elevated))
-- **Smooth Animations**: Dropdown animations 0.15s ease cho consistency
-- **Responsive Design**: Tương thích mobile và desktop
-- **No Border Radius**: Form inputs sử dụng border-bottom only
-- **Silent Operations**: Không có toast notifications khi move tasks
+- **Dark Theme**: Professional dark interface with CSS variables
+- **Edge-style Tabs**: Navigation tabs close together without gaps
+- **Unified Design**: Same sidebar width (280px) and color scheme
+- **Consistent Hover Colors**: All hover effects use #2d2d30 (var(--color-bg-elevated))
+- **Smooth Animations**: Dropdown animations 0.15s ease for consistency
+- **Responsive Design**: Compatible with mobile and desktop
+- **No Border Radius**: Form inputs use border-bottom only
+- **Silent Operations**: No toast notifications when moving tasks
 
-## 🏗️ Kiến trúc kỹ thuật
+## 🏗️ Technical Architecture
 
 ### Database Schema (MockAPI)
-Sử dụng single table approach với field `type` để phân biệt:
+Uses single table approach with `type` field to differentiate:
 
 **Notes Table:**
 ```json
@@ -73,7 +74,7 @@ Sử dụng single table approach với field `type` để phân biệt:
 }
 ```
 
-**Tasks Table (chứa cả tasks và lists):**
+**Tasks Table (contains both tasks and lists):**
 ```json
 {
   "id": "string",
@@ -113,7 +114,7 @@ Sử dụng single table approach với field `type` để phân biệt:
 ```
 
 ### API Configuration
-File `config.js` chứa centralized API endpoints (encoded):
+File `config.js` contains centralized API endpoints (encoded):
 ```javascript
 const API_CONFIG = {
     NOTES: 'encoded_url_here',
@@ -121,21 +122,39 @@ const API_CONFIG = {
 };
 ```
 
-**Cách update API URL:**
-1. Mở `encoder.html` trong browser
-2. Nhập API URL mới
+**How to update API URL:**
+1. Open `encoder.html` in browser
+2. Enter new API URL
 3. Click "Encode" 
-4. Copy mã đã encode vào `config.js`
+4. Copy encoded string to `config.js`
 
 ## 🎯 Key Implementation Details
 
+### 🆕 Auto-save Task Editor
+**Brand New**: Task editor no longer has Save/Cancel buttons, automatically saves all changes:
+
+```javascript
+// Auto-save triggers:
+- Text inputs: onBlur (when clicking outside)
+- Due date dropdown: onChange (when selecting Today/Tomorrow/Custom)
+- Toggle buttons: onClick (Important, Daily Recurring)
+- Move to list: onChange (when selecting different list)
+- Silent operation: No notifications
+```
+
+**Benefits:**
+- Smooth UX like Microsoft To Do
+- No worry about losing data when forgetting to save
+- More natural editing flow
+- Reduced cognitive load for users
+
 ### Tasks Management Architecture
-- **Single Table Design**: Tasks và Lists cùng table, phân biệt bằng `type` field
-- **Parent-Child Relationship**: Tasks có `parentId` trỏ đến List ID
-- **Event Delegation**: Sử dụng event delegation cho task interactions
-- **Optimistic UI**: Update UI trước, sync API sau
-- **Auto-save**: Move tasks giữa lists tự động lưu và refresh task list
-- **Smart Counts**: Custom list counts được update real-time
+- **Single Table Design**: Tasks and Lists in same table, differentiated by `type` field
+- **Parent-Child Relationship**: Tasks have `parentId` pointing to List ID
+- **Event Delegation**: Uses event delegation for task interactions
+- **Optimistic UI**: Update UI first, sync API later
+- **Auto-save**: Moving tasks between lists auto-saves and refreshes task list
+- **Smart Counts**: Custom list counts updated in real-time
 
 ### My Day Logic
 ```javascript
@@ -150,10 +169,10 @@ case 'today':
 ```
 
 ### Rich Text Editor
-- **ContentEditable**: Sử dụng contenteditable với execCommand API
-- **Fullscreen Mode**: Toggle với nút ⛶/🗗 hoặc phím F11
-- **Window Controls**: `.window-controls` div chứa fullscreen + close buttons
-- **Toolbar State**: Dynamic update button states theo selection
+- **ContentEditable**: Uses contenteditable with execCommand API
+- **Fullscreen Mode**: Toggle with ⛶/🗗 button or F11 key
+- **Window Controls**: `.window-controls` div contains fullscreen + close buttons
+- **Toolbar State**: Dynamic update button states based on selection
 - **Keyboard Shortcuts**: 
   - Ctrl+B/I/U (formatting)
   - Ctrl+S (save)
@@ -162,67 +181,77 @@ case 'today':
   - Tab (insert 4 spaces)
 
 ### UI Consistency Patterns
-- **Hover Colors**: Tất cả elements sử dụng `var(--color-bg-elevated)` (#2d2d30)
-- **Animation Timing**: Dropdowns sử dụng `0.15s ease` cho consistency
-- **Form Styling**: Không border-radius, chỉ border-bottom cho inputs
-- **Navigation**: Edge-style tabs với `margin-left: -1px` để sát nhau
-- **Context Menu**: Delete items có màu bình thường, không đỏ
+- **Hover Colors**: All elements use `var(--color-bg-elevated)` (#2d2d30)
+- **Animation Timing**: Dropdowns use `0.15s ease` for consistency
+- **Form Styling**: No border-radius, only border-bottom for inputs
+- **Navigation**: Edge-style tabs with `margin-left: -1px` to connect
+- **Context Menu**: Delete items have normal color, not red
 
 ### Performance Optimizations
-- **Event Delegation**: Tránh attach nhiều event listeners
-- **Debounced Search**: Search với 300ms delay
-- **Optimistic UI**: Update UI trước, API sau
-- **Cache Strategy**: LocalStorage cache để instant load
-- **Minimal DOM Manipulation**: Batch updates khi có thể
+- **Event Delegation**: Avoid attaching many event listeners
+- **Debounced Search**: Search with 300ms delay
+- **Optimistic UI**: Update UI first, API later
+- **Cache Strategy**: LocalStorage cache for instant load
+- **Minimal DOM Manipulation**: Batch updates when possible
 
-## 🚀 Cách sử dụng
+## 🚀 How to Use
 
 ### Notes
-1. **Tạo note mới**: Click "+" trong sidebar
-2. **Chỉnh sửa**: 
-   - Double-click title để inline edit
-   - Double-click content để mở rich text editor
-   - Click "Edit" để mở form mode
+1. **Create new note**: Click "+" in sidebar
+2. **Edit**: 
+   - Double-click title for inline edit
+   - Double-click content to open rich text editor
+   - Click "Edit" to open form mode
 3. **Rich text editing**: 
-   - Sử dụng toolbar hoặc keyboard shortcuts
-   - Click nút ⛶ hoặc nhấn F11 để fullscreen
-   - Ctrl+S để save, Escape để close
-4. **Tìm kiếm**: Gõ trong search box để filter notes
-5. **URLs**: Thêm tối đa 5 URLs vào mỗi note
+   - Use toolbar or keyboard shortcuts
+   - Click ⛶ button or press F11 for fullscreen
+   - Ctrl+S to save, Escape to close
+4. **Search**: Type in search box to filter notes
+5. **URLs**: Add up to 5 URLs per note
 
 ### Tasks  
-1. **Default View**: App mở với "My Day" view
-2. **Tạo list**: Click "+ New list" trong sidebar
-   - Lists tự động đặt tên "Untitled list", "Untitled list (1)", etc.
-   - Click vào tên để edit inline, auto-save khi blur/enter
-   - Right-click để rename/delete (màu bình thường)
-3. **Tạo task**: Click "Add a task" ở bottom của task list
-4. **Edit task**: Click vào task để mở editor bên phải
-   - **Auto-save**: Không cần nút Save/Cancel
-   - **Inputs**: Tự động lưu khi click ra ngoài (blur)
-   - **Dropdowns**: Tự động lưu khi chọn option
-   - **Toggle buttons**: Tự động lưu khi click
-5. **Move task**: Trong editor, click "In list: [Name]" để chọn list khác
-6. **Due date**: Click "Pick a date" để set due date với dropdown
-7. **Daily Recurring**: Check để task luôn xuất hiện trong My Day
-8. **Complete**: Click circular checkbox để mark complete
+1. **Default View**: App opens with "My Day" view
+2. **Create list**: Click "+ New list" in sidebar
+   - Lists auto-named "Untitled list", "Untitled list (1)", etc.
+   - Click on name for inline edit, auto-save on blur/enter
+   - Right-click to rename/delete (normal color)
+3. **Create task**: Click "Add a task" at bottom of task list
+4. **🆕 Edit task**: Click on task to open editor on right
+   - **Auto-save**: No Save/Cancel buttons needed
+   - **Text Fields**: Auto-save when clicking outside (blur)
+   - **Due Date**: Auto-save when selecting Today/Tomorrow/Custom date
+   - **Toggle Buttons**: Auto-save when clicking Important/Daily Recurring
+   - **Move to List**: Auto-save when selecting different list
+   - **Silent**: No notifications, saves silently
+5. **Complete**: Click circular checkbox to mark complete
+6. **Keyboard**: Only Escape to close (no Ctrl+S needed)
+
+### 🆕 Auto-save Workflow
+```
+User Action → Auto-save Trigger → Silent Save → UI Update
+├── Edit title/description → onBlur → Save task → Refresh list
+├── Change due date → onChange → Save task → Update display  
+├── Toggle important → onClick → Save task → Update priority
+├── Move to list → onChange → Save task → Refresh counts
+└── No manual save needed ✨
+```
 
 ### My Day Logic
-- **Tasks hôm nay**: Tasks có due date = today
-- **Overdue tasks**: Tasks quá hạn chưa complete
-- **Daily recurring tasks**: Luôn hiện mỗi ngày (bất kể due date)
+- **Today's tasks**: Tasks with due date = today
+- **Overdue tasks**: Overdue incomplete tasks
+- **Daily recurring tasks**: Always appear every day (regardless of due date)
 
 ## 🎨 Customization
 
 ### Theme Colors
 ```css
 :root {
-  --color-accent-primary: #007acc;    /* Màu chủ đạo */
-  --color-bg-primary: #1e1e1e;        /* Màu nền chính */
-  --color-bg-elevated: #2d2d30;       /* Màu hover (consistent) */
-  --color-text-primary: #d4d4d4;      /* Màu chữ chính */
-  --color-bg-secondary: #252526;      /* Màu nền phụ */
-  --color-border: #3e3e42;            /* Màu viền */
+  --color-accent-primary: #007acc;    /* Primary accent color */
+  --color-bg-primary: #1e1e1e;        /* Main background */
+  --color-bg-elevated: #2d2d30;       /* Hover color (consistent) */
+  --color-text-primary: #d4d4d4;      /* Primary text */
+  --color-bg-secondary: #252526;      /* Secondary background */
+  --color-border: #3e3e42;            /* Border color */
 }
 ```
 
@@ -238,7 +267,7 @@ case 'today':
 ## ⌨️ Keyboard Shortcuts
 
 ### Global
-- `Escape` - Cancel/Close
+- `Escape` - Close editor/modal
 - `Double Click` - Edit title hoặc content
 
 ### Rich Text Editor
@@ -250,106 +279,173 @@ case 'today':
 - `Ctrl + S` - Save và close
 - `Escape` - Close (không save)
 
+### 🆕 Task Editor (Auto-save)
+- `Escape` - Close editor (auto-save đã hoạt động)
+- ~~`Ctrl + S`~~ - **Không cần** (auto-save)
+- `Tab` - Navigate giữa fields
+- `Enter` - Confirm dropdown selections
+
 ## 🔧 Development Notes
 
+### 🆕 Auto-save Implementation
+```javascript
+// Setup auto-save event listeners
+function setupAutoSave() {
+    // Text inputs: auto-save on blur
+    inputs.forEach(input => {
+        input.addEventListener('blur', autoSaveTask);
+    });
+    
+    // Date input: auto-save on change
+    dueDateInput.addEventListener('change', autoSaveTask);
+}
+
+// Auto-save function
+function autoSaveTask() {
+    if (!window.currentEditingTask || !title.trim()) return;
+    
+    const taskData = { /* collect form data */ };
+    saveTask(taskData).catch(error => {
+        console.error('Error auto-saving task:', error);
+    });
+}
+
+// Toggle buttons: auto-save after state change
+function toggleImportantButton() {
+    checkbox.checked = !checkbox.checked;
+    updateToggleButtonState(btn, checkbox.checked);
+    autoSaveTask(); // Auto-save after toggle
+}
+```
+
 ### LocalStorage Keys
-- `notes_currentNoteId` - ID của note đang mở
-- `notes_editorState` - Trạng thái editor và form data
-- `notes_cachedNote` - Cache note data để instant display
+- `notes_currentNoteId` - ID of currently open note
+- `notes_editorState` - Editor state and form data
+- `notes_cachedNote` - Cache note data for instant display
 
 ### Browser Compatibility
 - **Modern Browsers**: Chrome, Firefox, Safari, Edge (latest versions)
 - **ContentEditable**: Rich text editor requires modern browser support
-- **CSS Variables**: Sử dụng CSS custom properties
-- **Backdrop Filter**: Modal blur effect (có thể không support older browsers)
+- **CSS Variables**: Uses CSS custom properties
+- **Backdrop Filter**: Modal blur effect (may not support older browsers)
 
 ### Known Limitations
-- **MockAPI Rate Limits**: Free tier có giới hạn requests
-- **Rich Text**: Không support images, chỉ text formatting
-- **Mobile UX**: Tối ưu cho desktop, mobile experience cơ bản
-- **Offline**: Không có offline support (cần internet)
+- **MockAPI Rate Limits**: Free tier has request limits
+- **Rich Text**: No image support, only text formatting
+- **Mobile UX**: Optimized for desktop, basic mobile experience
+- **Offline**: No offline support (requires internet)
+- **Auto-save**: Only saves when title exists (prevents empty tasks)
 
 ## 📱 Responsive Design
 
 ### Breakpoints
 - **Desktop**: > 768px - Full 3-column layout
-- **Tablet**: 768px - Sidebar thu gọn  
+- **Tablet**: 768px - Collapsed sidebar  
 - **Mobile**: < 768px - Stack layout, always show task actions
 
 ### Mobile Optimizations
-- Task actions luôn visible (không cần hover)
-- Sidebar width giảm xuống 240px
+- Task actions always visible (no hover needed)
+- Sidebar width reduced to 240px
 - Form elements stack vertically
 - Touch-friendly button sizes (min 44px)
 
 ## 🚀 Future Enhancements
 
 ### Planned Features
-- **Drag & Drop**: Reorder tasks và lists
+- **Drag & Drop**: Reorder tasks and lists
 - **Keyboard Navigation**: Full keyboard support
 - **Export/Import**: JSON/CSV export
 - **Collaboration**: Real-time sharing
-- **Offline Support**: PWA với service worker
+- **Offline Support**: PWA with service worker
 - **Advanced Search**: Filters, date ranges
 - **Themes**: Multiple color schemes
 - **Attachments**: File upload support
-- **Recurring Logic**: Auto-recreate completed recurring tasks
+- **Smart Recurring**: Auto-recreate completed recurring tasks
+- **Undo/Redo**: With auto-save system
 
 ### Technical Improvements
 - **TypeScript**: Type safety
 - **State Management**: Centralized state (Redux/Zustand)
-- **Testing**: Unit và integration tests
+- **Testing**: Unit and integration tests
 - **Build Process**: Webpack/Vite setup
-- **API Optimization**: GraphQL hoặc optimized REST
+- **API Optimization**: GraphQL or optimized REST
 - **Caching**: Smart caching strategies
-- **Performance**: Virtual scrolling cho large lists
+- **Performance**: Virtual scrolling for large lists
+- **Auto-save Optimization**: Debounced saves, conflict resolution
 
 ## 🛠️ Setup & Deployment
 
 ### Local Development
 1. Clone repository
-2. Mở `index.html` hoặc `tasks.html` trong browser
-3. Không cần build process (vanilla JS)
+2. Open `index.html` or `tasks.html` in browser
+3. No build process needed (vanilla JS)
 
 ### API Setup
-1. Tạo MockAPI account tại mockapi.io
-2. Tạo 2 tables: `notes` và `tasks`
+1. Create MockAPI account at mockapi.io
+2. Create 2 tables: `notes` and `tasks`
 3. Copy API URLs
-4. Mở `encoder.html`, encode URLs
-5. Paste vào `config.js`
+4. Open `encoder.html`, encode URLs
+5. Paste into `config.js`
 
 ### Deployment
 - **Static Hosting**: Vercel, Netlify, GitHub Pages
-- **No Backend Required**: Chỉ cần serve static files
-- **HTTPS Required**: Để CORS với MockAPI hoạt động
+- **No Backend Required**: Only serve static files
+- **HTTPS Required**: For CORS with MockAPI to work
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
-1. **"No tasks found"**: Kiểm tra My Day logic - cần tasks có due date hôm nay hoặc recurring
-2. **List counts không update**: Đã fix với `updateTaskCounts()` cho custom lists
-3. **New list không save**: Đã fix logic để luôn save dù tên trống
-4. **Hover colors khác nhau**: Đã unify tất cả thành `#2d2d30`
-5. **Animation chậm**: Đã optimize thành `0.15s ease`
+1. **"No tasks found"**: Check My Day logic - need tasks with today's due date or recurring
+2. **List counts not updating**: Fixed with `updateTaskCounts()` for custom lists
+3. **New list not saving**: Fixed logic to always save even with empty names
+4. **Different hover colors**: Unified all to `#2d2d30`
+5. **Slow animations**: Optimized to `0.15s ease`
+6. **🆕 Auto-save not working**: 
+   - Check title is not empty
+   - See console logs for errors
+   - Verify API connection
+
+### 🆕 Auto-save Debug
+```javascript
+// Enable debug logging
+window.DEBUG_AUTOSAVE = true;
+
+// Check auto-save events
+console.log('Auto-save triggered:', taskData);
+console.log('Current editing task:', window.currentEditingTask);
+
+// Verify event listeners
+document.getElementById('taskTitle').addEventListener('blur', () => {
+    console.log('Title blur event fired');
+});
+```
 
 ### Debug Tips
-- Mở browser console để xem logs
-- Kiểm tra API calls trong Network tab
+- Open browser console to see logs
+- Check API calls in Network tab
 - Verify localStorage data
-- Test với `encoder.html` nếu API issues
+- Test with `encoder.html` if API issues
+- **Auto-save**: Check console for auto-save events
 
 ---
 
-**Phiên bản**: 2.2.0  
-**Cập nhật cuối**: February 2026  
+**Version**: 2.3.0 🆕  
+**Last Updated**: February 2026  
 **Tech Stack**: Vanilla JavaScript, MockAPI, CSS Variables  
 **License**: MIT  
-**Tác giả**: BiBo Development Team
+**Author**: BiBo Development Team
+
+### 🆕 Changelog v2.3.0
+- ✅ **Auto-save Task Editor**: Removed Save/Cancel buttons
+- ✅ **Seamless UX**: Auto-save on blur, change, click
+- ✅ **Silent Operations**: No notifications when auto-saving
+- ✅ **Enhanced Workflow**: Microsoft To Do-like editing experience
+- ✅ **Updated Documentation**: Comprehensive auto-save guide
 
 ## 📞 Support
 
-Nếu gặp vấn đề hoặc có câu hỏi:
-1. Kiểm tra README này trước
-2. Kiểm tra browser console để debug
-3. Verify API URLs trong `config.js`
-4. Test với `encoder.html` nếu cần update API
+If you encounter issues or have questions:
+1. Check this README first
+2. Check browser console for debugging
+3. Verify API URLs in `config.js`
+4. Test with `encoder.html` if need to update API
