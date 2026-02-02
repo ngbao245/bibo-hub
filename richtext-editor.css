@@ -209,9 +209,9 @@
     border: 1px solid var(--color-border);
     padding: 4px 12px;
     font-size: 12px;
-    cursor: pointer;
+    cursor: pointer !important;
     border-radius: 3px;
-    z-index: 100;
+    z-index: 9999 !important;
     transition: background var(--transition-fast);
     user-select: none !important;
     -webkit-user-select: none !important;
