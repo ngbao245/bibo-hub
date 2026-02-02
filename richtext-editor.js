@@ -32,7 +32,7 @@ class RichTextEditor {
                             <button class="btn-toolbar" data-command="clearAll" title="Clear All Content">Clear</button>
                         </div>
                         <div class="richtext-stats">
-                            <button class="word-count-btn" data-action="word-count" title="Click to count words">
+                            <button class="word-count-btn" data-action="word-count" title="• Selected text \n• Text between &#96;&#96; markers, \n• All text">
                                 <span class="word-count-display">-- words</span>
                             </button>
                             <span class="toolbar-separator">|</span>
@@ -61,9 +61,68 @@ class RichTextEditor {
         
         this.setupEventListeners();
         
+        // Setup code block buttons for existing code blocks
+        this.setupCodeBlockButtons();
+        
         // Focus editor
         this.editor.focus();
         this.moveCursorToEnd();
+    }
+
+    setupCodeBlockButtons() {
+        // Find all existing code blocks and attach event listeners to their buttons
+        const codeBlockWrappers = this.editor.querySelectorAll('.code-block-wrapper');
+        
+        codeBlockWrappers.forEach(wrapper => {
+            const copyBtn = wrapper.querySelector('.code-copy-btn');
+            const pasteBtn = wrapper.querySelector('.code-paste-btn');
+            const clearBtn = wrapper.querySelector('.code-clear-btn');
+            const codeBlock = wrapper.querySelector('.code-block');
+            
+            if (copyBtn && codeBlock) {
+                copyBtn.onclick = async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        let text = codeBlock.innerText || codeBlock.textContent || '';
+                        if (text === '\u200B') text = '';
+                        await navigator.clipboard.writeText(text);
+                        const originalText = copyBtn.textContent;
+                        copyBtn.textContent = 'Copied';
+                        setTimeout(() => { copyBtn.textContent = originalText; }, 1500);
+                    } catch (err) {
+                        console.error('Failed to copy:', err);
+                        alert('Cannot copy to clipboard. Please copy manually (Ctrl+C)');
+                    }
+                };
+            }
+            
+            if (pasteBtn && codeBlock) {
+                pasteBtn.onclick = async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    try {
+                        const text = await navigator.clipboard.readText();
+                        codeBlock.innerHTML = '';
+                        codeBlock.textContent = text;
+                        codeBlock.focus();
+                    } catch (err) {
+                        console.error('Failed to read clipboard:', err);
+                        alert('Cannot access clipboard. Please paste manually (Ctrl+V)');
+                    }
+                };
+            }
+            
+            if (clearBtn && codeBlock) {
+                clearBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    codeBlock.innerHTML = '';
+                    codeBlock.textContent = '\u200B';
+                    codeBlock.focus();
+                };
+            }
+        });
     }
 
     setupEventListeners() {
@@ -230,6 +289,31 @@ class RichTextEditor {
                 }
             }
         }
+        // Enter: Handle line breaks in code blocks
+        else if (e.key === 'Enter') {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                let node = selection.anchorNode;
+                let isInCodeBlock = false;
+                
+                // Check if inside code block (check for both <pre> tag and code-block class)
+                while (node && node !== this.editor) {
+                    if ((node.tagName === 'PRE' && node.classList && node.classList.contains('code-block')) ||
+                        (node.tagName === 'CODE' && node.parentElement && node.parentElement.classList && node.parentElement.classList.contains('code-block'))) {
+                        isInCodeBlock = true;
+                        break;
+                    }
+                    node = node.parentNode;
+                }
+                
+                // If inside code block, insert plain newline instead of creating new <pre>
+                if (isInCodeBlock) {
+                    e.preventDefault();
+                    document.execCommand('insertText', false, '\n');
+                    return;
+                }
+            }
+        }
     }
 
     execCommand(command) {
@@ -277,13 +361,27 @@ class RichTextEditor {
             e.stopPropagation();
             try {
                 const text = await navigator.clipboard.readText();
-                const codeElement = codeBlockWrapper.querySelector('.code-block code');
-                if (codeElement) {
-                    // Clear all content first
-                    codeElement.innerHTML = '';
-                    // Set plain text
-                    codeElement.textContent = text;
-                    codeElement.focus();
+                
+                // Traverse to find code block
+                let node = pasteBtn;
+                let codeBlockElement = null;
+                
+                while (node && node !== document.body) {
+                    if (node.classList && node.classList.contains('code-block')) {
+                        codeBlockElement = node;
+                        break;
+                    }
+                    if (node.nextElementSibling && node.nextElementSibling.classList && node.nextElementSibling.classList.contains('code-block')) {
+                        codeBlockElement = node.nextElementSibling;
+                        break;
+                    }
+                    node = node.parentElement;
+                }
+                
+                if (codeBlockElement) {
+                    codeBlockElement.innerHTML = '';
+                    codeBlockElement.textContent = text;
+                    codeBlockElement.focus();
                 }
             } catch (err) {
                 console.error('Failed to read clipboard:', err);
@@ -305,21 +403,56 @@ class RichTextEditor {
             e.stopPropagation();
         };
         copyBtn.onclick = async (e) => {
+            console.log('=== COPY BUTTON CLICKED ===');
             e.preventDefault();
             e.stopPropagation();
             try {
-                const codeElement = codeBlockWrapper.querySelector('.code-block code');
-                if (codeElement) {
-                    let text = codeElement.innerText || codeElement.textContent || '';
+                // Traverse up from button to find code-block (same logic as Ctrl+A)
+                let node = copyBtn;
+                let codeBlockElement = null;
+                
+                console.log('Starting from:', node);
+                
+                while (node && node !== document.body) {
+                    console.log('Checking node:', node, 'classList:', node.classList);
+                    
+                    if (node.classList && node.classList.contains('code-block')) {
+                        codeBlockElement = node;
+                        console.log('Found code-block via parent!');
+                        break;
+                    }
+                    // Also check siblings
+                    if (node.nextElementSibling) {
+                        console.log('Checking sibling:', node.nextElementSibling);
+                        if (node.nextElementSibling.classList && node.nextElementSibling.classList.contains('code-block')) {
+                            codeBlockElement = node.nextElementSibling;
+                            console.log('Found code-block via sibling!');
+                            break;
+                        }
+                    }
+                    node = node.parentElement;
+                }
+                
+                console.log('Final code block:', codeBlockElement);
+                
+                if (codeBlockElement) {
+                    // Get ALL text from code block
+                    let text = codeBlockElement.innerText || codeBlockElement.textContent || '';
+                    console.log('Text to copy:', text.substring(0, 100));
+                    
                     if (text === '\u200B') {
                         text = '';
                     }
                     await navigator.clipboard.writeText(text);
+                    console.log('COPY SUCCESS!');
+                    
                     const originalText = copyBtn.textContent;
                     copyBtn.textContent = 'Copied';
                     setTimeout(() => {
                         copyBtn.textContent = originalText;
                     }, 1500);
+                } else {
+                    console.log('CODE BLOCK NOT FOUND!');
                 }
             } catch (err) {
                 console.error('Failed to copy:', err);
@@ -343,11 +476,27 @@ class RichTextEditor {
         clearBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const codeElement = codeBlockWrapper.querySelector('.code-block code');
-            if (codeElement) {
-                codeElement.innerHTML = '';
-                codeElement.textContent = '\u200B';
-                codeElement.focus();
+            
+            // Traverse to find code block
+            let node = clearBtn;
+            let codeBlockElement = null;
+            
+            while (node && node !== document.body) {
+                if (node.classList && node.classList.contains('code-block')) {
+                    codeBlockElement = node;
+                    break;
+                }
+                if (node.nextElementSibling && node.nextElementSibling.classList && node.nextElementSibling.classList.contains('code-block')) {
+                    codeBlockElement = node.nextElementSibling;
+                    break;
+                }
+                node = node.parentElement;
+            }
+            
+            if (codeBlockElement) {
+                codeBlockElement.innerHTML = '';
+                codeBlockElement.textContent = '\u200B';
+                codeBlockElement.focus();
             }
         };
         
@@ -579,7 +728,27 @@ class RichTextEditor {
     updateWordCount() {
         if (!this.wordCountActive) return;
         
-        const text = this.editor.innerText || '';
+        let text = '';
+        const selection = window.getSelection();
+        
+        // Priority 1: If text is selected, count selected text
+        if (selection && selection.toString().trim().length > 0) {
+            text = selection.toString();
+        } 
+        // Priority 2: If content has `` markers, count text between them
+        else {
+            const fullText = this.editor.innerText || '';
+            const markerRegex = /``([\s\S]*?)``/;
+            const match = fullText.match(markerRegex);
+            
+            if (match && match[1]) {
+                text = match[1];
+            } else {
+                // Priority 3: Count all text
+                text = fullText;
+            }
+        }
+        
         const words = text.trim().split(/\s+/).filter(word => word.length > 0);
         const count = words.length;
         
