@@ -1522,3 +1522,80 @@ textarea,
 .note-type-item.active .type-count {
     color: rgba(255, 255, 255, 0.8);
 }
+
+
+/* Note Type Dropdown (same style as Timer Duration) */
+.note-type-dropdown {
+    position: relative;
+    width: 100%;
+}
+
+.note-type-btn {
+    width: 100%;
+    padding: var(--spacing-sm);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+    font-family: 'Consolas', 'Courier New', monospace;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: all var(--transition-normal);
+    text-align: left;
+}
+
+.note-type-btn:hover {
+    border-color: var(--color-border-focus);
+}
+
+.note-type-btn:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+    background: var(--color-bg-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 122, 204, 0.2);
+}
+
+.note-type-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 1000;
+    margin-top: 4px;
+    overflow: hidden;
+    display: none;
+}
+
+.note-type-option {
+    padding: 14px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.2s ease;
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.note-type-option:last-child {
+    border-bottom: none;
+}
+
+.note-type-option:hover {
+    background: #37373d;
+}
+
+.note-type-option:active {
+    background: var(--color-bg-active);
+}
+
+.note-type-option .option-text {
+    font-size: 14px;
+    color: var(--color-text-primary);
+    font-weight: 500;
+}

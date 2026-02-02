@@ -245,6 +245,14 @@ function showEditMode(restoreData = null) {
     isEditing = true;
     const note = restoreData || currentNote || {};
     
+    // Set default type based on current filter
+    if (!note.id && !note.type) {
+        // New note: use current filter as default type (if not 'all')
+        if (currentTypeFilter !== 'all') {
+            note.type = currentTypeFilter;
+        }
+    }
+    
     // Generate default placeholder for new note
     const defaultPlaceholder = `New ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
     
@@ -271,12 +279,27 @@ function showEditMode(restoreData = null) {
                 <div class="form-row">
                     <div class="form-group">
                         <label>Type</label>
-                        <select id="noteType">
-                            <option value="note" ${note.type === 'note' ? 'selected' : ''}>Note</option>
-                            <option value="ielts" ${note.type === 'ielts' ? 'selected' : ''}>IELTS</option>
-                            <option value="course" ${note.type === 'course' ? 'selected' : ''}>Course</option>
-                            <option value="code" ${note.type === 'code' ? 'selected' : ''}>Code</option>
-                        </select>
+                        <div class="note-type-dropdown">
+                            <button type="button" class="note-type-btn" id="noteTypeBtn" onclick="toggleNoteTypeDropdown()">
+                                <span id="noteTypeText">Note</span>
+                            </button>
+                            <div class="note-type-options" id="noteTypeOptions">
+                                <div class="note-type-option" onclick="setNoteType('note')">
+                                    <span class="option-text">Note</span>
+                                </div>
+                                <div class="note-type-option" onclick="setNoteType('ielts')">
+                                    <span class="option-text">IELTS</span>
+                                </div>
+                                <div class="note-type-option" onclick="setNoteType('course')">
+                                    <span class="option-text">Course</span>
+                                </div>
+                                <div class="note-type-option" onclick="setNoteType('code')">
+                                    <span class="option-text">Code</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Hidden input for note type -->
+                        <input type="text" id="noteType" value="${note.type || 'note'}" style="display: none;">
                     </div>
 
                     <div class="form-group">
@@ -364,6 +387,48 @@ function showEditMode(restoreData = null) {
     
     // Initialize timer duration dropdown display
     updateTimerDurationDisplay();
+    
+    // Initialize note type dropdown display
+    updateNoteTypeDisplay();
+}
+
+// Note Type Dropdown Functions
+function toggleNoteTypeDropdown() {
+    const options = document.getElementById('noteTypeOptions');
+    if (options) {
+        options.style.display = options.style.display === 'block' ? 'none' : 'block';
+    }
+}
+
+function setNoteType(type) {
+    const input = document.getElementById('noteType');
+    const options = document.getElementById('noteTypeOptions');
+    
+    input.value = type;
+    updateNoteTypeDisplay();
+    
+    // Close dropdown
+    if (options) {
+        options.style.display = 'none';
+    }
+}
+
+function updateNoteTypeDisplay() {
+    const input = document.getElementById('noteType');
+    const displayText = document.getElementById('noteTypeText');
+    
+    if (!input || !displayText) return;
+    
+    const type = input.value || 'note';
+    
+    const typeLabels = {
+        'note': 'Note',
+        'ielts': 'IELTS',
+        'course': 'Course',
+        'code': 'Code'
+    };
+    
+    displayText.textContent = typeLabels[type] || 'Note';
 }
 
 // Timer Duration Dropdown Functions
@@ -514,10 +579,17 @@ function setupEventListeners() {
     
     // Close timer duration dropdown when clicking outside
     document.addEventListener('click', (e) => {
-        const dropdown = document.getElementById('timerDurationOptions');
-        const btn = document.getElementById('timerDurationBtn');
-        if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
-            dropdown.style.display = 'none';
+        const timerDropdown = document.getElementById('timerDurationOptions');
+        const timerBtn = document.getElementById('timerDurationBtn');
+        if (timerDropdown && timerBtn && !timerDropdown.contains(e.target) && !timerBtn.contains(e.target)) {
+            timerDropdown.style.display = 'none';
+        }
+        
+        // Close note type dropdown when clicking outside
+        const typeDropdown = document.getElementById('noteTypeOptions');
+        const typeBtn = document.getElementById('noteTypeBtn');
+        if (typeDropdown && typeBtn && !typeDropdown.contains(e.target) && !typeBtn.contains(e.target)) {
+            typeDropdown.style.display = 'none';
         }
     });
     
