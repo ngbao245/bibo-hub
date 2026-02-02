@@ -1549,7 +1549,7 @@ input[type="date"]:focus {
 
 .task-editor .editor-actions {
     display: flex;
-    gap: 10px;
+    gap: var(--spacing-sm);
 }
 
 .task-editor .editor-content {

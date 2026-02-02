@@ -758,7 +758,7 @@ function showTaskEditor(task = null) {
             <div class="editor-header">
                 <div class="editor-title">${isEdit ? 'Edit Task' : 'New Task'}</div>
                 <div class="editor-actions">
-                    <button class="btn-icon" onclick="cancelTaskEdit()" title="Close">×</button>
+                    <button class="btn-close" onclick="cancelTaskEdit()" title="Close">×</button>
                 </div>
             </div>
             <div class="editor-content">
