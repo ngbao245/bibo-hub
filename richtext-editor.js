@@ -4,6 +4,12 @@ class RichTextEditor {
         this.container = container;
         this.onSave = onSave;
         this.editor = null;
+        this.initialContent = initialContent; // Store initial content for comparison
+        this.timerInterval = null;
+        this.timerSeconds = 0;
+        this.timerRunning = false;
+        this.wordCountActive = false;
+        this.wordCountInterval = null;
         this.init(initialContent);
     }
 
@@ -24,6 +30,13 @@ class RichTextEditor {
                             <span class="toolbar-separator">|</span>
                             <button class="btn-toolbar" data-command="code" title="Code Block">&lt;/&gt;</button>
                             <button class="btn-toolbar" data-command="clearAll" title="Clear All Content">Clear</button>
+                        </div>
+                        <div class="richtext-stats">
+                            <button class="word-count-btn" data-action="word-count" title="Click to count words">
+                                <span class="word-count-display">-- words</span>
+                            </button>
+                            <span class="toolbar-separator">|</span>
+                            <button class="timer-btn" data-action="timer" title="Click to start/stop timer">⏱ 00:00</button>
                         </div>
                         <div class="window-controls">
                             <button class="btn-close" data-action="fullscreen" title="Toggle Fullscreen">⛶</button>
@@ -69,11 +82,19 @@ class RichTextEditor {
         });
 
         this.container.querySelectorAll('[data-action="close"]').forEach(btn => {
-            btn.addEventListener('click', () => this.close());
+            btn.addEventListener('click', () => this.closeWithConfirmation());
         });
 
         this.container.querySelectorAll('[data-action="fullscreen"]').forEach(btn => {
             btn.addEventListener('click', () => this.toggleFullscreen());
+        });
+
+        this.container.querySelectorAll('[data-action="timer"]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleTimer());
+        });
+
+        this.container.querySelectorAll('[data-action="word-count"]').forEach(btn => {
+            btn.addEventListener('click', () => this.toggleWordCount());
         });
 
         // Keyboard shortcuts
@@ -89,14 +110,72 @@ class RichTextEditor {
     }
 
     handleKeydown(e) {
+        // Ctrl+C: Copy plain text if inside code block
+        if ((e.ctrlKey || e.metaKey) && e.key === 'c') {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                let node = selection.anchorNode;
+                let codeBlockElement = null;
+                
+                // Check if inside code block
+                while (node && node !== this.editor) {
+                    if (node.classList && node.classList.contains('code-block')) {
+                        codeBlockElement = node;
+                        break;
+                    }
+                    node = node.parentNode;
+                }
+                
+                // If inside code block, copy as plain text
+                if (codeBlockElement) {
+                    e.preventDefault();
+                    const selectedText = selection.toString();
+                    if (selectedText) {
+                        navigator.clipboard.writeText(selectedText).catch(err => {
+                            console.error('Failed to copy:', err);
+                        });
+                    }
+                    return;
+                }
+            }
+        }
+        // Ctrl+A: Select all in code block if inside one
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                let node = selection.anchorNode;
+                let codeBlockElement = null;
+                
+                // Check if inside code block
+                while (node && node !== this.editor) {
+                    if (node.classList && node.classList.contains('code-block')) {
+                        codeBlockElement = node;
+                        break;
+                    }
+                    node = node.parentNode;
+                }
+                
+                // If inside code block, select all content
+                if (codeBlockElement) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const range = document.createRange();
+                    range.selectNodeContents(codeBlockElement);
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    return;
+                }
+            }
+        }
         // Ctrl+S: Save
         if (e.ctrlKey && e.key === 's') {
             e.preventDefault();
             this.save();
         }
-        // Escape: Close
+        // Escape: Close with confirmation if content changed
         else if (e.key === 'Escape') {
-            this.close();
+            this.closeWithConfirmation();
         }
         // F11: Toggle fullscreen
         else if (e.key === 'F11') {
@@ -123,28 +202,31 @@ class RichTextEditor {
             e.preventDefault();
             this.insertCodeBlock();
         }
-        // Tab: Insert 4 spaces (or handle in code block)
+        // Tab: Insert 4 spaces
         else if (e.key === 'Tab') {
             e.preventDefault();
+            document.execCommand('insertText', false, '    ');
+        }
+        // Backspace/Delete: Handle zero-width space in code blocks
+        else if (e.key === 'Backspace' || e.key === 'Delete') {
             const selection = window.getSelection();
             if (selection.rangeCount > 0) {
                 let node = selection.anchorNode;
-                let isInCodeBlock = false;
+                let codeElement = null;
                 
                 // Check if inside code block
                 while (node && node !== this.editor) {
-                    if (node.classList && node.classList.contains('code-block')) {
-                        isInCodeBlock = true;
+                    if (node.tagName === 'CODE' && node.parentElement && node.parentElement.classList.contains('code-block')) {
+                        codeElement = node;
                         break;
                     }
                     node = node.parentNode;
                 }
                 
-                // In code block, insert tab
-                if (isInCodeBlock) {
-                    document.execCommand('insertText', false, '    ');
-                } else {
-                    document.execCommand('insertText', false, '    ');
+                // If inside code block and content is only zero-width space, clear it
+                if (codeElement && codeElement.textContent === '\u200B') {
+                    e.preventDefault();
+                    codeElement.textContent = '';
                 }
             }
         }
@@ -181,63 +263,93 @@ class RichTextEditor {
         const pasteBtn = document.createElement('button');
         pasteBtn.className = 'code-paste-btn';
         pasteBtn.textContent = 'Paste';
-        pasteBtn.contentEditable = 'false';
-        pasteBtn.addEventListener('click', async (e) => {
+        pasteBtn.setAttribute('contenteditable', 'false');
+        pasteBtn.setAttribute('tabindex', '-1');
+        pasteBtn.setAttribute('unselectable', 'on');
+        pasteBtn.setAttribute('role', 'button');
+        pasteBtn.onselectstart = () => false;
+        pasteBtn.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        pasteBtn.onclick = async (e) => {
             e.preventDefault();
             e.stopPropagation();
             try {
                 const text = await navigator.clipboard.readText();
-                const codeElement = codeBlockWrapper.querySelector('code');
-                codeElement.textContent = text;
-                codeElement.focus();
+                const codeElement = codeBlockWrapper.querySelector('.code-block code');
+                if (codeElement) {
+                    // Clear all content first
+                    codeElement.innerHTML = '';
+                    // Set plain text
+                    codeElement.textContent = text;
+                    codeElement.focus();
+                }
             } catch (err) {
                 console.error('Failed to read clipboard:', err);
                 alert('Cannot access clipboard. Please paste manually (Ctrl+V)');
             }
-        });
+        };
         
         // Create copy button
         const copyBtn = document.createElement('button');
         copyBtn.className = 'code-copy-btn';
         copyBtn.textContent = 'Copy';
-        copyBtn.contentEditable = 'false';
-        copyBtn.addEventListener('click', async (e) => {
+        copyBtn.setAttribute('contenteditable', 'false');
+        copyBtn.setAttribute('tabindex', '-1');
+        copyBtn.setAttribute('unselectable', 'on');
+        copyBtn.setAttribute('role', 'button');
+        copyBtn.onselectstart = () => false;
+        copyBtn.onmousedown = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        };
+        copyBtn.onclick = async (e) => {
             e.preventDefault();
             e.stopPropagation();
             try {
-                const codeElement = codeBlockWrapper.querySelector('code');
-                let text = codeElement.textContent;
-                // Remove zero-width space if exists
-                if (text === '\u200B') {
-                    text = '';
+                const codeElement = codeBlockWrapper.querySelector('.code-block code');
+                if (codeElement) {
+                    let text = codeElement.innerText || codeElement.textContent || '';
+                    if (text === '\u200B') {
+                        text = '';
+                    }
+                    await navigator.clipboard.writeText(text);
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = 'Copied';
+                    setTimeout(() => {
+                        copyBtn.textContent = originalText;
+                    }, 1500);
                 }
-                await navigator.clipboard.writeText(text);
-                // Visual feedback with fixed width
-                copyBtn.style.minWidth = copyBtn.offsetWidth + 'px';
-                const originalText = copyBtn.textContent;
-                copyBtn.textContent = '✓ Copied';
-                setTimeout(() => {
-                    copyBtn.textContent = originalText;
-                    copyBtn.style.minWidth = '';
-                }, 1500);
             } catch (err) {
                 console.error('Failed to copy:', err);
                 alert('Cannot copy to clipboard. Please copy manually (Ctrl+C)');
             }
-        });
+        };
         
         // Create clear button for code block
         const clearBtn = document.createElement('button');
         clearBtn.className = 'code-clear-btn';
         clearBtn.textContent = 'Clear';
-        clearBtn.contentEditable = 'false';
-        clearBtn.addEventListener('click', (e) => {
+        clearBtn.setAttribute('contenteditable', 'false');
+        clearBtn.setAttribute('tabindex', '-1');
+        clearBtn.setAttribute('unselectable', 'on');
+        clearBtn.setAttribute('role', 'button');
+        clearBtn.onselectstart = () => false;
+        clearBtn.onmousedown = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const codeElement = codeBlockWrapper.querySelector('code');
-            codeElement.textContent = '\u200B';
-            codeElement.focus();
-        });
+        };
+        clearBtn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const codeElement = codeBlockWrapper.querySelector('.code-block code');
+            if (codeElement) {
+                codeElement.innerHTML = '';
+                codeElement.textContent = '\u200B';
+                codeElement.focus();
+            }
+        };
         
         // Create code block element
         const codeBlock = document.createElement('pre');
@@ -330,22 +442,18 @@ class RichTextEditor {
 
     toggleFullscreen() {
         const modal = this.container.querySelector('.richtext-modal');
-        const content = this.container.querySelector('.richtext-modal-content');
         const btn = this.container.querySelector('[data-action="fullscreen"]');
         
         if (modal.classList.contains('fullscreen')) {
-            // Exit fullscreen
             modal.classList.remove('fullscreen');
             btn.innerHTML = '⛶';
             btn.title = 'Fullscreen';
         } else {
-            // Enter fullscreen
             modal.classList.add('fullscreen');
             btn.innerHTML = '🗗';
             btn.title = 'Exit Fullscreen';
         }
         
-        // Refocus editor after toggle
         setTimeout(() => {
             this.editor.focus();
         }, 100);
@@ -392,6 +500,29 @@ class RichTextEditor {
         }
     }
 
+    hasContentChanged() {
+        const currentContent = this.getContent();
+        const initialContent = this.sanitizeContent(this.initialContent);
+        
+        // Normalize both contents for comparison (remove extra whitespace)
+        const normalize = (html) => {
+            return html.replace(/\s+/g, ' ').trim();
+        };
+        
+        return normalize(currentContent) !== normalize(initialContent);
+    }
+
+    closeWithConfirmation() {
+        // Check if content has changed
+        if (this.hasContentChanged()) {
+            const confirmed = confirm('You have unsaved changes. Are you sure you want to close?');
+            if (!confirmed) {
+                return; // Don't close if user cancels
+            }
+        }
+        this.close();
+    }
+
     save() {
         const content = this.getContent();
         if (this.onSave) {
@@ -400,7 +531,120 @@ class RichTextEditor {
         this.close();
     }
 
+    toggleWordCount() {
+        if (this.wordCountActive) {
+            this.stopWordCount();
+        } else {
+            this.startWordCount();
+        }
+    }
+
+    startWordCount() {
+        this.wordCountActive = true;
+        const wordCountBtn = this.container.querySelector('[data-action="word-count"]');
+        
+        // Update immediately
+        this.updateWordCount();
+        
+        // Update every time user types
+        this.wordCountInterval = setInterval(() => {
+            this.updateWordCount();
+        }, 500);
+        
+        if (wordCountBtn) {
+            wordCountBtn.classList.add('word-count-active');
+        }
+    }
+
+    stopWordCount() {
+        this.wordCountActive = false;
+        
+        if (this.wordCountInterval) {
+            clearInterval(this.wordCountInterval);
+            this.wordCountInterval = null;
+        }
+        
+        const wordCountBtn = this.container.querySelector('[data-action="word-count"]');
+        const wordCountDisplay = this.container.querySelector('.word-count-display');
+        
+        if (wordCountBtn) {
+            wordCountBtn.classList.remove('word-count-active');
+        }
+        
+        if (wordCountDisplay) {
+            wordCountDisplay.textContent = '-- words';
+        }
+    }
+
+    updateWordCount() {
+        if (!this.wordCountActive) return;
+        
+        const text = this.editor.innerText || '';
+        const words = text.trim().split(/\s+/).filter(word => word.length > 0);
+        const count = words.length;
+        
+        const wordCountDisplay = this.container.querySelector('.word-count-display');
+        if (wordCountDisplay) {
+            wordCountDisplay.textContent = `${count} ${count === 1 ? 'word' : 'words'}`;
+        }
+    }
+
+    toggleTimer() {
+        if (this.timerRunning) {
+            this.stopTimer();
+        } else {
+            this.startTimer();
+        }
+    }
+
+    startTimer() {
+        this.timerRunning = true;
+        const timerBtn = this.container.querySelector('[data-action="timer"]');
+        
+        this.timerInterval = setInterval(() => {
+            this.timerSeconds++;
+            this.updateTimerDisplay();
+        }, 1000);
+        
+        if (timerBtn) {
+            timerBtn.classList.add('timer-running');
+        }
+    }
+
+    stopTimer() {
+        this.timerRunning = false;
+        
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+        
+        const timerBtn = this.container.querySelector('[data-action="timer"]');
+        if (timerBtn) {
+            timerBtn.classList.remove('timer-running');
+        }
+    }
+
+    updateTimerDisplay() {
+        const minutes = Math.floor(this.timerSeconds / 60);
+        const seconds = this.timerSeconds % 60;
+        const display = `⏱ ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        
+        const timerBtn = this.container.querySelector('[data-action="timer"]');
+        if (timerBtn) {
+            timerBtn.textContent = display;
+        }
+    }
+
     close() {
+        // Stop timer when closing
+        if (this.timerInterval) {
+            clearInterval(this.timerInterval);
+        }
+        // Stop word count when closing
+        if (this.wordCountInterval) {
+            clearInterval(this.wordCountInterval);
+        }
         this.container.innerHTML = '';
     }
 }
