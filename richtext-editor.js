@@ -1,15 +1,16 @@
 // Rich Text Editor for Notes App
 class RichTextEditor {
-    constructor(container, initialContent = '', onSave) {
+    constructor(container, initialContent = '', onSave, noteData = {}) {
         this.container = container;
         this.onSave = onSave;
         this.editor = null;
         this.initialContent = initialContent; // Store initial content for comparison
         this.timerInterval = null;
-        this.timerSeconds = 0;
+        this.timerSeconds = parseInt(noteData.timerDuration) || 0; // Restore timer duration from string
         this.timerRunning = false;
-        this.wordCountActive = false;
+        this.wordCountActive = noteData.wordCountEnabled || false; // Restore word count state
         this.wordCountInterval = null;
+        this.noteData = noteData; // Store note data for saving state
         this.init(initialContent);
     }
 
@@ -63,6 +64,14 @@ class RichTextEditor {
         
         // Setup code block buttons for existing code blocks
         this.setupCodeBlockButtons();
+        
+        // Restore word count state if it was active
+        if (this.wordCountActive) {
+            this.startWordCount();
+        }
+        
+        // Update timer display with restored duration
+        this.updateTimerDisplay();
         
         // Focus editor
         this.editor.focus();
@@ -675,7 +684,12 @@ class RichTextEditor {
     save() {
         const content = this.getContent();
         if (this.onSave) {
-            this.onSave(content);
+            // Include word count state and timer duration in save
+            const editorState = {
+                wordCountEnabled: this.wordCountActive,
+                timerDuration: this.timerSeconds.toString() // Convert to string
+            };
+            this.onSave(content, editorState);
         }
         this.close();
     }
@@ -748,6 +762,9 @@ class RichTextEditor {
                 text = fullText;
             }
         }
+        
+        // Remove zero-width space and other invisible characters before counting
+        text = text.replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
         
         const words = text.trim().split(/\s+/).filter(word => word.length > 0);
         const count = words.length;

@@ -77,8 +77,7 @@ Uses single table approach with `type` field to differentiate:
 "id": "string",
 "title": "string",
 "content": "string (HTML)",
-"type": "note|vocabulary|code|course",
-"language": "vi|en",
+"type": "note|ielts|course|code",
 "source": "string",
 "tags": "string (comma-separated)",
 "example": "string",
@@ -87,6 +86,8 @@ Uses single table approach with `type` field to differentiate:
 "url3": "string",
 "url4": "string",
 "url5": "string",
+"wordCountEnabled": "boolean", // Rich text editor word count toggle state
+"timerDuration": "string", // Rich text editor timer duration in seconds
 "createdAt": "ISO string",
 "updatedAt": "ISO string"
 }
@@ -297,6 +298,7 @@ The rich text editor is a custom-built, feature-rich content editor with profess
   - Shows "-- words" when inactive
   - Fixed width (90px) to prevent layout shifts
   - Styled consistently with toolbar buttons
+  - **State Persistence**: Toggle state is saved to database and restored when reopening note
   - **Smart Counting Priority**:
     1. **Selected text**: If text is selected, counts only that selection
     2. **Marked text**: If content has `` markers, counts text between first `` ... `` pair
@@ -308,6 +310,8 @@ The rich text editor is a custom-built, feature-rich content editor with profess
   - Continues counting until manually stopped
   - Auto-stops when editor closes
   - Blue highlight when running
+  - **Duration Persistence**: Timer duration is saved to database and restored when reopening note
+  - **Accumulated Time**: Timer continues from where it left off in previous sessions
 - **Unsaved Changes Protection**:
   - Detects content changes by comparing with initial content
   - Prompts "You have unsaved changes. Are you sure you want to close?" when:
@@ -806,13 +810,21 @@ window.mobileInterface.forceSyncMobileHeader();
 
 ---
 
-**Version**: 2.6.2
+**Version**: 2.7.0
 **Last Updated**: February 2026
 **Tech Stack**: Vanilla JavaScript, MockAPI, CSS Variables
 **License**: MIT
 **Author**: BiBo Development Team
 
-### Changelog v2.6.2 (Latest)
+### Changelog v2.7.0 (Latest)
+- ✅ **Rich Text Editor State Persistence**:
+  - **Word Count State**: Toggle state (on/off) is now saved to database and restored when reopening notes
+  - **Timer Duration**: Timer duration is saved to database and continues from previous sessions
+  - **Database Schema**: Added `wordCountEnabled` (boolean) and `timerDuration` (string) fields to Notes table
+  - **Accumulated Writing Time**: Track total time spent writing on each note across multiple sessions
+  - **Seamless Experience**: Editor state automatically restored when switching between notes
+
+### Changelog v2.6.2
 - ✅ **Smart Word Count**:
   - **Priority 1 - Selected Text**: Counts only selected text when user has selection
   - **Priority 2 - Marked Text**: Counts text between `` markers (e.g., `` count this ``)

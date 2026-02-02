@@ -7,6 +7,7 @@ let notes = [];
 let currentNote = null;
 let isEditing = false;
 let searchQuery = '';
+let currentTypeFilter = localStorage.getItem('notes_typeFilter') || 'all'; // Filter by type, restore from localStorage
 
 // DOM Elements
 const notesList = document.getElementById('notesList');
@@ -49,6 +50,8 @@ async function loadNotes() {
         const response = await fetch(API_NOTES);
         notes = await response.json();
         notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        updateTypeCounts();
+        restoreTypeFilter(); // Restore filter state
         renderNotesList();
     } catch (error) {
         console.error('Error loading notes:', error);
@@ -68,6 +71,7 @@ async function saveNote(noteData) {
             // Update UI immediately
             StorageManager.saveCurrentNoteId(currentNote.id);
             StorageManager.clearEditorState();
+            updateTypeCounts();
             renderNotesList();
             showViewMode();
             
@@ -92,6 +96,7 @@ async function saveNote(noteData) {
             
             // Update UI immediately with temp note
             StorageManager.clearEditorState();
+            updateTypeCounts();
             renderNotesList();
             showViewMode();
             
@@ -108,6 +113,7 @@ async function saveNote(noteData) {
             if (index !== -1) notes[index] = newNote;
             currentNote = newNote;
             StorageManager.saveCurrentNoteId(newNote.id);
+            updateTypeCounts();
             renderNotesList();
         }
     } catch (error) {
@@ -126,6 +132,7 @@ async function deleteNote(id) {
         StorageManager.saveCurrentNoteId(null);
         StorageManager.saveCachedNote(null);
         StorageManager.clearEditorState();
+        updateTypeCounts();
         renderNotesList();
         editorView.innerHTML = '<div class="empty-editor">Select a note or create a new one</div>';
         
@@ -142,9 +149,15 @@ async function deleteNote(id) {
 // Render Functions
 function renderNotesList() {
     const filteredNotes = notes.filter(note => {
-        if (!searchQuery) return true;
-        return note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               note.content.toLowerCase().includes(searchQuery.toLowerCase());
+        // Filter by search query
+        const matchesSearch = !searchQuery || 
+            note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            note.content.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        // Filter by type
+        const matchesType = currentTypeFilter === 'all' || note.type === currentTypeFilter;
+        
+        return matchesSearch && matchesType;
     });
     
     if (filteredNotes.length === 0) {
@@ -180,8 +193,8 @@ function showViewMode() {
         <div class="view-mode">
             <div class="meta-info">
                 <span class="meta-badge">${getTypeLabel(currentNote.type)}</span>
-                <span class="meta-badge">${currentNote.language === 'vi' ? 'Tiếng Việt' : 'English'}</span>
                 <span class="meta-badge">${formatDate(currentNote.createdAt)}</span>
+                ${currentNote.timerDuration && parseInt(currentNote.timerDuration) > 0 ? `<span class="meta-badge">⏱ ${parseInt(currentNote.timerDuration)} min</span>` : ''}
             </div>
             
             ${currentNote.source ? `
@@ -193,7 +206,7 @@ function showViewMode() {
             
             <div class="content-section">
                 <h3>Content</h3>
-                <div class="content-text editable-content" ondblclick="editContent(this)">${currentNote.content ? currentNote.content : '<span style="color: var(--color-text-muted); font-style: italic;">blank</span>'}</div>
+                <div class="content-text editable-content" ondblclick="editContent(this)">${currentNote.content || ''}</div>
             </div>
             
             ${currentNote.example ? `
@@ -260,29 +273,54 @@ function showEditMode(restoreData = null) {
                         <label>Type</label>
                         <select id="noteType">
                             <option value="note" ${note.type === 'note' ? 'selected' : ''}>Note</option>
-                            <option value="vocabulary" ${note.type === 'vocabulary' ? 'selected' : ''}>Vocabulary</option>
-                            <option value="code" ${note.type === 'code' ? 'selected' : ''}>Code</option>
+                            <option value="ielts" ${note.type === 'ielts' ? 'selected' : ''}>IELTS</option>
                             <option value="course" ${note.type === 'course' ? 'selected' : ''}>Course</option>
+                            <option value="code" ${note.type === 'code' ? 'selected' : ''}>Code</option>
                         </select>
                     </div>
 
                     <div class="form-group">
-                        <label>Language</label>
-                        <select id="noteLanguage">
-                            <option value="vi" ${note.language === 'vi' ? 'selected' : ''}>Tiếng Việt</option>
-                            <option value="en" ${note.language === 'en' ? 'selected' : ''}>English</option>
-                        </select>
+                        <label>Timer Duration</label>
+                        <div class="timer-duration-dropdown">
+                            <button type="button" class="timer-duration-btn" id="timerDurationBtn" onclick="toggleTimerDurationDropdown()">
+                                <span id="timerDurationText">Not set</span>
+                            </button>
+                            <div class="timer-duration-options" id="timerDurationOptions">
+                                <div class="timer-duration-option" onclick="setTimerDuration('20')">
+                                    <span class="option-text">20 min (IELTS Task 1)</span>
+                                </div>
+                                <div class="timer-duration-option" onclick="setTimerDuration('40')">
+                                    <span class="option-text">40 min (IELTS Task 2)</span>
+                                </div>
+                                <div class="timer-duration-option" onclick="setTimerDuration('60')">
+                                    <span class="option-text">60 min (IELTS Reading/Listening)</span>
+                                </div>
+                                <div class="timer-duration-option" onclick="setTimerDuration('30')">
+                                    <span class="option-text">30 min</span>
+                                </div>
+                                <div class="timer-duration-option" onclick="setTimerDuration('45')">
+                                    <span class="option-text">45 min</span>
+                                </div>
+                                <div class="timer-duration-option" onclick="setTimerDuration('custom')">
+                                    <span class="option-text">Custom...</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Hidden input for timer duration -->
+                        <input type="number" id="noteTimerDuration" value="${parseInt(note.timerDuration) || 0}" style="display: none;" min="0">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label>Source</label>
-                    <input type="text" id="noteSource" value="${escapeHtml(note.source || '')}" placeholder="Udemy, YouTube, Book...">
-                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Source</label>
+                        <input type="text" id="noteSource" value="${escapeHtml(note.source || '')}" placeholder="Udemy, YouTube, Book...">
+                    </div>
 
-                <div class="form-group">
-                    <label>Tags</label>
-                    <input type="text" id="noteTags" value="${escapeHtml(note.tags || '')}" placeholder="javascript, react, english (comma separated)">
+                    <div class="form-group">
+                        <label>Tags</label>
+                        <input type="text" id="noteTags" value="${escapeHtml(note.tags || '')}" placeholder="javascript, react, english (comma separated)">
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -323,6 +361,67 @@ function showEditMode(restoreData = null) {
     
     // Setup auto-save for form fields
     StorageManager.setupAutoSave();
+    
+    // Initialize timer duration dropdown display
+    updateTimerDurationDisplay();
+}
+
+// Timer Duration Dropdown Functions
+function toggleTimerDurationDropdown() {
+    const options = document.getElementById('timerDurationOptions');
+    if (options) {
+        options.style.display = options.style.display === 'block' ? 'none' : 'block';
+    }
+}
+
+function setTimerDuration(value) {
+    const input = document.getElementById('noteTimerDuration');
+    const options = document.getElementById('timerDurationOptions');
+    
+    if (value === 'custom') {
+        // Show prompt for custom duration
+        const customValue = prompt('Enter duration in minutes:', input.value || '0');
+        if (customValue !== null) {
+            const minutes = parseInt(customValue);
+            if (!isNaN(minutes) && minutes >= 0) {
+                input.value = minutes;
+                updateTimerDurationDisplay();
+            }
+        }
+    } else {
+        input.value = value;
+        updateTimerDurationDisplay();
+    }
+    
+    // Close dropdown
+    if (options) {
+        options.style.display = 'none';
+    }
+}
+
+function updateTimerDurationDisplay() {
+    const input = document.getElementById('noteTimerDuration');
+    const displayText = document.getElementById('timerDurationText');
+    
+    if (!input || !displayText) return;
+    
+    const minutes = parseInt(input.value) || 0;
+    
+    if (minutes === 0) {
+        displayText.textContent = 'Not set';
+    } else if (minutes === 20) {
+        displayText.textContent = '20 min (IELTS Task 1)';
+    } else if (minutes === 40) {
+        displayText.textContent = '40 min (IELTS Task 2)';
+    } else if (minutes === 60) {
+        displayText.textContent = '60 min (IELTS Reading/Listening)';
+    } else if (minutes === 30) {
+        displayText.textContent = '30 min';
+    } else if (minutes === 45) {
+        displayText.textContent = '45 min';
+    } else {
+        displayText.textContent = `${minutes} min`;
+    }
 }
 
 // Actions
@@ -380,7 +479,6 @@ function saveCurrentNote() {
         title: finalTitle,
         content: content,
         type: document.getElementById('noteType').value,
-        language: document.getElementById('noteLanguage').value,
         source: document.getElementById('noteSource').value,
         tags: document.getElementById('noteTags').value,
         example: document.getElementById('noteExample').value,
@@ -388,7 +486,9 @@ function saveCurrentNote() {
         url2: document.getElementById('noteUrl2').value,
         url3: document.getElementById('noteUrl3').value,
         url4: document.getElementById('noteUrl4').value,
-        url5: document.getElementById('noteUrl5').value
+        url5: document.getElementById('noteUrl5').value,
+        wordCountEnabled: currentNote ? currentNote.wordCountEnabled : false, // Keep existing value or default
+        timerDuration: document.getElementById('noteTimerDuration').value || "0"
     };
     
     saveNote(noteData);
@@ -412,6 +512,15 @@ function setupEventListeners() {
         debouncedSearch(value);
     });
     
+    // Close timer duration dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('timerDurationOptions');
+        const btn = document.getElementById('timerDurationBtn');
+        if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
+    
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         // Ctrl+S: Save note
@@ -433,6 +542,62 @@ function clearSearch() {
     document.getElementById('clearSearch').style.display = 'none';
     renderNotesList();
     searchInput.focus();
+}
+
+// Type Filter Functions
+function toggleTypeFilter() {
+    const list = document.getElementById('noteTypeList');
+    const toggle = document.getElementById('filterToggle');
+    
+    list.classList.toggle('open');
+    toggle.classList.toggle('open');
+}
+
+function filterByType(type) {
+    currentTypeFilter = type;
+    
+    // Save to localStorage
+    localStorage.setItem('notes_typeFilter', type);
+    
+    // Update active state
+    document.querySelectorAll('.note-type-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    document.querySelector(`.note-type-item[data-type="${type}"]`).classList.add('active');
+    
+    // Render filtered notes
+    renderNotesList();
+}
+
+function restoreTypeFilter() {
+    // Restore active state from localStorage
+    const savedFilter = localStorage.getItem('notes_typeFilter') || 'all';
+    currentTypeFilter = savedFilter;
+    
+    document.querySelectorAll('.note-type-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    
+    const activeItem = document.querySelector(`.note-type-item[data-type="${savedFilter}"]`);
+    if (activeItem) {
+        activeItem.classList.add('active');
+    }
+}
+
+function updateTypeCounts() {
+    const counts = {
+        all: notes.length,
+        note: notes.filter(n => n.type === 'note').length,
+        ielts: notes.filter(n => n.type === 'ielts').length,
+        course: notes.filter(n => n.type === 'course').length,
+        code: notes.filter(n => n.type === 'code').length
+    };
+    
+    document.getElementById('countAll').textContent = counts.all;
+    document.getElementById('countNote').textContent = counts.note;
+    document.getElementById('countIelts').textContent = counts.ielts;
+    document.getElementById('countCourse').textContent = counts.course;
+    document.getElementById('countCode').textContent = counts.code;
 }
 
 // Restore state from cache IMMEDIATELY (no API wait)
@@ -474,10 +639,10 @@ function updateStateFromAPI() {
 
 function getTypeLabel(type) {
     const labels = {
-        vocabulary: 'Vocabulary',
-        code: 'Code',
+        note: 'Note',
+        ielts: 'IELTS',
         course: 'Course',
-        note: 'Note'
+        code: 'Code'
     };
     return labels[type] || 'Note';
 }
@@ -593,12 +758,19 @@ function editContent(element) {
     const editor = new RichTextEditor(
         editorContainer,
         contentToEdit,
-        async (newContent) => {
-            // Save callback
-            if (newContent !== currentNote.content) {
+        async (newContent, editorState) => {
+            // Save callback with editor state
+            if (newContent !== currentNote.content || 
+                (editorState && (editorState.wordCountEnabled !== currentNote.wordCountEnabled || 
+                editorState.timerDuration !== currentNote.timerDuration))) {
                 currentNote.content = newContent;
+                if (editorState) {
+                    currentNote.wordCountEnabled = editorState.wordCountEnabled;
+                    currentNote.timerDuration = editorState.timerDuration;
+                }
                 await saveNote(currentNote);
             }
-        }
+        },
+        currentNote // Pass current note data for state restoration
     );
 }
