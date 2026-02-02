@@ -21,6 +21,9 @@ class RichTextEditor {
                             <span class="toolbar-separator">|</span>
                             <button class="btn-toolbar" data-command="insertUnorderedList" title="Bullet List">• List</button>
                             <button class="btn-toolbar" data-command="insertOrderedList" title="Numbered List">1. List</button>
+                            <span class="toolbar-separator">|</span>
+                            <button class="btn-toolbar" data-command="code" title="Code Block">&lt;/&gt;</button>
+                            <button class="btn-toolbar" data-command="clearAll" title="Clear All Content">Clear</button>
                         </div>
                         <div class="window-controls">
                             <button class="btn-close" data-action="fullscreen" title="Toggle Fullscreen">⛶</button>
@@ -115,17 +118,164 @@ class RichTextEditor {
             e.preventDefault();
             this.execCommand('underline');
         }
-        // Tab: Insert 4 spaces
+        // Ctrl+Shift+C: Code Block
+        else if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+            e.preventDefault();
+            this.insertCodeBlock();
+        }
+        // Tab: Insert 4 spaces (or handle in code block)
         else if (e.key === 'Tab') {
             e.preventDefault();
-            document.execCommand('insertText', false, '    ');
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                let node = selection.anchorNode;
+                let isInCodeBlock = false;
+                
+                // Check if inside code block
+                while (node && node !== this.editor) {
+                    if (node.classList && node.classList.contains('code-block')) {
+                        isInCodeBlock = true;
+                        break;
+                    }
+                    node = node.parentNode;
+                }
+                
+                // In code block, insert tab
+                if (isInCodeBlock) {
+                    document.execCommand('insertText', false, '    ');
+                } else {
+                    document.execCommand('insertText', false, '    ');
+                }
+            }
         }
     }
 
     execCommand(command) {
-        document.execCommand(command, false, null);
+        if (command === 'code') {
+            this.insertCodeBlock();
+        } else if (command === 'clearAll') {
+            if (confirm('Are you sure you want to clear all content?')) {
+                this.editor.innerHTML = '';
+                this.editor.focus();
+            }
+            return;
+        } else {
+            document.execCommand(command, false, null);
+        }
         this.editor.focus();
         this.updateToolbar();
+    }
+
+    insertCodeBlock() {
+        const selection = window.getSelection();
+        const selectedText = selection.toString();
+        
+        // Create line break before code block
+        const brBefore = document.createElement('br');
+        
+        // Create code block wrapper
+        const codeBlockWrapper = document.createElement('div');
+        codeBlockWrapper.className = 'code-block-wrapper';
+        
+        // Create paste button
+        const pasteBtn = document.createElement('button');
+        pasteBtn.className = 'code-paste-btn';
+        pasteBtn.textContent = 'Paste';
+        pasteBtn.contentEditable = 'false';
+        pasteBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                const text = await navigator.clipboard.readText();
+                const codeElement = codeBlockWrapper.querySelector('code');
+                codeElement.textContent = text;
+                codeElement.focus();
+            } catch (err) {
+                console.error('Failed to read clipboard:', err);
+                alert('Cannot access clipboard. Please paste manually (Ctrl+V)');
+            }
+        });
+        
+        // Create copy button
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'code-copy-btn';
+        copyBtn.textContent = 'Copy';
+        copyBtn.contentEditable = 'false';
+        copyBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            try {
+                const codeElement = codeBlockWrapper.querySelector('code');
+                let text = codeElement.textContent;
+                // Remove zero-width space if exists
+                if (text === '\u200B') {
+                    text = '';
+                }
+                await navigator.clipboard.writeText(text);
+                // Visual feedback with fixed width
+                copyBtn.style.minWidth = copyBtn.offsetWidth + 'px';
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = '✓ Copied';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                    copyBtn.style.minWidth = '';
+                }, 1500);
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                alert('Cannot copy to clipboard. Please copy manually (Ctrl+C)');
+            }
+        });
+        
+        // Create clear button for code block
+        const clearBtn = document.createElement('button');
+        clearBtn.className = 'code-clear-btn';
+        clearBtn.textContent = 'Clear';
+        clearBtn.contentEditable = 'false';
+        clearBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const codeElement = codeBlockWrapper.querySelector('code');
+            codeElement.textContent = '\u200B';
+            codeElement.focus();
+        });
+        
+        // Create code block element
+        const codeBlock = document.createElement('pre');
+        codeBlock.className = 'code-block';
+        codeBlock.contentEditable = 'true';
+        
+        const code = document.createElement('code');
+        // Use zero-width space to make empty code block clickable
+        code.textContent = selectedText || '\u200B';
+        codeBlock.appendChild(code);
+        
+        // Assemble wrapper
+        codeBlockWrapper.appendChild(copyBtn);
+        codeBlockWrapper.appendChild(pasteBtn);
+        codeBlockWrapper.appendChild(clearBtn);
+        codeBlockWrapper.appendChild(codeBlock);
+        
+        // Create line break after code block
+        const brAfter = document.createElement('br');
+        
+        // Insert code block
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            range.deleteContents();
+            
+            // Insert: line break + code block wrapper + line break
+            range.insertNode(brAfter);
+            range.insertNode(codeBlockWrapper);
+            range.insertNode(brBefore);
+            
+            // Move cursor inside code block
+            const newRange = document.createRange();
+            const codeContent = codeBlock.querySelector('code');
+            newRange.selectNodeContents(codeContent);
+            newRange.collapse(false);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+        }
     }
     
     updateToolbar() {
@@ -142,6 +292,31 @@ class RichTextEditor {
                 }
             }
         });
+        
+        // Check if cursor is inside code block
+        const codeBtn = this.container.querySelector('[data-command="code"]');
+        if (codeBtn) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                let node = selection.anchorNode;
+                let isInCodeBlock = false;
+                
+                // Traverse up to check if inside code block
+                while (node && node !== this.editor) {
+                    if (node.classList && node.classList.contains('code-block')) {
+                        isInCodeBlock = true;
+                        break;
+                    }
+                    node = node.parentNode;
+                }
+                
+                if (isInCodeBlock) {
+                    codeBtn.classList.add('active');
+                } else {
+                    codeBtn.classList.remove('active');
+                }
+            }
+        }
     }
 
     moveCursorToEnd() {
