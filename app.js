@@ -310,13 +310,13 @@ function showEditMode(restoreData = null) {
                             </button>
                             <div class="timer-duration-options" id="timerDurationOptions">
                                 <div class="timer-duration-option" onclick="setTimerDuration('20')">
-                                    <span class="option-text">20 min (IELTS Task 1)</span>
+                                    <span class="option-text">20 min (Writing Task 1)</span>
                                 </div>
                                 <div class="timer-duration-option" onclick="setTimerDuration('40')">
-                                    <span class="option-text">40 min (IELTS Task 2)</span>
+                                    <span class="option-text">40 min (Writing Task 2)</span>
                                 </div>
                                 <div class="timer-duration-option" onclick="setTimerDuration('60')">
-                                    <span class="option-text">60 min (IELTS Reading/Listening)</span>
+                                    <span class="option-text">60 min (Reading/Listening)</span>
                                 </div>
                                 <div class="timer-duration-option" onclick="setTimerDuration('30')">
                                     <span class="option-text">30 min</span>
@@ -475,11 +475,11 @@ function updateTimerDurationDisplay() {
     if (minutes === 0) {
         displayText.textContent = 'Not set';
     } else if (minutes === 20) {
-        displayText.textContent = '20 min (IELTS Task 1)';
+        displayText.textContent = '20 min';
     } else if (minutes === 40) {
-        displayText.textContent = '40 min (IELTS Task 2)';
+        displayText.textContent = '40 min';
     } else if (minutes === 60) {
-        displayText.textContent = '60 min (IELTS Reading/Listening)';
+        displayText.textContent = '60 min';
     } else if (minutes === 30) {
         displayText.textContent = '30 min';
     } else if (minutes === 45) {

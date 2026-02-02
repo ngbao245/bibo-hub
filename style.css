@@ -501,7 +501,9 @@ body {
     border-left: 3px solid var(--color-accent-primary);
     overflow-x: auto;
     overflow-y: auto;
-    max-height: 400px;
+    max-height: calc(100vh - 300px);
+    /* Dynamic height based on viewport */
+    min-height: 200px;
     max-width: 100%;
     -webkit-overflow-scrolling: touch;
 }
