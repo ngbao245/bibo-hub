@@ -63,10 +63,17 @@ class MobileInterface {
     }
 
     getCurrentPage() {
-        // First check localStorage for saved tab state
-        const savedTab = StorageManager.loadCurrentTab();
+        // Check URL path
+        const path = window.location.pathname;
         
-        // Then check URL path
+        if (path.includes('tasks.html') || path.includes('tasks/')) {
+            return 'tasks';
+        } else if (path.includes('notes.html') || path.includes('notes/')) {
+            return 'notes';
+        }
+        
+        return 'notes'; // default
+    }
         const path = window.location.pathname;
         let currentTab;
         if (path.includes('tasks.html')) {
@@ -245,18 +252,8 @@ class MobileInterface {
     }
 
     handleClick(e) {
-        // Navigation tab clicks - save tab state
+        // Navigation tab clicks
         if (e.target.closest('.mobile-nav-tab') || e.target.closest('.nav-link')) {
-            const link = e.target.closest('.mobile-nav-tab') || e.target.closest('.nav-link');
-            const href = link.getAttribute('href');
-            
-            if (href) {
-                if (href.includes('tasks.html')) {
-                    StorageManager.saveCurrentTab('tasks');
-                } else if (href.includes('index.html')) {
-                    StorageManager.saveCurrentTab('notes');
-                }
-            }
             return; // Let the link navigate normally
         }
 
@@ -848,14 +845,7 @@ function setupNavigationStateTracking() {
         // Check if clicked element is a navigation link
         const navLink = e.target.closest('.nav-link, .mobile-nav-tab');
         if (navLink) {
-            const href = navLink.getAttribute('href');
-            if (href) {
-                if (href.includes('tasks.html')) {
-                    StorageManager.saveCurrentTab('tasks');
-                } else if (href.includes('index.html')) {
-                    StorageManager.saveCurrentTab('notes');
-                }
-            }
+            // Let the link navigate normally
         }
     });
 }

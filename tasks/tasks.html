@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Tasks - BiBo</title>
-    <link rel="icon" type="image/png" href="./assets/icon.png">
-    <link rel="stylesheet" href="./style.css">
-    <link rel="stylesheet" href="./tasks.css">
+    <link rel="icon" type="image/png" href="../assets/icon.png">
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="tasks.css">
 </head>
 <body>
     <div class="container">
@@ -18,9 +18,9 @@
             
             <!-- Navigation -->
             <div class="app-nav">
-                <a href="index.html" class="nav-link">Notes</a>
+                <a href="../notes/notes.html" class="nav-link">Notes</a>
                 <a href="tasks.html" class="nav-link active">Tasks</a>
-                <!-- <a href="#" class="nav-link">© BiBo</a> -->
+                <a href="../hub.html" class="nav-link">Hub</a>
             </div>
             
             <!-- Task Lists -->
@@ -103,10 +103,22 @@
         </div>
     </div>
 
-    <script src="./storage.js"></script>
-    <script src="./config.js"></script>
-    <script src="./mobile.js"></script>
-    <script src="./tasks.js"></script>
+    <script src="../config.js"></script>
+    <script>
+        // Clear old cache key and migrate to new key
+        if (localStorage.getItem('app_currentTab')) {
+            const oldTab = localStorage.getItem('app_currentTab');
+            localStorage.setItem('app_currentPage', oldTab);
+            localStorage.removeItem('app_currentTab');
+        }
+    </script>
+    <script src="tasks-storage.js"></script>
+    <script src="tasks-mobile.js"></script>
+    <script src="tasks.js"></script>
+    <script>
+        // Save current page when loaded
+        StorageManager.saveCurrentPage('tasks');
+    </script>
     <script>
         // Initialize tasks when page loads
         document.addEventListener('DOMContentLoaded', initTasks);

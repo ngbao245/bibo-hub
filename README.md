@@ -68,6 +68,41 @@ featuring rich text editing, auto-save task management, and responsive mobile de
 
 ## 🏗️ Technical Architecture
 
+### Modular Project Structure
+The project is organized into separate mini-projects with shared resources:
+
+**Hub System:**
+- `hub.html` - Main landing page with tool grid
+- Modals embedded in HTML (CORS limitation with file:// protocol)
+- Modal CSS and JS in separate files for modularity
+- Each modal has its own folder with `.css` and `.js` files
+
+**Mini Projects:**
+- `notes/` - Full notes management app
+- `tasks/` - Full tasks management app
+- Each project has its own HTML, CSS, JS files
+- All projects share `common.css` for consistent styling
+
+**Modal Architecture:**
+```
+hub.html (contains all modal HTML)
+├── Loads: modals/translate-modal.css + translate-modal.js
+├── Loads: modals/calculator-modal.css + calculator-modal.js
+├── Loads: backup/backup-modal.css + backup-modal.js
+└── Loads: encoder/encoder-modal.css + encoder-modal.js
+```
+
+**Why Modal HTML is Embedded:**
+- CORS policy blocks `fetch()` for local files (file:// protocol)
+- Cannot dynamically load HTML files when opening directly
+- CSS and JS can be loaded via `<link>` and `<script>` tags
+- Solution: Embed HTML, keep CSS/JS modular
+
+**Navigation:**
+- `index.html` redirects to last visited page (notes/tasks) or hub
+- Each page saves its name to localStorage for navigation memory
+- Hub provides quick access to all tools via modal system
+
 ### Database Schema (MockAPI)
 Uses single table approach with `type` field to differentiate:
 
@@ -118,20 +153,49 @@ Uses single table approach with `type` field to differentiate:
 
 ### File Structure
 ```
-├── index.html # Notes page
-├── tasks.html # Tasks page
-├── app.js # Notes logic
-├── tasks.js # Tasks logic
-├── mobile.js # Mobile-specific enhancements
-├── style.css # Base styles + Notes styles
-├── tasks.css # Tasks-specific styles (extends style.css)
-├── richtext-editor.js # Rich text editor class
-├── richtext-editor.css # Rich text editor styles
-├── storage.js # LocalStorage utilities
-├── config.js # API configuration (encoded)
-├── encoder.html # API URL encoding tool
-└── README.md # Documentation
+├── index.html              # Redirect to hub or last visited page
+├── hub.html                # Main hub with tool grid and modals
+├── config.js               # API configuration (encoded)
+├── common.css              # Shared styles for all projects
+├── package.json            # Project metadata
+├── PROJECT-STRUCTURE.md    # Project structure documentation
+├── README.md               # This file
+│
+├── assets/                 # Shared assets
+│   └── icon.png
+│
+├── notes/                  # Notes Project
+│   ├── notes.html
+│   ├── notes.css
+│   ├── notes.js
+│   ├── notes-storage.js
+│   ├── notes-richtext.js
+│   ├── notes-richtext.css
+│   └── notes-mobile.js
+│
+├── tasks/                  # Tasks Project
+│   ├── tasks.html
+│   ├── tasks.css
+│   ├── tasks.js
+│   ├── tasks-storage.js
+│   └── tasks-mobile.js
+│
+├── backup/                 # Backup Modal
+│   ├── backup-modal.css    # Modal styles
+│   └── backup-modal.js     # Modal logic
+│
+├── encoder/                # Encoder Modal
+│   ├── encoder-modal.css   # Modal styles
+│   └── encoder-modal.js    # Modal logic
+│
+└── modals/                 # Other Modals
+    ├── translate-modal.css # Translate modal styles
+    ├── translate-modal.js  # Translate modal logic
+    ├── calculator-modal.css # Calculator modal styles
+    └── calculator-modal.js  # Calculator modal logic
 ```
+
+**Note**: Modal HTML is embedded in `hub.html` due to CORS restrictions when opening files directly (file:// protocol). CSS and JS are kept in separate files for modularity.
 
 ### API Configuration
 File `config.js` contains centralized API endpoints (encoded):
@@ -143,10 +207,17 @@ TASKS: 'encoded_url_here'
 ```
 
 **How to update API URL:**
-1. Open `encoder.html` in browser
-2. Enter new API URL
-3. Click "Encode"
-4. Copy encoded string to `config.js`
+1. Open `hub.html` in browser
+2. Click "Encoder" tool button
+3. Enter new API URL in modal
+4. Click "Encode"
+5. Copy encoded string to `config.js`
+
+**Encoder Modal Features:**
+- Base64 + reverse encoding for simple obfuscation
+- Click-to-copy output
+- Vietnamese instructions
+- Integrated in hub (no separate page needed)
 
 ## 🎯 Key Implementation Details
 
@@ -372,6 +443,21 @@ The rich text editor is a custom-built, feature-rich content editor with profess
 - **Minimal DOM Manipulation**: Batch updates when possible
 
 ## 🚀 How to Use
+
+### Hub & Tools
+1. **Open Hub**: Open `hub.html` or navigate from notes/tasks
+2. **Tool Grid**: Click any tool button to open its modal
+3. **Available Tools**:
+   - **Translate**: Auto-detect Vietnamese/English translation
+   - **Calculator**: Basic calculator with keyboard support
+   - **Encoder**: Encode API URLs for config.js
+   - **Backup**: Export/import notes data
+   - **Notes**: Navigate to notes app
+   - **Timer, Color, QR, JSON, Markdown, Unit**: Coming soon
+4. **Modal Controls**:
+   - Click outside modal to close
+   - Press ESC to close
+   - Click × button to close
 
 ### Notes
 1. **Create new note**: Click "+" in sidebar
@@ -816,7 +902,20 @@ window.mobileInterface.forceSyncMobileHeader();
 **License**: MIT
 **Author**: BiBo Development Team
 
-### Changelog v2.7.0 (Latest)
+### Changelog v2.8.0 (Latest)
+- ✅ **Modular Hub Architecture**:
+  - **Refactored Modal System**: Separated modals into individual CSS/JS files
+  - **Clean Hub.html**: Modal HTML embedded (CORS limitation), styles/logic modular
+  - **Folder Structure**: 
+    - `modals/` - Translate and Calculator modals
+    - `backup/` - Backup modal (CSS + JS only)
+    - `encoder/` - Encoder modal (CSS + JS only)
+  - **Removed Redundant Files**: Cleaned up standalone HTML files, kept only modal versions
+  - **CORS Solution**: Modal HTML embedded in hub.html, CSS/JS loaded separately
+  - **Maintainability**: Each modal has its own CSS and JS file for easy updates
+  - **Documentation**: Updated README and PROJECT-STRUCTURE with full context
+
+### Changelog v2.7.0
 - ✅ **Rich Text Editor State Persistence**:
   - **Word Count State**: Toggle state (on/off) is now saved to database and restored when reopening notes
   - **Timer Duration**: Timer duration is saved to database and continues from previous sessions

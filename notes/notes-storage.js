@@ -4,7 +4,7 @@ const StorageManager = {
         CURRENT_NOTE_ID: 'notes_currentNoteId',
         EDITOR_STATE: 'notes_editorState',
         CACHED_NOTE: 'notes_cachedNote',
-        CURRENT_TAB: 'app_currentTab'
+        CURRENT_PAGE: 'app_currentPage'
     },
 
     // Save current note ID
@@ -135,21 +135,21 @@ const StorageManager = {
         }
     },
 
-    // Save current tab state
-    saveCurrentTab(tabName) {
+    // Save current page
+    saveCurrentPage(pageName) {
         try {
-            localStorage.setItem(this.KEYS.CURRENT_TAB, tabName);
+            localStorage.setItem(this.KEYS.CURRENT_PAGE, pageName);
         } catch (error) {
-            console.error('Error saving current tab:', error);
+            console.error('Error saving current page:', error);
         }
     },
 
-    // Load current tab state
-    loadCurrentTab() {
+    // Load current page
+    loadCurrentPage() {
         try {
-            return localStorage.getItem(this.KEYS.CURRENT_TAB) || 'notes';
+            return localStorage.getItem(this.KEYS.CURRENT_PAGE) || 'notes';
         } catch (error) {
-            console.error('Error loading current tab:', error);
+            console.error('Error loading current page:', error);
             return 'notes';
         }
     }

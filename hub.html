@@ -1,0 +1,378 @@
+​<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tools Hub</title>
+    <link rel="stylesheet" href="common.css">
+    
+    <!-- Modal Styles -->
+    <link rel="stylesheet" href="modals/translate-modal.css">
+    <link rel="stylesheet" href="modals/calculator-modal.css">
+    <link rel="stylesheet" href="backup/backup-modal.css">
+    <link rel="stylesheet" href="encoder/encoder-modal.css">
+    
+    <style>
+        body {
+            background: var(--color-bg-primary);
+        }
+
+        .hub-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+            min-height: 100vh;
+        }
+
+        .hub-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .hub-header h1 {
+            font-size: 24px;
+            color: var(--color-text-primary);
+            font-weight: normal;
+            letter-spacing: 0.5px;
+        }
+
+        .hub-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+        }
+
+        .tool-btn {
+            flex: 0 0 auto;
+            width: 130px;
+            height: 130px;
+            padding: 20px 12px;
+            background: var(--color-bg-secondary);
+            border: 1px solid var(--color-border);
+            color: var(--color-text-secondary);
+            font-size: 13px;
+            font-family: inherit;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tool-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 122, 204, 0.1), transparent);
+            transition: left 0.5s;
+        }
+
+        .tool-btn:hover::before {
+            left: 100%;
+        }
+
+        .tool-btn:hover {
+            background: var(--color-bg-elevated);
+            border-color: var(--color-accent-primary);
+            transform: translateY(-4px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .tool-btn:active {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .tool-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+            display: block;
+            filter: grayscale(0.3);
+            transition: all 0.2s;
+        }
+
+        .tool-btn:hover .tool-icon {
+            filter: grayscale(0);
+            transform: scale(1.1);
+        }
+
+        @media (max-width: 768px) {
+            .hub-container {
+                padding: 30px 15px;
+            }
+
+            .hub-header h1 {
+                font-size: 20px;
+            }
+
+            .tool-btn {
+                width: 100px;
+                height: 100px;
+                padding: 15px 10px;
+                font-size: 12px;
+            }
+            
+            .tool-icon {
+                font-size: 28px;
+                margin-bottom: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="hub-container">
+        <div class="hub-header">
+            <h1>Mini Tools</h1>
+        </div>
+
+        <div class="hub-grid">
+            <button class="tool-btn" onclick="openTranslateModal()">
+                <span class="tool-icon">🌐</span>
+                Translate
+            </button>
+
+            <button class="tool-btn" onclick="openCalculatorModal()">
+                <span class="tool-icon">🔢</span>
+                Calculator
+            </button>
+
+            <button class="tool-btn" onclick="openTimer()">
+                <span class="tool-icon">⏱️</span>
+                Timer
+            </button>
+
+            <button class="tool-btn" onclick="openNotes()">
+                <span class="tool-icon">📝</span>
+                Notes
+            </button>
+
+            <button class="tool-btn" onclick="openEncoderModal()">
+                <span class="tool-icon">🔐</span>
+                Encoder
+            </button>
+
+            <button class="tool-btn" onclick="openColor()">
+                <span class="tool-icon">🎨</span>
+                Color
+            </button>
+
+            <button class="tool-btn" onclick="openQR()">
+                <span class="tool-icon">📱</span>
+                QR Code
+            </button>
+
+            <button class="tool-btn" onclick="openJSON()">
+                <span class="tool-icon">📋</span>
+                JSON
+            </button>
+
+            <button class="tool-btn" onclick="openMarkdown()">
+                <span class="tool-icon">📄</span>
+                Markdown
+            </button>
+
+            <button class="tool-btn" onclick="openUnit()">
+                <span class="tool-icon">📏</span>
+                Unit
+            </button>
+
+            <button class="tool-btn" onclick="openBackupModal()">
+                <span class="tool-icon">📦</span>
+                Backup
+            </button>
+        </div>
+    </div>
+
+    <!-- Translate Modal -->
+    <div id="translateModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <span class="modal-title">Translate</span>
+                <button onclick="closeTranslateModal()" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <textarea id="translateSource" placeholder="Type text..."></textarea>
+                <div class="translate-divider">↓</div>
+                <textarea id="translateTarget" placeholder="Translation..." readonly></textarea>
+            </div>
+            <div class="modal-footer">
+                <button onclick="copyTranslation()">Copy</button>
+                <button onclick="clearTranslation()">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Calculator Modal -->
+    <div id="calculatorModal" class="modal">
+        <div class="modal-content" style="max-width: 350px;">
+            <div class="modal-header">
+                <span class="modal-title">Calculator</span>
+                <button onclick="closeCalculatorModal()" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="calcDisplay" class="calc-display" readonly value="0">
+                <div class="calc-buttons">
+                    <button class="calc-btn calc-clear" onclick="calcClear()">C</button>
+                    <button class="calc-btn calc-operator" onclick="calcBackspace()">⌫</button>
+                    <button class="calc-btn calc-operator" onclick="calcOp('/')">÷</button>
+                    <button class="calc-btn calc-operator" onclick="calcOp('*')">×</button>
+                    
+                    <button class="calc-btn" onclick="calcNum('7')">7</button>
+                    <button class="calc-btn" onclick="calcNum('8')">8</button>
+                    <button class="calc-btn" onclick="calcNum('9')">9</button>
+                    <button class="calc-btn calc-operator" onclick="calcOp('-')">−</button>
+                    
+                    <button class="calc-btn" onclick="calcNum('4')">4</button>
+                    <button class="calc-btn" onclick="calcNum('5')">5</button>
+                    <button class="calc-btn" onclick="calcNum('6')">6</button>
+                    <button class="calc-btn calc-operator" onclick="calcOp('+')">+</button>
+                    
+                    <button class="calc-btn" onclick="calcNum('1')">1</button>
+                    <button class="calc-btn" onclick="calcNum('2')">2</button>
+                    <button class="calc-btn" onclick="calcNum('3')">3</button>
+                    <button class="calc-btn calc-equals" onclick="calcEquals()" style="grid-row: span 2;">=</button>
+                    
+                    <button class="calc-btn" onclick="calcNum('0')" style="grid-column: span 2;">0</button>
+                    <button class="calc-btn" onclick="calcDecimal()">.</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Backup Modal -->
+    <div id="backupModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title">💾 Backup</span>
+                <button onclick="closeBackupModal()" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Statistics -->
+                <div class="dm-stats">
+                    <div class="dm-stats-title">Statistics</div>
+                    <div class="dm-stats-grid">
+                        <div class="dm-stat-item">
+                            <div class="dm-stat-value primary" id="dmTotalNotes">0</div>
+                            <div class="dm-stat-label">Total</div>
+                        </div>
+                        <div class="dm-stat-item">
+                            <div class="dm-stat-value secondary" id="dmIeltsNotes">0</div>
+                            <div class="dm-stat-label">IELTS</div>
+                        </div>
+                        <div class="dm-stat-item">
+                            <div class="dm-stat-value secondary" id="dmCodeNotes">0</div>
+                            <div class="dm-stat-label">Code</div>
+                        </div>
+                        <div class="dm-stat-item">
+                            <div class="dm-stat-value secondary" id="dmCourseNotes">0</div>
+                            <div class="dm-stat-label">Course</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="dm-section">
+                    <h3 class="dm-section-title">💾 Backup & Restore</h3>
+                    <p class="dm-section-desc">Export or import notes as JSON backup file</p>
+                    <div class="dm-button-group">
+                        <button class="dm-btn dm-btn-primary" onclick="dmExportNotes()">
+                            📤 Export
+                        </button>
+                        
+                        <button class="dm-btn" onclick="document.getElementById('dmImportFileMerge').click()">
+                            📁 Merge
+                        </button>
+                        <input type="file" id="dmImportFileMerge" accept=".json" onchange="dmImportNotes('merge')" style="display: none;">
+                        
+                        <button class="dm-btn dm-btn-danger" onclick="document.getElementById('dmImportFileReplace').click()">
+                            ⚠️ Replace
+                        </button>
+                        <input type="file" id="dmImportFileReplace" accept=".json" onchange="dmImportNotes('replace')" style="display: none;">
+                    </div>
+                    <div id="dmExportStatus" class="dm-status"></div>
+                    <div id="dmImportStatus" class="dm-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Encoder Modal -->
+    <div id="encoderModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title">🔐 API Encoder</span>
+                <button onclick="closeEncoderModal()" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--color-text-muted);">API Base URL</label>
+                    <input type="text" id="apiInput" placeholder="https://example.mockapi.io" 
+                           style="width: 100%; padding: 10px; background: var(--color-bg-input); border: 1px solid var(--color-border); color: var(--color-text-primary); font-size: 13px; font-family: 'Consolas', monospace;">
+                </div>
+                
+                <button class="encoder-btn encoder-btn-primary" onclick="encodeAPI()" style="width: 100%; margin-bottom: 20px;">
+                    🔐 Encode
+                </button>
+                
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-size: 12px; color: var(--color-text-muted);">Encoded String (Click to copy)</label>
+                    <div id="encoderOutput" onclick="copyEncoderOutput()" 
+                         style="background: var(--color-bg-primary); padding: 15px; border: 1px solid var(--color-border); word-break: break-all; font-size: 12px; color: var(--color-accent-secondary); min-height: 80px; cursor: pointer; user-select: all; transition: all 0.2s;">
+                        b2suaXBhY29tLmVscG1heGUvL3NwdHRo
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: var(--color-bg-elevated); border-left: 3px solid var(--color-accent-primary); font-size: 12px; line-height: 1.6;">
+                    <strong style="color: var(--color-accent-primary);">Hướng dẫn:</strong><br>
+                    1. Nhập API URL vào ô trên<br>
+                    2. Click "Encode"<br>
+                    3. Click vào output để copy<br>
+                    4. Paste vào config.js thay thế giá trị API<br>
+                    5. App sẽ tự động decode khi chạy
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="./config.js"></script>
+    
+    <!-- Modal Scripts -->
+    <script src="modals/translate-modal.js"></script>
+    <script src="modals/calculator-modal.js"></script>
+    <script src="backup/backup-modal.js"></script>
+    <script src="encoder/encoder-modal.js"></script>
+    
+    <script>
+        // Global modal close handlers
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal').forEach(m => m.classList.remove('show'));
+            }
+        });
+
+        // Close on outside click
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                e.target.classList.remove('show');
+            }
+        });
+
+        // Placeholder functions
+        function openTimer() { alert('Timer - Coming soon!'); }
+        function openNotes() { window.location.href = 'notes/notes.html'; }
+        function openColor() { alert('Color Picker - Coming soon!'); }
+        function openQR() { alert('QR Code - Coming soon!'); }
+        function openJSON() { alert('JSON Formatter - Coming soon!'); }
+        function openMarkdown() { alert('Markdown Preview - Coming soon!'); }
+        function openUnit() { alert('Unit Converter - Coming soon!'); }
+    </script>
+</body>
+</html>

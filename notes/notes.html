@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Notes - BiBo</title>
+    <link rel="icon" type="image/png" href="../assets/icon.png">
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="notes.css">
+    <link rel="stylesheet" href="notes-richtext.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>NOTES</h3>
+                <button class="btn-new" onclick="newNote()">+</button>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="app-nav">
+                <a href="notes.html" class="nav-link active">Notes</a>
+                <a href="../tasks/tasks.html" class="nav-link">Tasks</a>
+                <a href="../hub.html" class="nav-link">Hub</a>
+            </div>
+            
+            <div class="search-box">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" placeholder="Search..." class="search-input">
+                    <button class="btn-clear-search" id="clearSearch" onclick="clearSearch()" style="display: none;">×</button>
+                </div>
+            </div>
+            
+            <!-- Type Filter -->
+            <div class="note-type-filter">
+                <div class="note-type-header" onclick="toggleTypeFilter()">
+                    <span class="filter-title">Type</span>
+                    <span class="filter-toggle" id="filterToggle">▼</span>
+                </div>
+                <div class="note-type-list" id="noteTypeList">
+                    <div class="note-type-item active" data-type="all" onclick="filterByType('all')">
+                        <div class="type-name">All Notes</div>
+                        <div class="type-count" id="countAll">0</div>
+                    </div>
+                    <div class="note-type-item" data-type="note" onclick="filterByType('note')">
+                        <div class="type-name">Note</div>
+                        <div class="type-count" id="countNote">0</div>
+                    </div>
+                    <div class="note-type-item" data-type="ielts" onclick="filterByType('ielts')">
+                        <div class="type-name">IELTS</div>
+                        <div class="type-count" id="countIelts">0</div>
+                    </div>
+                    <div class="note-type-item" data-type="course" onclick="filterByType('course')">
+                        <div class="type-name">Course</div>
+                        <div class="type-count" id="countCourse">0</div>
+                    </div>
+                    <div class="note-type-item" data-type="code" onclick="filterByType('code')">
+                        <div class="type-name">Code</div>
+                        <div class="type-count" id="countCode">0</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="notes-list-container" id="notesList">
+                <div style="padding: 20px; text-align: center; color: #858585;">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Editor -->
+        <div class="editor-container">
+            <div id="editorView" class="editor-content">
+                <div class="empty-editor">
+                    Select a note or create a new one
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../config.js"></script>
+    <script>
+        // Clear old cache key and migrate to new key
+        if (localStorage.getItem('app_currentTab')) {
+            const oldTab = localStorage.getItem('app_currentTab');
+            localStorage.setItem('app_currentPage', oldTab);
+            localStorage.removeItem('app_currentTab');
+        }
+    </script>
+    <script src="notes-storage.js"></script>
+    <script src="notes-richtext.js"></script>
+    <script src="notes-mobile.js"></script>
+    <script src="notes.js"></script>
+    <script>
+        // Save current page when loaded
+        StorageManager.saveCurrentPage('notes');
+    </script>
+</body>
+</html>
