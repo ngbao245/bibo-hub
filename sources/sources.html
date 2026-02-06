@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sources - Code Manager</title>
+    <link rel="icon" type="image/png" href="../assets/icon.png">
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="./sources.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>SOURCES</h3>
+                <button class="btn-new" onclick="newProject()">+</button>
+            </div>
+            
+            <div class="search-box">
+                <div class="search-wrapper">
+                    <input type="text" id="searchInput" placeholder="Search sources..." class="search-input">
+                    <button class="btn-clear-search" id="clearSearch" onclick="clearSearch()" style="display: none;">×</button>
+                </div>
+            </div>
+            
+            <div class="projects-list-container" id="projectsList">
+                <div style="padding: 20px; text-align: center; color: #858585;">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Editor -->
+        <div class="editor-container">
+            <div id="editorView" class="editor-content">
+                <div class="empty-editor">
+                    Select a source or create a new one
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../config.js"></script>
+    <script src="sources.js"></script>
+    <script>
+        // Save current page
+        localStorage.setItem('app_currentPage', 'sources');
+    </script>
+</body>
+</html>
