@@ -48,7 +48,10 @@ async function init() {
 async function loadNotes() {
     try {
         const response = await fetch(API_NOTES);
-        notes = await response.json();
+        const allNotes = await response.json();
+        
+        // Filter out sources (only show notes)
+        notes = allNotes.filter(n => n.type !== 'source');
         notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         updateTypeCounts();
         restoreTypeFilter(); // Restore filter state
@@ -685,7 +688,8 @@ function restoreStateFromCache() {
     const savedNoteId = StorageManager.loadCurrentNoteId();
     if (savedNoteId) {
         const cachedNote = StorageManager.loadCachedNote();
-        if (cachedNote && cachedNote.id === savedNoteId) {
+        // Skip if cached note is a source
+        if (cachedNote && cachedNote.id === savedNoteId && cachedNote.type !== 'source') {
             currentNote = cachedNote;
             // Add to notes array temporarily
             notes = [cachedNote];
