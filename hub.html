@@ -4,13 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tools Hub</title>
+    <link rel="icon" type="image/png" href="./assets/icon.png">
     <link rel="stylesheet" href="common.css">
     
     <!-- Modal Styles -->
-    <link rel="stylesheet" href="modals/translate-modal.css">
+    <link rel="stylesheet" href="translate/translate-modal.css">
     <link rel="stylesheet" href="modals/calculator-modal.css">
     <link rel="stylesheet" href="backup/backup-modal.css">
     <link rel="stylesheet" href="encoder/encoder-modal.css">
+    <link rel="stylesheet" href="sources/sources-modal.css">
+    <link rel="stylesheet" href="sources/sources.css">
+    <link rel="stylesheet" href="shortcuts-modal.css">
     
     <style>
         body {
@@ -36,6 +40,26 @@
             letter-spacing: 0.5px;
         }
 
+        .hub-header-link {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-text-muted);
+            font-size: 12px;
+            text-decoration: none;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .hub-header-link:hover {
+            background: var(--color-bg-secondary);
+            border-color: var(--color-accent-primary);
+            color: var(--color-text-primary);
+        }
+
         .hub-grid {
             display: flex;
             flex-wrap: wrap;
@@ -57,7 +81,7 @@
             transition: all 0.2s ease;
             text-align: center;
             position: relative;
-            overflow: hidden;
+            overflow: visible;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -73,6 +97,36 @@
             height: 100%;
             background: linear-gradient(90deg, transparent, rgba(0, 122, 204, 0.1), transparent);
             transition: left 0.5s;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* Shortcut Tooltip */
+        .tool-btn::after {
+            content: attr(data-shortcut);
+            position: absolute;
+            bottom: -32px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30, 30, 30, 0.95);
+            border: 1px solid rgba(0, 122, 204, 0.3);
+            color: #4fc3f7;
+            padding: 4px 8px;
+            font-size: 10px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s ease 0s;
+            z-index: 10;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            border-radius: 3px;
+        }
+
+        .tool-btn:hover::after {
+            opacity: 1;
+            transition: opacity 0.2s ease 0.7s;
         }
 
         .tool-btn:hover::before {
@@ -84,11 +138,17 @@
             border-color: var(--color-accent-primary);
             transform: translateY(-4px);
             box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
+            z-index: 5;
         }
 
         .tool-btn:active {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .tool-btn:active::after {
+            opacity: 0;
+            transition: none;
         }
 
         .tool-icon {
@@ -97,6 +157,8 @@
             display: block;
             filter: grayscale(0.3);
             transition: all 0.2s;
+            position: relative;
+            z-index: 1;
         }
 
         .tool-btn:hover .tool-icon {
@@ -124,70 +186,120 @@
                 font-size: 28px;
                 margin-bottom: 8px;
             }
+            
+            /* Hide tooltips on mobile */
+            .tool-btn::after {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
+    <a href="sources/sources.html" class="hub-header-link">💾 Sources Page</a>
+    <button class="hub-header-link" onclick="showShortcutsModal()" style="left: 20px; right: auto; cursor: pointer;">⌨️ Shortcuts</button>
+    
     <div class="hub-container">
         <div class="hub-header">
             <h1>Mini Tools</h1>
         </div>
 
         <div class="hub-grid">
-            <button class="tool-btn" onclick="openTranslateModal()">
+            <button class="tool-btn" onclick="openTranslateModal()" data-shortcut="Ctrl+T">
                 <span class="tool-icon">🌐</span>
                 Translate
             </button>
 
-            <button class="tool-btn" onclick="openCalculatorModal()">
+            <button class="tool-btn" onclick="openCalculatorModal()" data-shortcut="Ctrl+C">
                 <span class="tool-icon">🔢</span>
                 Calculator
             </button>
 
-            <button class="tool-btn" onclick="openTimer()">
+            <button class="tool-btn" onclick="openTimer()" data-shortcut="Ctrl+Shift+T">
                 <span class="tool-icon">⏱️</span>
                 Timer
             </button>
 
-            <button class="tool-btn" onclick="openNotes()">
+            <button class="tool-btn" onclick="openNotes()" data-shortcut="Ctrl+N">
                 <span class="tool-icon">📝</span>
                 Notes
             </button>
 
-            <button class="tool-btn" onclick="openEncoderModal()">
+            <button class="tool-btn" onclick="openEncoderModal()" data-shortcut="Ctrl+E">
                 <span class="tool-icon">🔐</span>
                 Encoder
             </button>
 
-            <button class="tool-btn" onclick="openColor()">
+            <button class="tool-btn" onclick="openColor()" data-shortcut="Ctrl+Shift+C">
                 <span class="tool-icon">🎨</span>
                 Color
             </button>
 
-            <button class="tool-btn" onclick="openQR()">
+            <button class="tool-btn" onclick="openQR()" data-shortcut="Ctrl+Q">
                 <span class="tool-icon">📱</span>
                 QR Code
             </button>
 
-            <button class="tool-btn" onclick="openJSON()">
+            <button class="tool-btn" onclick="openJSON()" data-shortcut="Ctrl+J">
                 <span class="tool-icon">📋</span>
                 JSON
             </button>
 
-            <button class="tool-btn" onclick="openMarkdown()">
+            <button class="tool-btn" onclick="openMarkdown()" data-shortcut="Ctrl+M">
                 <span class="tool-icon">📄</span>
                 Markdown
             </button>
 
-            <button class="tool-btn" onclick="openUnit()">
+            <button class="tool-btn" onclick="openUnit()" data-shortcut="Ctrl+U">
                 <span class="tool-icon">📏</span>
                 Unit
             </button>
 
-            <button class="tool-btn" onclick="openBackupModal()">
+            <button class="tool-btn" onclick="openBackupModal()" data-shortcut="Ctrl+B">
                 <span class="tool-icon">📦</span>
                 Backup
             </button>
+
+            <button class="tool-btn" onclick="openSourcesModal()" data-shortcut="Ctrl+P">
+                <span class="tool-icon">💾</span>
+                Sources
+            </button>
+        </div>
+    </div>
+
+    <!-- Sources Modal -->
+    <div id="sourcesModal" class="sources-modal">
+        <div class="sources-modal-content">
+            <div class="sources-modal-header">
+                <div class="sources-modal-title">💾 Sources</div>
+                <button class="sources-modal-close-btn" onclick="closeSourcesModal()">×</button>
+            </div>
+            <div class="sources-modal-body">
+                <div class="app-container">
+                    <div class="sidebar">
+                        <div class="sidebar-header">
+                            <h3>SOURCES</h3>
+                            <button class="btn-new" onclick="newSourceModal()">+</button>
+                        </div>
+                        
+                        <div class="search-box">
+                            <div class="search-wrapper">
+                                <input type="text" id="sourcesSearchInput" placeholder="Search sources..." class="search-input">
+                                <button class="btn-clear-search" id="sourcesClearSearch" onclick="clearSourcesSearch()" style="display: none;">×</button>
+                            </div>
+                        </div>
+                        
+                        <div class="notes-list-container" id="sourcesListModal">
+                            <div style="padding: 20px; text-align: center; color: #858585;">Loading...</div>
+                        </div>
+                    </div>
+
+                    <div class="editor-container">
+                        <div id="sourcesEditorView" class="editor-content">
+                            <div class="empty-editor">Select a source or create a new one</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -342,25 +454,45 @@
         </div>
     </div>
 
+    <!-- Shortcuts Modal -->
+    <div id="shortcutsModal" class="shortcuts-modal">
+        <div class="shortcuts-modal-content">
+            <div class="shortcuts-modal-header">
+                <div class="shortcuts-modal-title">⌨️ Keyboard Shortcuts</div>
+                <button class="shortcuts-modal-close-btn" onclick="closeShortcutsModal()">×</button>
+            </div>
+            <div class="shortcuts-modal-body">
+                <div id="shortcutsList"></div>
+            </div>
+            <div class="shortcuts-footer">
+                Press <strong>Ctrl+Shift+K</strong> to toggle this window
+            </div>
+        </div>
+    </div>
+
     <script src="./config.js"></script>
     
     <!-- Modal Scripts -->
-    <script src="modals/translate-modal.js"></script>
+    <script src="translate/translate-modal.js"></script>
     <script src="modals/calculator-modal.js"></script>
     <script src="backup/backup-modal.js"></script>
     <script src="encoder/encoder-modal.js"></script>
+    <script src="sources/sources-modal.js"></script>
+    
+    <!-- Keyboard Shortcuts -->
+    <script src="hub-shortcuts.js"></script>
     
     <script>
         // Global modal close handlers
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
-                document.querySelectorAll('.modal').forEach(m => m.classList.remove('show'));
+                closeAllModals();
             }
         });
 
         // Close on outside click
         document.addEventListener('click', (e) => {
-            if (e.target.classList.contains('modal')) {
+            if (e.target.classList.contains('modal') || e.target.classList.contains('shortcuts-modal')) {
                 e.target.classList.remove('show');
             }
         });
