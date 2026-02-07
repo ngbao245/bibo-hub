@@ -1,5 +1,5 @@
-​<!DOCTYPE html>
-<html lang="vi">
+<!DOCTYPE html>
+<html lang="vi" style="background: #1e1e1e;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -81,7 +81,7 @@
             transition: all 0.2s ease;
             text-align: center;
             position: relative;
-            overflow: visible;
+            overflow: hidden;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -303,48 +303,12 @@
         </div>
     </div>
 
-    <!-- Sources Modal (Hub only - not yet converted to loader) -->
-    <div id="sourcesModal" class="sources-modal">
-        <div class="sources-modal-content">
-            <div class="sources-modal-header">
-                <div class="sources-modal-title">💾 Sources</div>
-                <button class="sources-modal-close-btn" onclick="closeSourcesModal()">×</button>
-            </div>
-            <div class="sources-modal-body">
-                <div class="app-container">
-                    <div class="sidebar">
-                        <div class="sidebar-header">
-                            <h3>SOURCES</h3>
-                            <button class="btn-new" onclick="newSource()">+</button>
-                        </div>
-                        
-                        <div class="search-box">
-                            <div class="search-wrapper">
-                                <input type="text" id="sourceSearchInput" placeholder="Search..." class="search-input">
-                                <button class="btn-clear-search" id="clearSourceSearch" onclick="clearSourceSearch()" style="display: none;">×</button>
-                            </div>
-                        </div>
-                        
-                        <div class="sources-list-container" id="sourcesList">
-                            <div style="padding: 20px; text-align: center; color: #858585;">Loading...</div>
-                        </div>
-                    </div>
-
-                    <div class="editor-container">
-                        <div id="sourceEditorView" class="editor-content">
-                            <div class="empty-editor">
-                                Select a source or create a new one
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Modals will be injected here by loaders -->
 
     <script src="./config.js"></script>
+    
+    <!-- Sources Modal JS -->
+    <script src="sources/sources-modal.js"></script>
     
     <!-- Global Modal Loaders -->
     <script src="translate/translate-loader.js"></script>
