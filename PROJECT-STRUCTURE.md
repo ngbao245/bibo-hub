@@ -8,12 +8,16 @@ Dự án đã được refactor thành cấu trúc modular với các mini proje
 ```
 project/
 ├── index.html              # Redirect to hub.html or last visited page
-├── hub.html                # Main hub with tool grid and modals
+├── hub.html                # Main hub with tool grid
 ├── config.js               # API configuration
 ├── common.css              # Shared styles for all projects
+├── shortcuts-config.js     # Keyboard shortcuts configuration (single source of truth)
+├── global-shortcuts.js     # Global keyboard shortcuts handler
+├── shortcuts-loader.js     # Shortcuts modal loader
 ├── package.json            # Project metadata
 ├── PROJECT-STRUCTURE.md    # This file
 ├── README.md               # Project readme
+├── Global Modal Popup Guide.md  # Guide for creating global modals
 │
 ├── .vscode/                # VSCode settings
 │   └── settings.json
@@ -38,91 +42,201 @@ project/
 │   └── tasks-mobile.js
 │
 ├── backup/                 # Backup Modal
+│   ├── backup-loader.js    # Dynamic modal loader
 │   ├── backup-modal.css    # Modal styles
 │   └── backup-modal.js     # Modal logic (includes openBackupModal, closeBackupModal)
 │
 ├── encoder/                # Encoder Modal
+│   ├── encoder-loader.js   # Dynamic modal loader
 │   ├── encoder-modal.css   # Modal styles
 │   └── encoder-modal.js    # Modal logic (includes openEncoderModal, closeEncoderModal)
 │
-└── modals/                 # Other Modals
-    ├── translate-modal.css # Translate modal styles
-    ├── translate-modal.js  # Translate modal logic (includes openTranslateModal, closeTranslateModal)
+├── translate/              # Translate Modal
+│   ├── translate-loader.js # Dynamic modal loader
+│   ├── translate-modal.css # Translate modal styles
+│   └── translate-modal.js  # Translate modal logic (includes openTranslateModal, closeTranslateModal)
+│
+├── sources/                # Sources Modal (Hub only)
+│   ├── sources-modal.css   # Sources modal styles
+│   ├── sources-modal.js    # Sources modal logic
+│   ├── sources.css         # Sources page styles
+│   ├── sources.html        # Sources standalone page
+│   └── sources.js          # Sources page logic
+│
+└── modals/                 # Calculator Modal
+    ├── calculator-loader.js # Dynamic modal loader
     ├── calculator-modal.css # Calculator modal styles
     └── calculator-modal.js  # Calculator modal logic (includes openCalculatorModal, closeCalculatorModal)
 ```
 
-## Modal Architecture
+## Global Modal Architecture
 
-### Why Modal HTML is Embedded in hub.html
+### How Global Modals Work
 
-**CORS Limitation:**
-- When opening HTML files directly (file:// protocol), browsers block `fetch()` requests to local files
-- Cannot dynamically load HTML files using JavaScript
-- CSS and JS files can be loaded via `<link>` and `<script>` tags
+**Problem Solved:**
+- Modals need to be accessible from any page (notes, tasks, hub)
+- CORS blocks `fetch()` for local HTML files (file:// protocol)
+- Don't want to duplicate modal HTML in every page
 
-**Solution:**
-- **HTML**: Embedded directly in `hub.html` (all modal HTML in one file)
-- **CSS**: Separate files in respective folders (modular, reusable)
-- **JS**: Separate files in respective folders (modular, reusable)
+**Solution: Dynamic Modal Loading with Lazy Initialization**
+
+**Architecture:**
+```
+Single Source of Truth
+├── shortcuts-config.js          # All keyboard shortcuts defined here
+    ↓
+├── global-shortcuts.js          # Reads SHORTCUTS_CONFIG, handles keyboard events
+└── shortcuts-loader.js          # Reads SHORTCUTS_CONFIG, renders shortcuts modal
+
+Modal Loaders
+├── {modal}-loader.js            # Lazy loads modal on demand with toggle support
+├── {modal}-modal.css            # Modal styles
+└── {modal}-modal.js             # Modal logic
+```
+
+**How It Works:**
+1. **Single Config**: Edit `shortcuts-config.js` to add/modify shortcuts
+2. **Global Shortcuts**: `global-shortcuts.js` listens for keyboard shortcuts on all pages
+3. **Lazy Loading**: When shortcut pressed, calls `open{Modal}Lazy()` function
+4. **CSS First**: Load CSS and wait → Then inject HTML → Prevents flash
+5. **Dynamic Injection**: Loader injects HTML into DOM, loads CSS/JS files
+6. **Toggle Support**: Press once to open, press again to close
+7. **Path Detection**: Auto-detects if running from notes/, tasks/, or root
+8. **One-Time Load**: Modal only loads once, subsequent opens are instant
+9. **High z-index**: Modals use z-index: 10000 to appear above everything
 
 **Benefits:**
+- ✅ Easy to configure (edit one file: `shortcuts-config.js`)
 - ✅ Works with file:// protocol (no server needed)
-- ✅ CSS and JS remain modular and maintainable
-- ✅ Each modal has its own folder with styles and logic
-- ✅ Easy to update individual modal styles/behavior
-- ✅ Clean separation of concerns (HTML in hub, styles/logic separate)
+- ✅ No CORS issues (HTML injected via JavaScript, not fetched)
+- ✅ No flash of unstyled content (CSS loads first)
+- ✅ Global access from any page with keyboard shortcuts
+- ✅ Toggle UX (press once to open, again to close)
+- ✅ Lazy loading (better performance, only loads when needed)
+- ✅ Modular (each modal has separate CSS/JS files)
+- ✅ No duplication (modal HTML defined once in loader)
+- ✅ Alt key usage (avoids browser shortcut conflicts)
+- ✅ Easy to add new global modals (follow pattern in "Global Modal Popup Guide.md")
 
-### Modal Structure Pattern
+### Global Modal Structure Pattern
 
-Each modal follows this pattern:
+Each global modal follows this pattern:
 
-**HTML (in hub.html):**
-```html
-<div id="modalNameModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <span class="modal-title">Modal Title</span>
-            <button onclick="closeModalNameModal()" class="modal-close-btn">&times;</button>
-        </div>
-        <div class="modal-body">
-            <!-- Modal content -->
-        </div>
-    </div>
-</div>
-```
-
-**CSS (separate file):**
-```css
-/* folder/modal-name-modal.css */
-.modal { /* base modal styles */ }
-.modal-content { /* content styles */ }
-/* ... specific modal styles ... */
-```
-
-**JS (separate file):**
+**Loader (folder/modal-name-loader.js):**
 ```javascript
-// folder/modal-name-modal.js
-function openModalNameModal() {
+let modalNameLoaded = false;
+
+async function loadModalName() {
+    if (modalNameLoaded) return;
+    
+    try {
+        // Detect current path
+        const basePath = window.location.pathname.includes('/notes/') || 
+                         window.location.pathname.includes('/tasks/') ? '../' : './';
+        
+        // Inject HTML directly
+        const html = `
+            <div id="modalNameModal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <span class="modal-title">Modal Title</span>
+                        <button onclick="closeModalName()" class="modal-close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- Modal content -->
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const container = document.createElement('div');
+        container.innerHTML = html;
+        document.body.appendChild(container.firstElementChild);
+        
+        // Load CSS
+        if (!document.querySelector('link[href*="modal-name-modal.css"]')) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = basePath + 'folder/modal-name-modal.css';
+            document.head.appendChild(link);
+        }
+        
+        // Load JS - wait for it
+        if (typeof openModalName === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = basePath + 'folder/modal-name-modal.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+        }
+        
+        modalNameLoaded = true;
+    } catch (error) {
+        console.error('Error loading modal:', error);
+    }
+}
+
+// Lazy open function
+async function openModalNameLazy() {
+    await loadModalName();
+    if (typeof openModalName === 'function') {
+        openModalName();
+    }
+}
+```
+
+**CSS (folder/modal-name-modal.css):**
+```css
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000; /* High z-index to appear above everything */
+    align-items: center;
+    justify-content: center;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--color-bg-elevated);
+    /* ... specific modal styles ... */
+}
+```
+
+**JS (folder/modal-name-modal.js):**
+```javascript
+function openModalName() {
     document.getElementById('modalNameModal').classList.add('show');
 }
 
-function closeModalNameModal() {
+function closeModalName() {
     document.getElementById('modalNameModal').classList.remove('show');
 }
 
 // ... modal-specific logic ...
 ```
 
-**Loading in hub.html:**
+**Loading in pages (notes.html, tasks.html, hub.html):**
 ```html
-<head>
-    <link rel="stylesheet" href="folder/modal-name-modal.css">
-</head>
-<body>
-    <!-- Modal HTML here -->
-    <script src="folder/modal-name-modal.js"></script>
-</body>
+<script src="../folder/modal-name-loader.js"></script>
+<script src="../global-shortcuts.js"></script>
+```
+
+**Register in global-shortcuts.js:**
+```javascript
+const GLOBAL_SHORTCUTS = {
+    'ctrl+x': { name: 'Modal Name', action: 'openModalNameLazy' },
+    // ... other shortcuts
+};
 ```
 
 ## File Naming Convention
@@ -325,57 +439,46 @@ Contains:
 
 ## Development Guidelines
 
-### Adding New Modal to Hub
+### Adding New Global Modal
+
+**See "Global Modal Popup Guide.md" for detailed step-by-step instructions.**
+
+**Quick Steps:**
 
 1. **Create modal files:**
    ```
    folder/
-   ├── modal-name-modal.css
-   └── modal-name-modal.js
+   ├── modal-name-loader.js    # Dynamic loader
+   ├── modal-name-modal.css    # Styles
+   └── modal-name-modal.js     # Logic
    ```
 
-2. **Add modal HTML to hub.html:**
-   ```html
-   <div id="modalNameModal" class="modal">
-       <div class="modal-content">
-           <div class="modal-header">
-               <span class="modal-title">Title</span>
-               <button onclick="closeModalNameModal()" class="modal-close-btn">&times;</button>
-           </div>
-           <div class="modal-body">
-               <!-- Content -->
-           </div>
-       </div>
-   </div>
+2. **Create loader** (see pattern above or guide)
+
+3. **Create CSS** with `z-index: 10000`
+
+4. **Create JS** with open/close functions
+
+5. **Register in shortcuts-config.js:**
+   ```javascript
+   const SHORTCUTS_CONFIG = {
+       'alt+x': { name: 'Modal Name', action: 'openModalNameLazy' },
+   };
    ```
 
-3. **Load CSS in hub.html head:**
+6. **Load in pages:**
    ```html
-   <link rel="stylesheet" href="folder/modal-name-modal.css">
+   <script src="../folder/modal-name-loader.js"></script>
+   <script src="../shortcuts-config.js"></script>
+   <script src="../global-shortcuts.js"></script>
    ```
 
-4. **Load JS before closing body:**
+7. **Add button to hub (optional):**
    ```html
-   <script src="folder/modal-name-modal.js"></script>
-   ```
-
-5. **Add button to hub grid:**
-   ```html
-   <button class="tool-btn" onclick="openModalNameModal()">
+   <button class="tool-btn" onclick="openModalNameLazy()">
        <span class="tool-icon">🔧</span>
        Tool Name
    </button>
-   ```
-
-6. **Implement open/close functions in JS:**
-   ```javascript
-   function openModalNameModal() {
-       document.getElementById('modalNameModal').classList.add('show');
-   }
-   
-   function closeModalNameModal() {
-       document.getElementById('modalNameModal').classList.remove('show');
-   }
    ```
 
 ### Adding New Project
@@ -413,7 +516,15 @@ Contains:
 ### Deprecated Files
 All old files have been removed. The project now uses the new modular structure.
 
-### Modal Refactoring (v2.8.0)
+### Modal Refactoring History
+
+**v2.9.0 (Current): Global Modal System with Toggle**
+- **Change**: Dynamic modal loading with lazy initialization and toggle support
+- **New Files**: `shortcuts-config.js` (single source of truth), `*-loader.js` for each modal, `global-shortcuts.js`, `shortcuts-loader.js`
+- **Benefit**: Easy config, global access, keyboard shortcuts, toggle UX, lazy loading, no flash
+- **How**: CSS loads first → HTML injected → JS loaded, Alt key usage to avoid browser conflicts
+
+**v2.8.0: Modular Hub Architecture**
 - **Before**: Standalone HTML files for each tool
 - **After**: Modal system with embedded HTML, separate CSS/JS
 - **Reason**: CORS limitation with file:// protocol
@@ -432,10 +543,21 @@ All old files have been removed. The project now uses the new modular structure.
 
 ## Key Technical Decisions
 
-### Why Modal HTML is Embedded
-**Problem**: CORS blocks `fetch()` for local files when using file:// protocol
-**Solution**: Embed modal HTML in hub.html, keep CSS/JS separate
-**Trade-off**: Hub.html is longer, but modals remain modular and maintainable
+### Why Dynamic Modal Loading (v2.9.0)
+**Problem**: Need modals accessible from any page, but CORS blocks `fetch()` for local files
+**Solution**: Inject HTML via JavaScript, load CSS/JS dynamically
+**Benefits**:
+- ✅ No CORS issues (HTML injected, not fetched)
+- ✅ Global access from any page with keyboard shortcuts
+- ✅ Lazy loading (better performance)
+- ✅ Modular (separate CSS/JS files)
+- ✅ No duplication (modal HTML in loader only)
+
+### Why Lazy Loading
+**Benefit**: Modals only load when first opened (better initial page load)
+**Performance**: Reduces initial JavaScript execution time
+**User Experience**: Instant page load, modals load on demand
+**Memory**: Only loads what's needed
 
 ### Why Separate CSS/JS Files
 **Benefit**: Each modal can be updated independently
@@ -443,11 +565,11 @@ All old files have been removed. The project now uses the new modular structure.
 **Reusability**: Modal styles can be reused in other contexts
 **Clean Code**: Separation of concerns (structure/style/behavior)
 
-### Why No Standalone Modal Pages
-**Reason**: Modals are quick tools, not full applications
-**User Experience**: Faster access via hub, no page navigation needed
-**Consistency**: All tools accessible from one place
-**Simplicity**: Less files to maintain, cleaner structure
+### Why Global Shortcuts
+**User Experience**: Quick access to tools from anywhere
+**Productivity**: No need to navigate to hub to open modals
+**Consistency**: Same shortcuts work on all pages
+**Flexibility**: Hub buttons still work for mouse users
 
 ## Context for Future Development
 

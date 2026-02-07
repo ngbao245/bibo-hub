@@ -83,20 +83,47 @@ The project is organized into separate mini-projects with shared resources:
 - Each project has its own HTML, CSS, JS files
 - All projects share `common.css` for consistent styling
 
-**Modal Architecture:**
+**Global Modal Architecture:**
 ```
-hub.html (contains all modal HTML)
-├── Loads: modals/translate-modal.css + translate-modal.js
-├── Loads: modals/calculator-modal.css + calculator-modal.js
-├── Loads: backup/backup-modal.css + backup-modal.js
-└── Loads: encoder/encoder-modal.css + encoder-modal.js
+Single Source of Truth
+├── shortcuts-config.js     # All keyboard shortcuts defined here
+    ↓
+├── global-shortcuts.js     # Reads from SHORTCUTS_CONFIG, handles keyboard events
+└── shortcuts-loader.js     # Reads from SHORTCUTS_CONFIG, renders shortcuts modal
+
+Modal Loaders (lazy loading)
+├── translate-loader.js     # Loads CSS first → Injects HTML → Loads JS
+├── calculator-loader.js    # Loads CSS first → Injects HTML → Loads JS
+├── encoder-loader.js       # Loads CSS first → Injects HTML → Loads JS
+└── backup-loader.js        # Loads CSS first → Injects HTML → Loads JS
+
+Each modal:
+├── *-loader.js             # Injects HTML, loads CSS/JS dynamically with toggle support
+├── *-modal.css             # Modal styles (z-index: 10000)
+└── *-modal.js              # Modal logic (open/close functions)
 ```
 
-**Why Modal HTML is Embedded:**
-- CORS policy blocks `fetch()` for local files (file:// protocol)
-- Cannot dynamically load HTML files when opening directly
-- CSS and JS can be loaded via `<link>` and `<script>` tags
-- Solution: Embed HTML, keep CSS/JS modular
+**How Global Modals Work:**
+1. **Single Config**: All shortcuts defined in `shortcuts-config.js` (easy to modify)
+2. **Lazy Loading**: Modals only load when first opened (via keyboard shortcut or button click)
+3. **CSS First**: Load CSS and wait → Then inject HTML → Prevents flash of unstyled content
+4. **Dynamic Injection**: Loader injects HTML into DOM, loads CSS/JS files
+5. **Path Detection**: Auto-detects if running from notes/, tasks/, or root
+6. **Toggle Support**: Press shortcut once to open, press again to close
+7. **Global Shortcuts**: Keyboard shortcuts work from any page (notes, tasks, hub)
+8. **High z-index**: Modals use z-index: 10000 to appear above rich text editor (z-index: 1000)
+9. **Click Outside**: All modals close when clicking outside or pressing ESC
+
+**Why This Architecture:**
+- **Easy Config**: Edit shortcuts in one place (`shortcuts-config.js`)
+- **No CORS Issues**: HTML injected via JavaScript (no fetch needed)
+- **No Flash**: CSS loads before HTML injection
+- **Lazy Loading**: Modals only load when needed (better performance)
+- **Global Access**: Open modals from any page with keyboard shortcuts
+- **Toggle UX**: Natural interaction - press once to open, again to close
+- **Modular**: Each modal has separate CSS/JS files for maintainability
+- **No Duplication**: Modal HTML defined once in loader, works everywhere
+- **Alt Key**: Uses Alt instead of Ctrl to avoid browser shortcut conflicts
 
 **Navigation:**
 - `index.html` redirects to last visited page (notes/tasks) or hub
@@ -157,9 +184,12 @@ Uses single table approach with `type` field to differentiate:
 ├── hub.html                # Main hub with tool grid and modals
 ├── config.js               # API configuration (encoded)
 ├── common.css              # Shared styles for all projects
+├── global-shortcuts.js     # Global keyboard shortcuts system
+├── hub-shortcuts.js        # Hub-specific keyboard shortcuts
 ├── package.json            # Project metadata
 ├── PROJECT-STRUCTURE.md    # Project structure documentation
 ├── README.md               # This file
+├── Global Modal Popup Guide.md  # Guide for creating global modals
 │
 ├── assets/                 # Shared assets
 │   └── icon.png
@@ -181,18 +211,24 @@ Uses single table approach with `type` field to differentiate:
 │   └── tasks-mobile.js
 │
 ├── backup/                 # Backup Modal
+│   ├── backup-loader.js    # Dynamic modal loader
 │   ├── backup-modal.css    # Modal styles
 │   └── backup-modal.js     # Modal logic
 │
 ├── encoder/                # Encoder Modal
+│   ├── encoder-loader.js   # Dynamic modal loader
 │   ├── encoder-modal.css   # Modal styles
 │   └── encoder-modal.js    # Modal logic
 │
-└── modals/                 # Other Modals
-    ├── translate-modal.css # Translate modal styles
-    ├── translate-modal.js  # Translate modal logic
-    ├── calculator-modal.css # Calculator modal styles
-    └── calculator-modal.js  # Calculator modal logic
+├── translate/              # Translate Modal
+│   ├── translate-loader.js # Dynamic modal loader
+│   ├── translate-modal.css # Modal styles
+│   └── translate-modal.js  # Modal logic
+│
+└── modals/                 # Calculator Modal
+    ├── calculator-loader.js # Dynamic modal loader
+    ├── calculator-modal.css # Modal styles
+    └── calculator-modal.js  # Modal logic
 ```
 
 **Note**: Modal HTML is embedded in `hub.html` due to CORS restrictions when opening files directly (file:// protocol). CSS and JS are kept in separate files for modularity.
@@ -448,16 +484,25 @@ The rich text editor is a custom-built, feature-rich content editor with profess
 1. **Open Hub**: Open `hub.html` or navigate from notes/tasks
 2. **Tool Grid**: Click any tool button to open its modal
 3. **Available Tools**:
-   - **Translate**: Auto-detect Vietnamese/English translation
-   - **Calculator**: Basic calculator with keyboard support
-   - **Encoder**: Encode API URLs for config.js
-   - **Backup**: Export/import notes data
+   - **Translate**: Auto-detect Vietnamese/English translation (Ctrl+Q)
+   - **Calculator**: Basic calculator with keyboard support (Ctrl+Shift+C)
+   - **Encoder**: Encode API URLs for config.js (Ctrl+E)
+   - **Backup**: Export/import notes data (Ctrl+B)
    - **Notes**: Navigate to notes app
    - **Timer, Color, QR, JSON, Markdown, Unit**: Coming soon
 4. **Modal Controls**:
    - Click outside modal to close
-   - Press ESC to close
+   - Press ESC to close all modals
    - Click × button to close
+5. **Global Keyboard Shortcuts** (works from any page):
+   - **Alt+T**: Open Translate modal (toggle)
+   - **Alt+C**: Open Calculator modal (toggle)
+   - **Alt+E**: Open Encoder modal (toggle)
+   - **Alt+B**: Open Backup modal (toggle)
+   - **Alt+K**: Open Shortcuts modal (toggle)
+   - **ESC**: Close all modals
+   - Press shortcut once to open, press again to close (toggle)
+   - Modals can be opened from Notes, Tasks, or Hub pages
 
 ### Notes
 1. **Create new note**: Click "+" in sidebar
@@ -539,9 +584,16 @@ User Action → Auto-save Trigger → Silent Save → UI Update
 
 ## ⌨️ Keyboard Shortcuts
 
-### Global
-- `Escape` - Close editor/modal
+### Global (Works from any page)
+- `Alt + T` - Open Translate modal (toggle)
+- `Alt + C` - Open Calculator modal (toggle)
+- `Alt + E` - Open Encoder modal (toggle)
+- `Alt + B` - Open Backup modal (toggle)
+- `Alt + K` - Open Shortcuts modal (toggle)
+- `Escape` - Close all modals/editor
 - `Double Click` - Edit title or content
+
+**Note**: Uses Alt instead of Ctrl to avoid conflicts with browser shortcuts
 
 ### Rich Text Editor
 - `Ctrl + A` - Select all (entire editor or just code block content if cursor is inside code block)
@@ -902,7 +954,30 @@ window.mobileInterface.forceSyncMobileHeader();
 **License**: MIT
 **Author**: BiBo Development Team
 
-### Changelog v2.8.0 (Latest)
+### Changelog v2.9.0 (Latest)
+- ✅ **Global Modal System with Keyboard Shortcuts & Toggle**:
+  - **Single Config File**: `shortcuts-config.js` - single source of truth for all shortcuts
+  - **Global Shortcuts**: Open modals from any page (notes, tasks, hub) with keyboard shortcuts
+  - **Toggle Support**: Press shortcut once to open, press again to close
+  - **Lazy Loading**: Modals dynamically load only when first opened (better performance)
+  - **CSS First Loading**: Load CSS before HTML injection to prevent flash of unstyled content
+  - **Modal Loaders**: Each modal has a loader that injects HTML and loads CSS/JS
+  - **Path Detection**: Auto-detects current page path for correct file loading
+  - **Alt Key Usage**: Uses Alt instead of Ctrl to avoid browser shortcut conflicts
+  - **Keyboard Shortcuts**:
+    - `Alt+T` - Translate modal (toggle)
+    - `Alt+C` - Calculator modal (toggle)
+    - `Alt+E` - Encoder modal (toggle)
+    - `Alt+B` - Backup modal (toggle)
+    - `Alt+K` - Shortcuts modal (toggle)
+    - `ESC` - Close all modals
+  - **Click Outside**: All modals close when clicking outside modal content
+  - **High z-index**: Modals use z-index: 10000 to appear above rich text editor
+  - **No CORS Issues**: HTML injected via JavaScript (no fetch needed)
+  - **Optimized Code**: Removed console.log debug statements, clean architecture
+  - **Documentation**: Updated "Global Modal Popup Guide.md" with toggle support and Alt key usage
+
+### Changelog v2.8.0
 - ✅ **Modular Hub Architecture**:
   - **Refactored Modal System**: Separated modals into individual CSS/JS files
   - **Clean Hub.html**: Modal HTML embedded (CORS limitation), styles/logic modular
