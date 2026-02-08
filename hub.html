@@ -21,13 +21,56 @@
     <style>
         body {
             background: var(--color-bg-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Container */
+        .container {
+            display: flex;
+            height: 100vh;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: var(--color-bg-secondary);
+            border-right: 1px solid var(--color-border);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .sidebar-header {
+            padding: 10px;
+            background: #323233;
+            border-bottom: 1px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .sidebar-header h3 {
+            font-size: var(--font-md);
+            color: var(--color-text-secondary);
+            font-weight: normal;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         .hub-container {
-            max-width: 1200px;
-            margin: 0 auto;
+            flex: 1;
+            overflow-y: auto;
             padding: 40px 20px;
-            min-height: 100vh;
         }
 
         .hub-header {
@@ -169,6 +212,25 @@
         }
 
         @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                width: 280px;
+                z-index: 100;
+                transform: translateX(-100%);
+                transition: transform 0.3s ease;
+            }
+
+            .main-content {
+                width: 100%;
+            }
+
             .hub-container {
                 padding: 30px 15px;
             }
@@ -197,10 +259,24 @@
     </style>
 </head>
 <body>
-    <a href="sources/sources.html" class="hub-header-link">💾 Sources Page</a>
-    <button class="hub-header-link" onclick="openShortcutsModalLazy()" style="left: 20px; right: auto; cursor: pointer;">⌨️ Shortcuts</button>
-    
-    <div class="hub-container">
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h3>HUB</h3>
+            </div>
+            
+            <!-- Navigation -->
+            <div class="app-nav">
+                <a href="hub.html" class="nav-link active"><img src="assets/apps.png" alt="Hub" style="vertical-align: middle; opacity: 0.7; width: 20px; height: 20px;"></a>
+                <a href="notes/notes.html" class="nav-link">Notes</a>
+                <a href="tasks/tasks.html" class="nav-link">Tasks</a>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <div class="hub-container">
         <div class="hub-header">
             <h1>Mini Tools</h1>
         </div>
@@ -345,6 +421,9 @@
     <script src="global-shortcuts.js"></script>
     
     <script>
+        // Save current page
+        localStorage.setItem('app_currentPage', 'hub');
+
         // Global modal close handlers
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
@@ -368,5 +447,8 @@
         function openMarkdown() { alert('Markdown Preview - Coming soon!'); }
         function openUnit() { alert('Unit Converter - Coming soon!'); }
     </script>
+            </div> <!-- Close hub-container -->
+        </div> <!-- Close main-content -->
+    </div> <!-- Close container -->
 </body>
 </html>
