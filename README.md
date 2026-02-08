@@ -824,43 +824,125 @@ activeListItem.classList.remove('force-active');
 
 ## 📱 Mobile Interface Details
 
-### Smart Header Design
-The mobile interface features a compact smart header that includes:
+### Unified Mobile Design (All Pages)
+All pages (Hub, Notes, Tasks, Sources) now share the same simple mobile interface:
 
-**Header Components:**
+**Mobile Interface Features:**
+- **Hamburger Button**: ☰ button in top-left corner of mobile header
+- **Sidebar Slide**: Sidebar slides in from left with smooth animation
+- **Toggle Behavior**: Button changes to ✕ when sidebar is open
+- **Click Outside**: Sidebar closes when clicking outside or on ✕ button
+- **Navigation Tabs**: All pages have Hub icon, Notes, and Tasks tabs in sidebar
+- **Responsive**: Automatically activates on screens ≤768px width
+- **Consistent**: Identical behavior across all pages
+
+**Mobile Header Layout:**
+```
+[☰] [Page Title]
+```
+
+**Implementation:**
+```javascript
+// Each page has its own mobile JS file
+class MobileInterface {
+    constructor() {
+        this.isMobile = window.innerWidth <= 768;
+        this.sidebarVisible = false;
+        this.init();
+    }
+
+    createMobileHeader() {
+        // Creates hamburger button + page title
+    }
+
+    setupSidebarToggle() {
+        // Handles sidebar show/hide with smooth animation
+        // Click outside to close
+    }
+}
+```
+
+**Files:**
+- `hub-mobile.js` - Hub page mobile interface
+- `notes/notes-mobile.js` - Notes page mobile interface  
+- `tasks/tasks-mobile.js` - Tasks page mobile interface
+- `sources/sources-mobile.js` - Sources page mobile interface
+
+### Mobile CSS Structure
+All pages use identical mobile CSS:
+```css
+/* Mobile Header */
+.mobile-header {
+    display: none;
+    padding: 15px;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
+    align-items: center;
+    gap: 15px;
+}
+
+.mobile-hamburger {
+    background: transparent;
+    border: none;
+    color: var(--color-text-primary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 5px 10px;
+    transition: all 0.2s;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .mobile-header {
+        display: flex;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 280px;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+    }
+
+    .sidebar.mobile-visible {
+        transform: translateX(0);
+    }
+}
+```
+
+### Smart Header Design (Tasks Only - Legacy)
+The Tasks page previously had a more complex smart header (now simplified):
+
+**Old Header Components:**
 - **Hamburger Toggle**: ☰/✕ button to show/hide sidebar
 - **Navigation Tabs**: Switch between Notes and Tasks
 - **Search Bar** (Notes): Mobile search input synced with desktop
 - **List Selector** (Tasks): Dropdown to switch between task lists (4 built-in only)
 
-**Mobile Navigation:**
+**Old Mobile Navigation:**
 ```
 [☰] [Notes|Tasks] .................... [Search/List Selector]
 ```
 
-**Features:**
-- **Responsive**: Automatically activates on screens ≤768px
-- **Touch-Friendly**: Large touch targets (44px minimum)
-- **Smooth Animations**: 0.3s sidebar slide, 0.15s dropdown
-- **Synchronized**: Mobile actions sync with desktop functionality
-- **Overlay**: Dark overlay when sidebar is open
-- **Auto-Close**: Sidebar closes when clicking outside or selecting lists
-- **Fixed Highlighting**: Task list items properly highlight when active
+**Note**: This complex design has been replaced with the simple unified design across all pages.
 
 ### Mobile Sidebar Behavior
 - **Slide Animation**: Smooth slide-in from left with transform
-- **Overlay Background**: Dark backdrop when open
-- **Auto-Close**: Closes when selecting task lists or clicking outside
-- **Proper Highlighting**: Active task lists now show blue background and white text
-- **Sync with Dropdown**: Selection syncs between sidebar and header dropdown
-- **All Lists Available**: Sidebar shows all lists (built-in + custom)
+- **Overlay Background**: Dark backdrop when open (via click outside detection)
+- **Auto-Close**: Closes when clicking outside sidebar area
+- **Navigation**: All pages have Hub, Notes, Tasks tabs in sidebar
+- **Consistent Width**: 280px sidebar width on all pages
+- **High z-index**: z-index: 1000 to appear above content
 
 ### Mobile vs Desktop Differences
-- **Header Dropdown**: Mobile shows only 4 built-in lists (My Day, All Tasks, Important, Completed)
-- **Sidebar**: Mobile sidebar shows all lists including custom ones
-- **Navigation**: Mobile uses smart header, desktop uses traditional sidebar navigation
-- **Search**: Mobile search in header, desktop search in sidebar/main content
-- **Touch Optimization**: Larger touch targets and simplified interactions on mobile
+- **Header**: Mobile shows hamburger + title, desktop shows full sidebar
+- **Sidebar**: Mobile sidebar is fixed and slides in, desktop sidebar is always visible
+- **Navigation**: Mobile uses hamburger to access navigation, desktop has tabs always visible
+- **Touch Optimization**: Larger touch targets (minimum 44px) on mobile
 
 ### Technical Implementation
 ```javascript
@@ -994,7 +1076,7 @@ window.mobileInterface.forceSyncMobileHeader();
 
 ---
 
-**Version**: 2.7.0
+**Version**: 2.10.2
 **Last Updated**: February 2026
 **Tech Stack**: Vanilla JavaScript, MockAPI, CSS Variables
 **License**: MIT
@@ -1028,6 +1110,25 @@ window.mobileInterface.forceSyncMobileHeader();
   - **Animation Consistency**: Same `slideIn 0.2s ease` as translate, calculator, encoder, backup modals
   - **Close Button**: Red background on hover (consistent with other modals)
   - **URL Management**: Support up to 100 URLs per secret note with optional names
+
+### Changelog v2.10.2
+- ✅ **Unified Mobile Interface Across All Pages**:
+  - **Simple Hamburger Design**: All pages (Hub, Notes, Tasks, Sources) now use identical mobile interface
+  - **Consistent Behavior**: 
+    - Hamburger button (☰) in top-left corner
+    - Sidebar slides in from left when clicked
+    - Button changes to ✕ when sidebar is open
+    - Click outside or on ✕ to close sidebar
+  - **Mobile JS Files**: 
+    - `hub-mobile.js` - Hub page mobile interface
+    - `notes/notes-mobile.js` - Notes page mobile interface
+    - `tasks/tasks-mobile.js` - Tasks page mobile interface
+    - `sources/sources-mobile.js` - Sources page mobile interface
+  - **Navigation Tabs**: All pages have navigation tabs (Hub icon, Notes, Tasks) in sidebar
+  - **Responsive Design**: Automatically activates on screens ≤768px width
+  - **Touch-Friendly**: Large touch targets and smooth animations
+  - **Clean CSS**: Removed old complex mobile CSS, replaced with simple unified version
+  - **No Conflicts**: Eliminated duplicate mobile blocks and conflicting styles
 
 ### Changelog v2.9.0
 - ✅ **Global Modal System with Keyboard Shortcuts & Toggle**:

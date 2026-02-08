@@ -73,18 +73,9 @@
             flex: 1;
             overflow-y: auto;
             padding: 40px 20px;
-        }
-
-        .hub-header {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-
-        .hub-header h1 {
-            font-size: 24px;
-            color: var(--color-text-primary);
-            font-weight: normal;
-            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .hub-header-link {
@@ -213,7 +204,43 @@
             transform: scale(1.1);
         }
 
+        /* Mobile Header */
+        .mobile-header {
+            display: none;
+            padding: 15px;
+            background: var(--color-bg-secondary);
+            border-bottom: 1px solid var(--color-border);
+            align-items: center;
+            gap: 15px;
+        }
+
+        .mobile-header h2 {
+            font-size: 18px;
+            color: var(--color-text-primary);
+            font-weight: 500;
+            margin: 0;
+        }
+
+        .mobile-hamburger {
+            background: transparent;
+            border: none;
+            color: var(--color-text-primary);
+            font-size: 24px;
+            cursor: pointer;
+            padding: 5px 10px;
+            transition: all 0.2s;
+        }
+
+        .mobile-hamburger:hover {
+            color: var(--color-accent-primary);
+        }
+
+        /* Mobile Responsive */
         @media (max-width: 768px) {
+            .mobile-header {
+                display: flex;
+            }
+
             .container {
                 flex-direction: column;
             }
@@ -222,23 +249,24 @@
                 position: fixed;
                 top: 0;
                 left: 0;
-                height: 100vh;
                 width: 280px;
-                z-index: 100;
+                height: 100vh;
+                z-index: 1000;
                 transform: translateX(-100%);
                 transition: transform 0.3s ease;
             }
 
+            .sidebar.mobile-visible {
+                transform: translateX(0);
+            }
+
             .main-content {
                 width: 100%;
+                flex: 1;
             }
 
             .hub-container {
                 padding: 30px 15px;
-            }
-
-            .hub-header h1 {
-                font-size: 20px;
             }
 
             .tool-btn {
@@ -283,11 +311,7 @@
             <a href="sources/sources.html" class="hub-header-link">💾 Sources Page</a>
             
             <div class="hub-container">
-        <div class="hub-header">
-            <h1>Mini Tools</h1>
-        </div>
-
-        <div class="hub-grid">
+                <div class="hub-grid">
             <button class="tool-btn" onclick="openTranslateModalLazy()" data-shortcut="Alt+T">
                 <span class="tool-icon">🌐</span>
                 Translate
@@ -425,6 +449,9 @@
     <script src="shortcut/shortcuts-config.js"></script>
     <script src="shortcut/shortcuts-loader.js"></script>
     <script src="shortcut/global-shortcuts.js"></script>
+    
+    <!-- Mobile Interface -->
+    <script src="hub-mobile.js"></script>
     
     <script>
         // Save current page

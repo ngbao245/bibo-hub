@@ -15,6 +15,8 @@ function openSourcesModal() {
             initSourcesModal();
             modalInitialized = true;
         }
+        // Initialize mobile interface
+        setTimeout(() => initSourcesMobileInterface(), 100);
     }
 }
 
@@ -491,3 +493,47 @@ document.addEventListener('keydown', (e) => {
         }
     }
 });
+
+
+// Mobile Interface for Sources Modal
+function initSourcesMobileInterface() {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) return;
+
+    const sidebar = document.querySelector('.sources-modal-body .sidebar');
+    const header = document.querySelector('.sources-modal-header');
+    
+    if (!sidebar || !header) return;
+
+    // Add hamburger button
+    const hamburger = document.createElement('button');
+    hamburger.className = 'mobile-hamburger';
+    hamburger.innerHTML = '☰';
+    hamburger.style.cssText = `
+        background: transparent;
+        border: none;
+        color: var(--color-text-primary);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 5px 10px;
+        margin-right: 10px;
+    `;
+    
+    header.insertBefore(hamburger, header.firstChild);
+
+    // Toggle sidebar
+    hamburger.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-visible');
+        hamburger.innerHTML = sidebar.classList.contains('mobile-visible') ? '✕' : '☰';
+    });
+
+    // Close sidebar when clicking outside
+    document.addEventListener('click', (e) => {
+        if (sidebar.classList.contains('mobile-visible') && 
+            !sidebar.contains(e.target) && 
+            !hamburger.contains(e.target)) {
+            sidebar.classList.remove('mobile-visible');
+            hamburger.innerHTML = '☰';
+        }
+    });
+}

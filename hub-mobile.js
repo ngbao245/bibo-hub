@@ -1,5 +1,5 @@
-// Simple Mobile Interface for Notes Page
-class NotesMobileInterface {
+// Simple Mobile Interface for Hub Page
+class HubMobileInterface {
     constructor() {
         this.isMobile = window.innerWidth <= 768;
         this.sidebarVisible = false;
@@ -22,7 +22,7 @@ class NotesMobileInterface {
         header.className = 'mobile-header';
         header.innerHTML = `
             <button class="mobile-hamburger" id="mobileHamburger">☰</button>
-            <h2>Notes</h2>
+            <h2>Hub</h2>
         `;
 
         container.insertBefore(header, container.firstChild);
@@ -64,8 +64,8 @@ class NotesMobileInterface {
 // Initialize on load
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => {
-        new NotesMobileInterface();
+        new HubMobileInterface();
     });
 } else {
-    new NotesMobileInterface();
+    new HubMobileInterface();
 }

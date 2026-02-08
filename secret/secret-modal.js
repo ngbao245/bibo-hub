@@ -168,6 +168,9 @@ async function showSecretNotesApp() {
     
     // Load notes immediately
     await loadSecretNotes();
+    
+    // Initialize mobile interface
+    setTimeout(() => initSecretMobileInterface(), 100);
 }
 
 async function loadSecretNotes() {
@@ -578,4 +581,51 @@ async function copySecretUrl(url) {
     } catch (error) {
         console.error('Error copying URL:', error);
     }
+}
+
+
+// Mobile Interface for Secret Modal
+function initSecretMobileInterface() {
+    const isMobile = window.innerWidth <= 768;
+    if (!isMobile) return;
+
+    const sidebar = document.querySelector('.secret-app-container .sidebar');
+    const header = document.querySelector('.secret-modal-header');
+    
+    if (!sidebar || !header) return;
+
+    // Check if hamburger already exists
+    if (header.querySelector('.mobile-hamburger')) return;
+
+    // Add hamburger button
+    const hamburger = document.createElement('button');
+    hamburger.className = 'mobile-hamburger';
+    hamburger.innerHTML = '☰';
+    hamburger.style.cssText = `
+        background: transparent;
+        border: none;
+        color: var(--color-text-primary);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 5px 10px;
+        margin-right: 10px;
+    `;
+    
+    header.insertBefore(hamburger, header.firstChild);
+
+    // Toggle sidebar
+    hamburger.addEventListener('click', () => {
+        sidebar.classList.toggle('mobile-visible');
+        hamburger.innerHTML = sidebar.classList.contains('mobile-visible') ? '✕' : '☰';
+    });
+
+    // Close sidebar when clicking outside
+    document.addEventListener('click', (e) => {
+        if (sidebar.classList.contains('mobile-visible') && 
+            !sidebar.contains(e.target) && 
+            !hamburger.contains(e.target)) {
+            sidebar.classList.remove('mobile-visible');
+            hamburger.innerHTML = '☰';
+        }
+    });
 }
