@@ -112,35 +112,6 @@ function renderAllShortcutsList() {
         `;
     }
     
-    // Rich text editor shortcuts
-    html += `
-        <div class="shortcuts-section">
-            <div class="shortcuts-section-title">Rich Text Editor</div>
-            <div class="shortcuts-list">
-                <div class="shortcut-item">
-                    <span class="shortcut-name">Bold</span>
-                    <div class="shortcut-keys"><span class="shortcut-key">Ctrl</span><span class="shortcut-plus">+</span><span class="shortcut-key">B</span></div>
-                </div>
-                <div class="shortcut-item">
-                    <span class="shortcut-name">Italic</span>
-                    <div class="shortcut-keys"><span class="shortcut-key">Ctrl</span><span class="shortcut-plus">+</span><span class="shortcut-key">I</span></div>
-                </div>
-                <div class="shortcut-item">
-                    <span class="shortcut-name">Underline</span>
-                    <div class="shortcut-keys"><span class="shortcut-key">Ctrl</span><span class="shortcut-plus">+</span><span class="shortcut-key">U</span></div>
-                </div>
-                <div class="shortcut-item">
-                    <span class="shortcut-name">Save & Close</span>
-                    <div class="shortcut-keys"><span class="shortcut-key">Ctrl</span><span class="shortcut-plus">+</span><span class="shortcut-key">S</span></div>
-                </div>
-                <div class="shortcut-item">
-                    <span class="shortcut-name">Fullscreen</span>
-                    <div class="shortcut-keys"><span class="shortcut-key">F11</span></div>
-                </div>
-            </div>
-        </div>
-    `;
-    
     container.innerHTML = html;
 }
 
