@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="sources/sources-modal.css">
     <link rel="stylesheet" href="sources/sources.css">
     <link rel="stylesheet" href="shortcuts-modal.css">
+    <link rel="stylesheet" href="secret/secret-modal.css">
+    <link rel="stylesheet" href="notes/notes.css">
     
     <style>
         body {
@@ -263,6 +265,11 @@
                 <span class="tool-icon">💾</span>
                 Sources
             </button>
+
+            <button class="tool-btn" onclick="openSecretModal()" data-shortcut="">
+                <span class="tool-icon">🔒</span>
+                Secret
+            </button>
         </div>
     </div>
 
@@ -305,10 +312,26 @@
 
     <!-- Modals will be injected here by loaders -->
 
+    <!-- Secret Notes Modal -->
+    <div id="secretModal" class="secret-modal">
+        <div class="secret-modal-content">
+            <div class="secret-modal-header">
+                <div class="secret-modal-title">🔒 Secret Notes</div>
+                <button class="secret-modal-close-btn" onclick="closeSecretModal()">×</button>
+            </div>
+            <div class="secret-modal-body">
+                <!-- Content will be injected by JS -->
+            </div>
+        </div>
+    </div>
+
     <script src="./config.js"></script>
     
     <!-- Sources Modal JS -->
     <script src="sources/sources-modal.js"></script>
+    
+    <!-- Secret Notes Modal JS -->
+    <script src="secret/secret-modal.js"></script>
     
     <!-- Global Modal Loaders -->
     <script src="translate/translate-loader.js"></script>

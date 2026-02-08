@@ -14,9 +14,16 @@ featuring rich text editing, auto-save task management, and responsive mobile de
 - **Window Controls**: Fullscreen button (gray) and close button (red) like Windows Explorer
 - **Inline Editing**: Direct editing of title and content
 - **Search**: Search notes by title and content
-- **Categories & Tags**: Categorize notes by type, language, tags
+- **Categories & Tags**: Categorize notes by type (Note, IELTS, Course, Code)
 - **URLs Management**: Store up to 5 URLs per note
 - **Auto-save**: Automatically save form data while editing
+
+### 🔒 Secret Notes (Hub Only)
+- **Password Protection**: Separate app in Hub requiring password to access
+- **Dedicated Interface**: Full notes app interface with purple theme
+- **Type: secret**: Notes stored with type="secret" in database
+- **No Global Access**: Only accessible from Hub button (not in Notes app)
+- **Session Lock**: Password required each time modal is opened
 
 ### ✅ Tasks Management (Microsoft To Do Style)
 - **3-Column Layout**: Lists → Tasks → Editor (like Microsoft To Do desktop)
@@ -139,7 +146,7 @@ Uses single table approach with `type` field to differentiate:
 "id": "string",
 "title": "string",
 "content": "string (HTML)",
-"type": "note|ielts|course|code",
+"type": "note|ielts|course|code|secret",
 "source": "string",
 "tags": "string (comma-separated)",
 "example": "string",
@@ -154,6 +161,8 @@ Uses single table approach with `type` field to differentiate:
 "updatedAt": "ISO string"
 }
 ```
+
+**Note:** Secret notes (type="secret") are only accessible through Hub's Secret Notes modal with password protection.
 
 **Tasks Table (contains both tasks and lists):**
 ```json
@@ -516,6 +525,15 @@ The rich text editor is a custom-built, feature-rich content editor with profess
 - Ctrl+S to save, Escape to close
 4. **Search**: Type in search box to filter notes
 5. **URLs**: Add up to 5 URLs per note
+
+### 🔒 Secret Notes (Hub Only)
+1. **Access**: Click "🔒 Secret" button in Hub
+2. **Password**: Enter password to unlock
+3. **Interface**: Full notes app with purple theme
+4. **Create**: Click "+" to create new secret note
+5. **Security**: Password required each time modal is opened
+6. **Storage**: Notes saved with type="secret" in database
+7. **Isolation**: Secret notes don't appear in regular Notes app
 
 ### Tasks
 1. **Default View**: App opens with "My Day" view
@@ -954,7 +972,19 @@ window.mobileInterface.forceSyncMobileHeader();
 **License**: MIT
 **Author**: BiBo Development Team
 
-### Changelog v2.9.0 (Latest)
+### Changelog v2.10.0 (Latest)
+- ✅ **🔒 Secret Notes Feature (Hub Only)**:
+  - **Dedicated App**: Separate notes app in Hub with password protection
+  - **Password Modal**: Password required to access
+  - **Full Interface**: Complete notes app with sidebar, editor, search
+  - **Purple Theme**: Special purple gradient styling for secret notes
+  - **Type: secret**: Notes stored with type="secret" in database
+  - **Session Lock**: Password required each time modal is opened
+  - **Isolation**: Secret notes don't appear in regular Notes app
+  - **Hub Button**: Access via "🔒 Secret" button in Hub grid
+  - **Files**: `secret/secret-modal.css`, `secret/secret-modal.js`
+
+### Changelog v2.9.0
 - ✅ **Global Modal System with Keyboard Shortcuts & Toggle**:
   - **Single Config File**: `shortcuts-config.js` - single source of truth for all shortcuts
   - **Global Shortcuts**: Open modals from any page (notes, tasks, hub) with keyboard shortcuts
