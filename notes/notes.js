@@ -50,8 +50,8 @@ async function loadNotes() {
         const response = await fetch(API_NOTES);
         const allNotes = await response.json();
         
-        // Filter out sources (only show notes)
-        notes = allNotes.filter(n => n.type !== 'source');
+        // Filter out sources and secret notes (only show regular notes)
+        notes = allNotes.filter(n => n.type !== 'source' && n.type !== 'secret');
         notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         updateTypeCounts();
         restoreTypeFilter(); // Restore filter state

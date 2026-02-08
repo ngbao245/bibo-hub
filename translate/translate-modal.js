@@ -1,18 +1,14 @@
 // Translate Modal Logic
 
+let translateTimeout;
+
 function openTranslateModal() {
     document.getElementById('translateModal').classList.add('show');
     document.getElementById('translateSource').focus();
-}
-
-function closeTranslateModal() {
-    document.getElementById('translateModal').classList.remove('show');
-}
-
-let translateTimeout;
-document.addEventListener('DOMContentLoaded', () => {
+    
+    // Setup event listener if not already set
     const sourceInput = document.getElementById('translateSource');
-    if (sourceInput) {
+    if (sourceInput && !sourceInput.hasAttribute('data-listener-attached')) {
         sourceInput.oninput = function() {
             clearTimeout(translateTimeout);
             const text = this.value.trim();
@@ -22,8 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('translateTarget').value = '';
             }
         };
+        sourceInput.setAttribute('data-listener-attached', 'true');
     }
-});
+}
+
+function closeTranslateModal() {
+    document.getElementById('translateModal').classList.remove('show');
+}
 
 async function translate(text) {
     const isVi = /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i.test(text);

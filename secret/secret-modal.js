@@ -248,7 +248,7 @@ function showSecretNoteView() {
             
             ${allUrls.length > 0 ? `
                 <div class="content-section">
-                    <h3>URLs</h3>
+                    <h3>URLs <span style="color: var(--color-text-muted); font-size: 12px; font-weight: normal;">(Click to copy)</span></h3>
                     <div class="urls-list">
                         ${allUrls.map((urlData, index) => {
                             const parts = urlData.split('::');
@@ -256,11 +256,11 @@ function showSecretNoteView() {
                             const url = parts.length > 1 ? parts[1] : urlData;
                             
                             return `
-                            <div class="url-item">
+                            <div class="url-item" onclick="copySecretUrl('${escapeHtmlSecret(url).replace(/'/g, '\\\'')}')" style="cursor: pointer;" title="Click to copy">
                                 <span class="url-index">${index + 1}.</span>
                                 <div class="url-content">
                                     ${name ? `<div class="url-name">${escapeHtmlSecret(name)}</div>` : ''}
-                                    <a href="${escapeHtmlSecret(url)}" target="_blank" class="url-link">${escapeHtmlSecret(url)}</a>
+                                    <div class="url-link">${escapeHtmlSecret(url)}</div>
                                 </div>
                             </div>
                         `;
@@ -531,3 +531,51 @@ function formatDateSecret(dateString) {
     });
 }
 
+// Reusable feedback element
+let copyFeedback = null;
+let copyFeedbackTimeout = null;
+
+async function copySecretUrl(url) {
+    try {
+        await navigator.clipboard.writeText(url);
+        
+        // Create feedback element only once
+        if (!copyFeedback) {
+            copyFeedback = document.createElement('div');
+            copyFeedback.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background: var(--color-accent-primary);
+                color: white;
+                padding: 12px 24px;
+                border-radius: 4px;
+                font-size: 14px;
+                z-index: 100000;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            `;
+            document.body.appendChild(copyFeedback);
+        }
+        
+        // Clear existing timeout if any
+        if (copyFeedbackTimeout) {
+            clearTimeout(copyFeedbackTimeout);
+        }
+        
+        // Update text and show
+        copyFeedback.textContent = 'URL copied!';
+        copyFeedback.style.opacity = '1';
+        
+        // Hide after 1.5s
+        copyFeedbackTimeout = setTimeout(() => {
+            if (copyFeedback) {
+                copyFeedback.style.opacity = '0';
+            }
+        }, 1500);
+    } catch (error) {
+        console.error('Error copying URL:', error);
+    }
+}
