@@ -6,7 +6,14 @@ class RichTextEditor {
         this.editor = null;
         this.initialContent = initialContent; // Store initial content for comparison
         this.timerInterval = null;
-        this.timerSeconds = parseInt(noteData.timerDuration) || 0; // Restore timer duration from string
+        
+        // Restore timer from session storage (per note)
+        const noteId = noteData.id || 'new';
+        const sessionKey = `richtext_timer_${noteId}`;
+        const savedTimer = localStorage.getItem(sessionKey);
+        this.timerSeconds = savedTimer ? parseInt(savedTimer) : 0;
+        this.sessionTimerKey = sessionKey;
+        
         this.timerRunning = false;
         this.wordCountActive = noteData.wordCountEnabled || false; // Restore word count state
         this.wordCountInterval = null;
@@ -37,7 +44,7 @@ class RichTextEditor {
                                 <span class="word-count-display">-- words</span>
                             </button>
                             <span class="toolbar-separator">|</span>
-                            <button class="timer-btn" data-action="timer" title="Click to start/stop timer">⏱ 00:00</button>
+                            <button class="timer-btn" data-action="timer" title="Click: start/stop timer&#10;Right-click: reset timer">⏱ 00:00</button>
                         </div>
                         <div class="window-controls">
                             <button class="btn-close" data-action="fullscreen" title="Toggle Fullscreen">⛶</button>
@@ -159,6 +166,16 @@ class RichTextEditor {
 
         this.container.querySelectorAll('[data-action="timer"]').forEach(btn => {
             btn.addEventListener('click', () => this.toggleTimer());
+            // Right-click to reset timer
+            btn.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                if (confirm('Reset timer to 00:00?')) {
+                    this.stopTimer();
+                    this.timerSeconds = 0;
+                    localStorage.setItem(this.sessionTimerKey, '0');
+                    this.updateTimerDisplay();
+                }
+            });
         });
 
         this.container.querySelectorAll('[data-action="word-count"]').forEach(btn => {
@@ -684,13 +701,16 @@ class RichTextEditor {
     save() {
         const content = this.getContent();
         if (this.onSave) {
-            // Include word count state and timer duration in save
+            // Include word count state only (timer is for display only, not saved)
             const editorState = {
-                wordCountEnabled: this.wordCountActive,
-                timerDuration: this.timerSeconds.toString() // Convert to string
+                wordCountEnabled: this.wordCountActive
             };
             this.onSave(content, editorState);
         }
+        
+        // Clear session timer when saving
+        localStorage.removeItem(this.sessionTimerKey);
+        
         this.close();
     }
 
@@ -790,6 +810,11 @@ class RichTextEditor {
         this.timerInterval = setInterval(() => {
             this.timerSeconds++;
             this.updateTimerDisplay();
+            
+            // Save to session storage every 5 seconds (performance optimization)
+            if (this.timerSeconds % 5 === 0) {
+                localStorage.setItem(this.sessionTimerKey, this.timerSeconds.toString());
+            }
         }, 1000);
         
         if (timerBtn) {
@@ -804,6 +829,9 @@ class RichTextEditor {
             clearInterval(this.timerInterval);
             this.timerInterval = null;
         }
+        
+        // Save timer when stopping (performance optimization)
+        localStorage.setItem(this.sessionTimerKey, this.timerSeconds.toString());
         
         const timerBtn = this.container.querySelector('[data-action="timer"]');
         if (timerBtn) {
@@ -823,6 +851,11 @@ class RichTextEditor {
     }
 
     close() {
+        // Save timer before closing (if not already saved)
+        if (this.timerSeconds > 0) {
+            localStorage.setItem(this.sessionTimerKey, this.timerSeconds.toString());
+        }
+        
         // Stop timer when closing
         if (this.timerInterval) {
             clearInterval(this.timerInterval);

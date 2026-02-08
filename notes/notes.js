@@ -277,6 +277,9 @@ function showEditMode(restoreData = null) {
                 <div class="form-group">
                     <label>Content</label>
                     <textarea id="noteContent" placeholder="Start typing...">${note.content ? htmlToPlainText(note.content) : ''}</textarea>
+                    <div id="richTextWarning" style="display: none; color: var(--color-danger); font-size: 12px; margin-top: 4px;">
+                        ! This note has rich text formatting. To edit content, close this form and double-click the content in view mode.
+                    </div>
                 </div>
 
                 <div class="form-row">
@@ -393,6 +396,9 @@ function showEditMode(restoreData = null) {
     
     // Initialize note type dropdown display
     updateNoteTypeDisplay();
+    
+    // Detect and warn about rich text content
+    detectRichTextContent(note);
 }
 
 // Note Type Dropdown Functions
@@ -434,7 +440,7 @@ function updateNoteTypeDisplay() {
     displayText.textContent = typeLabels[type] || 'Note';
 }
 
-// Timer Duration Dropdown Functions
+// Timer Duration Dropdown Functions (Manual input only, not auto-saved from rich text editor)
 function toggleTimerDurationDropdown() {
     const options = document.getElementById('timerDurationOptions');
     if (options) {
@@ -489,6 +495,28 @@ function updateTimerDurationDisplay() {
         displayText.textContent = '45 min';
     } else {
         displayText.textContent = `${minutes} min`;
+    }
+}
+
+// Detect if content has rich text formatting
+function detectRichTextContent(note) {
+    if (!note || !note.content) return;
+    
+    // Check if content has rich text tags (not just <div> and <br>)
+    const richTextTags = /<(strong|em|u|b|i|ul|ol|li|code|pre|h[1-6]|span|p)[^>]*>/i;
+    const hasRichText = richTextTags.test(note.content);
+    
+    if (hasRichText) {
+        const textarea = document.getElementById('noteContent');
+        const warning = document.getElementById('richTextWarning');
+        
+        if (textarea && warning) {
+            // Make textarea readonly and show warning
+            textarea.readOnly = true;
+            textarea.style.opacity = '0.6';
+            textarea.style.cursor = 'not-allowed';
+            warning.style.display = 'block';
+        }
     }
 }
 
@@ -556,7 +584,7 @@ function saveCurrentNote() {
         url4: document.getElementById('noteUrl4').value,
         url5: document.getElementById('noteUrl5').value,
         wordCountEnabled: currentNote ? currentNote.wordCountEnabled : false, // Keep existing value or default
-        timerDuration: document.getElementById('noteTimerDuration').value || "0"
+        timerDuration: document.getElementById('noteTimerDuration').value || "0" // Manual input only
     };
     
     saveNote(noteData);
@@ -837,12 +865,10 @@ function editContent(element) {
         async (newContent, editorState) => {
             // Save callback with editor state
             if (newContent !== currentNote.content || 
-                (editorState && (editorState.wordCountEnabled !== currentNote.wordCountEnabled || 
-                editorState.timerDuration !== currentNote.timerDuration))) {
+                (editorState && editorState.wordCountEnabled !== currentNote.wordCountEnabled)) {
                 currentNote.content = newContent;
                 if (editorState) {
                     currentNote.wordCountEnabled = editorState.wordCountEnabled;
-                    currentNote.timerDuration = editorState.timerDuration;
                 }
                 await saveNote(currentNote);
             }

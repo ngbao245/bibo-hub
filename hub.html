@@ -15,11 +15,16 @@
     <link rel="stylesheet" href="notes/notes.css">
     
     <style>
+        /* Disable text selection in hub */
         body {
             background: var(--color-bg-primary);
             display: flex;
             height: 100vh;
             overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         /* Container */
