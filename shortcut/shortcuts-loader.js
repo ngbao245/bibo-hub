@@ -14,7 +14,7 @@ async function loadShortcutsModal() {
             await new Promise((resolve) => {
                 const link = document.createElement('link');
                 link.rel = 'stylesheet';
-                link.href = basePath + 'shortcuts-modal.css';
+                link.href = basePath + 'shortcut/shortcuts-modal.css';
                 link.onload = resolve;
                 document.head.appendChild(link);
             });
