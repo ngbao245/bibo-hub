@@ -20,10 +20,19 @@ featuring rich text editing, auto-save task management, and responsive mobile de
 
 ### 🔒 Secret Notes (Hub Only)
 - **Password Protection**: Separate app in Hub requiring password to access
-- **Dedicated Interface**: Full notes app interface with purple theme
+- **Dedicated Interface**: Full notes app interface with consistent dark theme
+- **Custom Password Toggle**: Show/hide password with eye icon (white color, smooth hover effects)
+- **Browser Compatibility**: Hides default password reveal icons from all browsers (Edge, Chrome, Firefox, Opera, Arc, Safari)
 - **Type: secret**: Notes stored with type="secret" in database
 - **No Global Access**: Only accessible from Hub button (not in Notes app)
 - **Session Lock**: Password required each time modal is opened
+- **ESC Key Support**: Press ESC to close modal at any time
+- **Smooth Animations**: Consistent 0.2s slideIn animation matching other hub modals
+- **Optimized Performance**: No requestAnimationFrame delays, instant UI updates
+- **URL Management**: Store up to 100 URLs per secret note with optional names
+- **Full CRUD**: Create, read, update, delete secret notes with same features as regular notes
+- **Search & Filter**: Search secret notes by title and content
+- **Rich Content**: HTML content support with line breaks
 
 ### ✅ Tasks Management (Microsoft To Do Style)
 - **3-Column Layout**: Lists → Tasks → Editor (like Microsoft To Do desktop)
@@ -528,12 +537,31 @@ The rich text editor is a custom-built, feature-rich content editor with profess
 
 ### 🔒 Secret Notes (Hub Only)
 1. **Access**: Click "🔒 Secret" button in Hub
-2. **Password**: Enter password to unlock
-3. **Interface**: Full notes app with purple theme
+2. **Password Prompt**: 
+   - Enter password to unlock
+   - Custom show/hide password toggle (white eye icon)
+   - Browser default password icons hidden (Edge, Chrome, Firefox, Opera, Arc, Safari)
+   - Press Enter to submit, ESC to close
+3. **Interface**: Full notes app with consistent dark theme (not purple)
 4. **Create**: Click "+" to create new secret note
-5. **Security**: Password required each time modal is opened
-6. **Storage**: Notes saved with type="secret" in database
-7. **Isolation**: Secret notes don't appear in regular Notes app
+5. **Edit**: 
+   - Double-click title or content to edit
+   - Click "Edit" button for full form
+   - Support up to 100 URLs per note with optional names
+6. **Security**: 
+   - Password required each time modal is opened
+   - Session-based lock (no persistent login)
+7. **Storage**: Notes saved with type="secret" in database
+8. **Isolation**: Secret notes don't appear in regular Notes app
+9. **Features**:
+   - Search notes by title/content
+   - Rich HTML content with line breaks
+   - URL management with custom names
+   - Same CRUD operations as regular notes
+10. **Performance**: 
+    - Smooth 0.2s animations matching other modals
+    - No delays or lag
+    - Instant UI updates
 
 ### Tasks
 1. **Default View**: App opens with "My Day" view
@@ -977,12 +1005,29 @@ window.mobileInterface.forceSyncMobileHeader();
   - **Dedicated App**: Separate notes app in Hub with password protection
   - **Password Modal**: Password required to access
   - **Full Interface**: Complete notes app with sidebar, editor, search
-  - **Purple Theme**: Special purple gradient styling for secret notes
+  - **Consistent Theme**: Dark theme matching other modals (not purple)
   - **Type: secret**: Notes stored with type="secret" in database
   - **Session Lock**: Password required each time modal is opened
   - **Isolation**: Secret notes don't appear in regular Notes app
   - **Hub Button**: Access via "🔒 Secret" button in Hub grid
   - **Files**: `secret/secret-modal.css`, `secret/secret-modal.js`
+
+### Changelog v2.10.1
+- ✅ **Secret Notes UX Improvements**:
+  - **Custom Password Toggle**: White eye icon for show/hide password
+  - **Browser Compatibility**: Hides default password reveal icons from all browsers:
+    - Edge/IE: `::-ms-reveal`, `::-ms-clear`
+    - Chrome/Opera/Arc: `::-webkit-credentials-auto-fill-button`
+    - Firefox: `::-moz-reveal`
+    - Safari: `::-webkit-contacts-auto-fill-button`
+  - **ESC Key Support**: Press ESC to close modal at any time
+  - **Performance Optimization**: 
+    - Removed all `requestAnimationFrame` delays
+    - Instant UI updates and transitions
+    - Smooth 0.2s animations matching other hub modals
+  - **Animation Consistency**: Same `slideIn 0.2s ease` as translate, calculator, encoder, backup modals
+  - **Close Button**: Red background on hover (consistent with other modals)
+  - **URL Management**: Support up to 100 URLs per secret note with optional names
 
 ### Changelog v2.9.0
 - ✅ **Global Modal System with Keyboard Shortcuts & Toggle**:
