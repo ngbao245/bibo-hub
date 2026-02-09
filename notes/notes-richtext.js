@@ -32,6 +32,8 @@ class RichTextEditor {
                             <button class="btn-toolbar" data-command="bold" title="Bold (Ctrl+B)"><strong>B</strong></button>
                             <button class="btn-toolbar" data-command="italic" title="Italic (Ctrl+I)"><em>I</em></button>
                             <button class="btn-toolbar" data-command="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+                            <button class="btn-toolbar" data-command="strikeThrough" title="Strikethrough"><s>ab</s></button>
+                            <button class="btn-toolbar" data-command="highlight" title="Highlight (Ctrl+H)">H</button>
                             <span class="toolbar-separator">|</span>
                             <button class="btn-toolbar" data-command="insertUnorderedList" title="Bullet List">• List</button>
                             <button class="btn-toolbar" data-command="insertOrderedList" title="Numbered List">1. List</button>
@@ -282,6 +284,11 @@ class RichTextEditor {
             e.preventDefault();
             this.execCommand('underline');
         }
+        // Ctrl+H: Highlight
+        else if (e.ctrlKey && e.key === 'h') {
+            e.preventDefault();
+            this.execCommand('highlight');
+        }
         // Ctrl+Shift+C: Code Block
         else if (e.ctrlKey && e.shiftKey && e.key === 'C') {
             e.preventDefault();
@@ -345,6 +352,8 @@ class RichTextEditor {
     execCommand(command) {
         if (command === 'code') {
             this.insertCodeBlock();
+        } else if (command === 'highlight') {
+            this.toggleHighlight();
         } else if (command === 'clearAll') {
             if (confirm('Are you sure you want to clear all content?')) {
                 this.editor.innerHTML = '';
@@ -356,6 +365,56 @@ class RichTextEditor {
         }
         this.editor.focus();
         this.updateToolbar();
+    }
+
+    toggleHighlight() {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        
+        const range = selection.getRangeAt(0);
+        const selectedText = range.toString();
+        
+        if (!selectedText) return;
+        
+        // Check if selection is inside a highlight (check for both <mark> and <span> with background)
+        let node = range.commonAncestorContainer;
+        if (node.nodeType === Node.TEXT_NODE) {
+            node = node.parentNode;
+        }
+        
+        let highlightElement = null;
+        let tempNode = node;
+        
+        while (tempNode && tempNode !== this.editor) {
+            // Check for <mark> with highlight class
+            if (tempNode.tagName === 'MARK' && tempNode.classList.contains('highlight')) {
+                highlightElement = tempNode;
+                break;
+            }
+            // Check for <span> with yellow background (from backColor command)
+            if (tempNode.tagName === 'SPAN' && tempNode.style.backgroundColor) {
+                const bgColor = tempNode.style.backgroundColor.toLowerCase();
+                if (bgColor.includes('255, 235, 59') || bgColor.includes('#ffeb3b')) {
+                    highlightElement = tempNode;
+                    break;
+                }
+            }
+            tempNode = tempNode.parentNode;
+        }
+        
+        if (highlightElement) {
+            // Remove highlight - select the element and remove format
+            const newRange = document.createRange();
+            newRange.selectNodeContents(highlightElement);
+            selection.removeAllRanges();
+            selection.addRange(newRange);
+            
+            // Use execCommand to maintain undo history
+            document.execCommand('removeFormat', false, null);
+        } else {
+            // Add highlight using execCommand for undo support
+            document.execCommand('backColor', false, '#ffeb3b');
+        }
     }
 
     insertCodeBlock() {
@@ -567,7 +626,7 @@ class RichTextEditor {
     
     updateToolbar() {
         // Update button states based on current selection
-        const commands = ['bold', 'italic', 'underline', 'insertUnorderedList', 'insertOrderedList'];
+        const commands = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'];
         
         commands.forEach(command => {
             const btn = this.container.querySelector(`[data-command="${command}"]`);
@@ -601,6 +660,40 @@ class RichTextEditor {
                     codeBtn.classList.add('active');
                 } else {
                     codeBtn.classList.remove('active');
+                }
+            }
+        }
+        
+        // Check if cursor is inside highlight
+        const highlightBtn = this.container.querySelector('[data-command="highlight"]');
+        if (highlightBtn) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                let node = selection.anchorNode;
+                let isHighlighted = false;
+                
+                // Traverse up to check if inside highlight
+                while (node && node !== this.editor) {
+                    // Check for <mark> with highlight class
+                    if (node.classList && node.classList.contains('highlight')) {
+                        isHighlighted = true;
+                        break;
+                    }
+                    // Check for <span> with yellow background
+                    if (node.tagName === 'SPAN' && node.style && node.style.backgroundColor) {
+                        const bgColor = node.style.backgroundColor.toLowerCase();
+                        if (bgColor.includes('255, 235, 59') || bgColor.includes('#ffeb3b')) {
+                            isHighlighted = true;
+                            break;
+                        }
+                    }
+                    node = node.parentNode;
+                }
+                
+                if (isHighlighted) {
+                    highlightBtn.classList.add('active');
+                } else {
+                    highlightBtn.classList.remove('active');
                 }
             }
         }
