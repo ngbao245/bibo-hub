@@ -4,8 +4,9 @@
 (function() {
     'use strict';
     
-    // Check if running as standalone web app
-    const isStandalone = window.navigator.standalone === true;
+    // Check if running as standalone web app (iOS)
+    const isStandalone = window.navigator.standalone === true || 
+                         window.matchMedia('(display-mode: standalone)').matches;
     
     if (!isStandalone) {
         return; // Only apply fix when running as web app
@@ -31,8 +32,12 @@
             href.startsWith('#') || 
             href.startsWith('javascript:') ||
             href.startsWith('mailto:') ||
-            href.startsWith('tel:') ||
-            target.getAttribute('target') === '_blank') {
+            href.startsWith('tel:')) {
+            return;
+        }
+        
+        // Skip external links with target="_blank"
+        if (target.getAttribute('target') === '_blank') {
             return;
         }
         
@@ -42,9 +47,22 @@
         
         if (isRelative || isSameDomain) {
             e.preventDefault();
+            e.stopPropagation();
+            
+            // Use window.location for navigation (stays in app)
             window.location.href = href;
+            return false;
         }
-    }, false);
+    }, true); // Use capture phase
     
-    console.log('iOS Web App navigation fix loaded');
+    // Also handle form submissions
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
+        if (form.tagName === 'FORM' && !form.getAttribute('target')) {
+            // Let form submit normally, but ensure it stays in app
+            form.setAttribute('target', '_self');
+        }
+    }, true);
+    
+    console.log('iOS Web App navigation fix loaded (standalone mode)');
 })();
