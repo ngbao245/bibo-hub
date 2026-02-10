@@ -5,6 +5,45 @@ let secretNotesUnlocked = false;
 let secretNotes = [];
 let currentSecretNote = null;
 
+// Encryption/Decryption functions (Base64 + reverse)
+function encryptSecretData(text) {
+    if (!text) return '';
+    try {
+        return btoa(text.split('').reverse().join(''));
+    } catch (e) {
+        console.error('Encryption error:', e);
+        return text;
+    }
+}
+
+function decryptSecretData(encoded) {
+    if (!encoded) return '';
+    try {
+        // Try to decrypt - if it fails, assume it's already plain text (old data)
+        const decoded = atob(encoded);
+        return decoded.split('').reverse().join('');
+    } catch (e) {
+        // If decryption fails, return original (it's plain text from old notes)
+        return encoded;
+    }
+}
+
+// Check if data is encrypted (valid base64)
+function isEncrypted(text) {
+    if (!text) return false;
+    try {
+        // Valid base64 pattern
+        const base64Pattern = /^[A-Za-z0-9+/]*={0,2}$/;
+        if (!base64Pattern.test(text)) return false;
+        
+        // Try to decode
+        atob(text);
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
 function openSecretModal() {
     const modal = document.getElementById('secretModal');
     if (modal) {
@@ -178,6 +217,15 @@ async function loadSecretNotes() {
         const response = await fetch(API_CONFIG.NOTES);
         const allNotes = await response.json();
         secretNotes = allNotes.filter(n => n.type === 'secret');
+        
+        // Decrypt all secret notes for display
+        secretNotes = secretNotes.map(note => ({
+            ...note,
+            title: decryptSecretData(note.title),
+            content: decryptSecretData(note.content),
+            url1: decryptSecretData(note.url1)
+        }));
+        
         secretNotes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         renderSecretNotesList();
     } catch (error) {
@@ -429,14 +477,15 @@ async function saveSecretNote() {
     // Save all URLs to url1 field only (separated by |)
     const url1 = allUrls.join('|');
     
+    // Encrypt sensitive data before saving
     const noteData = {
-        title: title || 'Untitled Secret',
-        content: content.replace(/\n/g, '<br>'),
+        title: encryptSecretData(title || 'Untitled Secret'),
+        content: encryptSecretData(content.replace(/\n/g, '<br>')),
         type: 'secret',
         source: '',
         tags: '',
         example: '',
-        url1: url1,
+        url1: encryptSecretData(url1),
         url2: '',
         url3: '',
         url4: '',
@@ -450,7 +499,15 @@ async function saveSecretNote() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ...noteData, updatedAt: new Date().toISOString() })
             });
-            currentSecretNote = await response.json();
+            const savedNote = await response.json();
+            
+            // Decrypt for local state
+            currentSecretNote = {
+                ...savedNote,
+                title: decryptSecretData(savedNote.title),
+                content: decryptSecretData(savedNote.content),
+                url1: decryptSecretData(savedNote.url1)
+            };
             
             const index = secretNotes.findIndex(n => n.id === currentSecretNote.id);
             if (index !== -1) secretNotes[index] = currentSecretNote;
@@ -464,7 +521,16 @@ async function saveSecretNote() {
                     updatedAt: new Date().toISOString()
                 })
             });
-            currentSecretNote = await response.json();
+            const savedNote = await response.json();
+            
+            // Decrypt for local state
+            currentSecretNote = {
+                ...savedNote,
+                title: decryptSecretData(savedNote.title),
+                content: decryptSecretData(savedNote.content),
+                url1: decryptSecretData(savedNote.url1)
+            };
+            
             secretNotes.unshift(currentSecretNote);
         }
         

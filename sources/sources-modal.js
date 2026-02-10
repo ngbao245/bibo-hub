@@ -301,9 +301,9 @@ async function saveProjectModal() {
     
     codeBlocks.forEach((block, index) => {
         const name = block.querySelector('.code-file-name-input').value.trim();
-        const content = document.getElementById(`codeContentModal${index}`).value;
-        if (name) {
-            files.push({ name, content });
+        const textarea = block.querySelector('.code-file-content');
+        if (textarea && name) {
+            files.push({ name, content: textarea.value });
         }
     });
     
@@ -408,7 +408,40 @@ function addCodeBlockModal() {
 // Remove code block
 function removeCodeBlockModal(index) {
     const block = document.querySelector(`#codeBlocksModal .code-file-block[data-index="${index}"]`);
-    if (block) block.remove();
+    if (block) {
+        block.remove();
+        // Reindex all remaining blocks
+        reindexCodeBlocks();
+    }
+}
+
+// Reindex code blocks after removal
+function reindexCodeBlocks() {
+    const container = document.getElementById('codeBlocksModal');
+    if (!container) return;
+    
+    const blocks = container.querySelectorAll('.code-file-block');
+    blocks.forEach((block, newIndex) => {
+        block.setAttribute('data-index', newIndex);
+        
+        // Update textarea ID
+        const textarea = block.querySelector('.code-file-content');
+        const oldId = textarea.id;
+        const newId = `codeContentModal${newIndex}`;
+        textarea.id = newId;
+        
+        // Update copy button onclick
+        const copyBtn = block.querySelector('.btn-copy-code');
+        if (copyBtn) {
+            copyBtn.setAttribute('onclick', `copyCodeModal('${newId}')`);
+        }
+        
+        // Update remove button onclick
+        const removeBtn = block.querySelector('.btn-remove-block');
+        if (removeBtn) {
+            removeBtn.setAttribute('onclick', `removeCodeBlockModal(${newIndex})`);
+        }
+    });
 }
 
 // Copy code (edit mode)
