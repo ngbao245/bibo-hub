@@ -1,4 +1,4 @@
-# Global Modal Popup Guide
+# GLOBAL-MODAL-POPUP-GUIDE
 
 Hướng dẫn tạo modal có thể mở từ bất kỳ trang nào bằng keyboard shortcuts với tính năng toggle.
 
@@ -281,79 +281,65 @@ File: `notes/notes.html` (hoặc trang khác)
 
 ## 🐛 Troubleshooting
 
-### **Modal không mở:**
-1. Check Console có lỗi không (F12 → Console)
-2. Verify loader script đã load: `typeof openYourModalLazy`
-3. Check shortcut đã đăng ký: `console.log(GLOBAL_SHORTCUTS)`
-4. Verify modal HTML đã được inject: `document.getElementById('yourModal')`
+### Modal không mở
+- Check Console (F12) có lỗi không
+- Verify loader script đã load: `typeof openYourModalLazy`
+- Check shortcut đã đăng ký: `console.log(SHORTCUTS_CONFIG)`
+- Verify modal HTML đã inject: `document.getElementById('yourModal')`
 
-### **Toggle không hoạt động:**
-- Verify modal có class `show` khi mở: `document.getElementById('yourModal').classList.contains('show')`
-- Check có duplicate event listeners không (hub-shortcuts.js và global-shortcuts.js)
+### Toggle không hoạt động
+- Verify modal có class `show` khi mở
+- Check duplicate event listeners
 - Đảm bảo `hub-shortcuts.js` skip global shortcuts
 
-### **Modal bị nằm phía sau:**
-- Tăng `z-index` trong CSS lên `10000` hoặc cao hơn
-- Rich text editor modal có `z-index: 1000`, nên modal mới cần `z-index: 10000`
+### Modal bị nằm phía sau
+- Tăng `z-index` lên `10000` hoặc cao hơn
+- Rich text editor có `z-index: 1000`
 
-### **Conflict với browser shortcuts:**
+### Conflict với browser shortcuts
 - Dùng `Alt` thay vì `Ctrl`
 - Tránh: Ctrl+Q, Ctrl+E, Ctrl+B, Ctrl+N, Ctrl+T, Ctrl+P
 
-### **Failed to fetch:**
-- Đừng dùng `fetch()` để load HTML từ file riêng
-- Embed HTML trực tiếp trong loader JS (như ví dụ)
-- Tránh CORS issues khi mở bằng `file://` protocol
+### Failed to fetch
+- Embed HTML trong loader JS (không dùng `fetch()`)
+- Tránh CORS issues với `file://` protocol
 
-### **Path sai:**
-- Dùng `basePath` detection như trong ví dụ
-- Test từ nhiều trang khác nhau (notes/, tasks/, root)
-- Check path trong DevTools Network tab
-
-### **Modal được gọi 2 lần:**
-- Verify `hub-shortcuts.js` có skip global shortcuts
-- Check logic: `const isGlobalShortcut = typeof GLOBAL_SHORTCUTS !== 'undefined' && GLOBAL_SHORTCUTS[keyCombo];`
-- Nếu `isGlobalShortcut` thì return ngay
+### Path sai
+- Dùng `basePath` detection
+- Test từ nhiều trang (notes/, tasks/, root)
+- Check DevTools Network tab
 
 ---
 
 ## 💡 Tips
 
-1. **Lazy loading:** Modal chỉ load khi cần (lần đầu nhấn phím tắt)
-2. **Toggle support:** Nhấn lần 1 mở, lần 2 đóng
-3. **No duplication:** HTML chỉ có 1 chỗ (trong loader)
-4. **High z-index:** Luôn dùng `z-index: 10000` để tránh bị che
-5. **Close handlers:** `global-shortcuts.js` xử lý ESC và click outside cho tất cả modal
-6. **Path detection:** Dùng `window.location.pathname` để detect path
-7. **Alt key:** Dùng Alt thay vì Ctrl để tránh conflict với browser
-8. **Hub shortcuts:** Thêm vào `hub-shortcuts.js` để hiển thị trong shortcuts modal
-9. **Test thoroughly:** Test từ nhiều trang khác nhau (notes, tasks, hub)
-10. **Console is your friend:** Luôn mở Console để debug
+1. **Lazy loading**: Modal chỉ load khi cần
+2. **Toggle support**: Nhấn lần 1 mở, lần 2 đóng
+3. **No duplication**: HTML chỉ có 1 chỗ (trong loader)
+4. **High z-index**: Dùng `z-index: 10000`
+5. **Close handlers**: `global-shortcuts.js` xử lý ESC và click outside
+6. **Alt key**: Tránh conflict với browser
+7. **Test thoroughly**: Test từ nhiều trang
 
 ---
 
 ## 🔍 Debug Checklist
 
-Khi modal không hoạt động, check theo thứ tự:
-
-1. **F12 → Console:** Có lỗi JavaScript không?
-2. **Network tab:** CSS/JS files có load không?
-3. **Elements tab:** Modal HTML có được inject vào DOM không?
-4. **Console:** `typeof openYourModalLazy` → Phải là `"function"`
-5. **Console:** `document.getElementById('yourModal')` → Phải trả về element
-6. **Console:** `GLOBAL_SHORTCUTS` → Check shortcut đã đăng ký chưa
-7. **Console:** `HUB_SHORTCUTS` → Check shortcut có trong hub shortcuts không
-8. **Console:** Nhấn phím tắt và xem có log gì không
+1. **Console**: Có lỗi JavaScript không?
+2. **Network tab**: CSS/JS files có load không?
+3. **Elements tab**: Modal HTML có inject vào DOM không?
+4. **Console**: `typeof openYourModalLazy` → Phải là `"function"`
+5. **Console**: `document.getElementById('yourModal')` → Phải trả về element
+6. **Console**: `SHORTCUTS_CONFIG` → Check shortcut đã đăng ký chưa
 
 ---
 
 ## 📚 Tham khảo
 
-- `translate/translate-loader.js` - Ví dụ hoàn chỉnh với toggle
-- `shortcuts-loader.js` - Ví dụ modal không cần separate JS file
+- `translate/translate-loader.js` - Ví dụ hoàn chỉnh
+- `shortcuts-loader.js` - Ví dụ modal không cần separate JS
 - `global-shortcuts.js` - Keyboard shortcuts system
-- `hub-shortcuts.js` - Hub shortcuts với duplicate prevention
-- `translate/translate-modal.css` - Modal styling với z-index cao
+- `translate/translate-modal.css` - Modal styling
 
 ---
 
@@ -373,21 +359,6 @@ Check modal đã load chưa?
 Check modal đang mở không?
     ├─ Đang mở → Close (toggle off)
     └─ Đang đóng → Open (toggle on)
-    ↓
-Modal hiển thị/ẩn
-```
-
-**Duplicate Prevention:**
-```
-User nhấn Alt+T trong hub
-    ↓
-hub-shortcuts.js detect
-    ↓
-Check: Alt+T có trong GLOBAL_SHORTCUTS?
-    ├─ Có → Skip (return ngay)
-    └─ Không → Execute function
-    ↓
-Tránh được duplicate execution
 ```
 
 ---
