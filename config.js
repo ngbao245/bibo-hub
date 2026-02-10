@@ -5,13 +5,28 @@ const API_CONFIG = {
     // Encoded API base - use encoder.html to generate this value
     ENCODED: 'b2kuaXBha2NvbS43MmM1MWJlZmNlYTFhOTg4ZTcwMWM3OTYvLzpzcHR0aA==',
     
-    // Decoder function
+    // Decoder function (supports Unicode/Vietnamese)
     decode() {
         try {
-            return atob(this.ENCODED).split('').reverse().join('');
+            // Reverse + Base64 decode
+            const reversed = atob(this.ENCODED).split('').reverse().join('');
+            
+            // Convert binary string to UTF-8
+            const bytes = new Uint8Array(reversed.length);
+            for (let i = 0; i < reversed.length; i++) {
+                bytes[i] = reversed.charCodeAt(i);
+            }
+            
+            // Decode UTF-8 bytes to string
+            return new TextDecoder().decode(bytes);
         } catch (e) {
-            console.error('Failed to decode API base');
-            return '';
+            // Fallback to old method for backward compatibility
+            try {
+                return atob(this.ENCODED).split('').reverse().join('');
+            } catch (e2) {
+                console.error('Failed to decode API base');
+                return '';
+            }
         }
     },
     

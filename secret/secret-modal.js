@@ -5,11 +5,21 @@ let secretNotesUnlocked = false;
 let secretNotes = [];
 let currentSecretNote = null;
 
-// Encryption/Decryption functions (Base64 + reverse)
+// Encryption/Decryption functions (Base64 + reverse) - Supports Unicode/Vietnamese
 function encryptSecretData(text) {
     if (!text) return '';
     try {
-        return btoa(text.split('').reverse().join(''));
+        // Step 1: Convert Unicode to UTF-8 bytes
+        const utf8Bytes = new TextEncoder().encode(text);
+        
+        // Step 2: Convert bytes to binary string
+        let binaryString = '';
+        utf8Bytes.forEach(byte => {
+            binaryString += String.fromCharCode(byte);
+        });
+        
+        // Step 3: Reverse + Base64 encode
+        return btoa(binaryString.split('').reverse().join(''));
     } catch (e) {
         console.error('Encryption error:', e);
         return text;
@@ -19,12 +29,26 @@ function encryptSecretData(text) {
 function decryptSecretData(encoded) {
     if (!encoded) return '';
     try {
-        // Try to decrypt - if it fails, assume it's already plain text (old data)
-        const decoded = atob(encoded);
-        return decoded.split('').reverse().join('');
+        // Step 1: Base64 decode + reverse
+        const reversed = atob(encoded).split('').reverse().join('');
+        
+        // Step 2: Convert binary string to UTF-8 bytes
+        const bytes = new Uint8Array(reversed.length);
+        for (let i = 0; i < reversed.length; i++) {
+            bytes[i] = reversed.charCodeAt(i);
+        }
+        
+        // Step 3: Decode UTF-8 bytes to Unicode string
+        return new TextDecoder().decode(bytes);
     } catch (e) {
-        // If decryption fails, return original (it's plain text from old notes)
-        return encoded;
+        // Fallback for old data (plain text or old encryption method)
+        try {
+            const decoded = atob(encoded);
+            return decoded.split('').reverse().join('');
+        } catch (e2) {
+            // If all fails, return original (plain text)
+            return encoded;
+        }
     }
 }
 

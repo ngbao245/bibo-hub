@@ -16,9 +16,23 @@ function encodeAPI() {
         return;
     }
     
-    // Simple encoding: Base64 + reverse
-    const encoded = btoa(input.split('').reverse().join(''));
-    document.getElementById('encoderOutput').textContent = encoded;
+    try {
+        // Encode Unicode (tiếng Việt) to Base64
+        // Step 1: Convert to UTF-8 bytes
+        const utf8Bytes = new TextEncoder().encode(input);
+        
+        // Step 2: Convert bytes to binary string
+        let binaryString = '';
+        utf8Bytes.forEach(byte => {
+            binaryString += String.fromCharCode(byte);
+        });
+        
+        // Step 3: Base64 encode + reverse
+        const encoded = btoa(binaryString.split('').reverse().join(''));
+        document.getElementById('encoderOutput').textContent = encoded;
+    } catch (error) {
+        alert('Lỗi mã hóa: ' + error.message);
+    }
 }
 
 function copyEncoderOutput() {
