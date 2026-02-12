@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Packer - Pack & Unpack Projects</title>
+    <link rel="icon" type="image/png" href="assets/icon.png">
+    <link rel="shortcut icon" type="image/png" href="assets/icon.png">
+
+    <!-- iOS Home Screen Icon -->
+    <link rel="apple-touch-icon" href="assets/icon.png">
+
+    <!-- iOS Web App Settings -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="BiBo Tools">
+
+    <style>
+        :root {
+            --color-bg-primary: #1e1e1e;
+            --color-bg-secondary: #252526;
+            --color-bg-tertiary: #2b2b2b;
+            --color-bg-elevated: #2d2d30;
+            --color-bg-input: #3c3c3c;
+            --color-bg-hover: #2d2d30;
+            --color-bg-active: #37373d;
+            --color-border: #3e3e42;
+            --color-border-light: #3e3e42;
+            --color-border-focus: #007acc;
+            --color-text-primary: #d4d4d4;
+            --color-text-secondary: #cccccc;
+            --color-text-muted: #858585;
+            --color-accent-primary: #007acc;
+            --color-accent-primary-hover: #1177bb;
+            --color-accent-blue: #0e639c;
+            --color-success: #28a745;
+            --color-success-bg: rgba(40, 167, 69, 0.1);
+            --color-danger: #c5000b;
+            --color-danger-hover: #e81123;
+            --color-warning: #ffc107;
+            --color-warning-bg: rgba(255, 193, 7, 0.1);
+            --spacing-sm: 8px;
+            --spacing-md: 12px;
+            --spacing-lg: 15px;
+            --spacing-xl: 20px;
+            --font-sm: 12px;
+            --font-md: 13px;
+            --font-lg: 14px;
+            --font-xl: 16px;
+            --font-xxl: 20px;
+            --transition-fast: 0.15s ease;
+            --transition-normal: 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background: var(--color-bg-tertiary);
+            color: var(--color-text-primary);
+            min-height: 100vh;
+            padding: var(--spacing-xl);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: var(--color-bg-primary);
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+        }
+
+        .header {
+            background: var(--color-bg-secondary);
+            color: var(--color-text-primary);
+            padding: var(--spacing-xl);
+            text-align: center;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .header h1 {
+            font-size: var(--font-xxl);
+            margin-bottom: var(--spacing-md);
+            color: var(--color-accent-primary);
+        }
+
+        .header p {
+            color: var(--color-text-muted);
+            font-size: var(--font-md);
+        }
+
+        .tabs {
+            display: flex;
+            background: var(--color-bg-secondary);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .tab {
+            flex: 1;
+            padding: var(--spacing-lg);
+            text-align: center;
+            cursor: pointer;
+            border: none;
+            background: var(--color-bg-secondary);
+            color: var(--color-text-muted);
+            font-size: var(--font-lg);
+            font-weight: 500;
+            font-family: inherit;
+            transition: all var(--transition-fast);
+            border-right: 1px solid var(--color-border);
+        }
+
+        .tab:last-child {
+            border-right: none;
+        }
+
+        .tab:hover {
+            background: var(--color-bg-hover);
+            color: var(--color-text-primary);
+        }
+
+        .tab.active {
+            background: var(--color-bg-primary);
+            color: var(--color-accent-primary);
+            border-bottom: 2px solid var(--color-accent-primary);
+        }
+
+        .content {
+            padding: var(--spacing-xl);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--color-border);
+            background: var(--color-bg-secondary);
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all var(--transition-normal);
+            margin-bottom: var(--spacing-xl);
+        }
+
+        .upload-area:hover {
+            background: var(--color-bg-hover);
+            border-color: var(--color-accent-primary);
+        }
+
+        .upload-area.dragover {
+            background: var(--color-bg-active);
+            border-color: var(--color-accent-primary);
+            border-style: solid;
+        }
+
+        .upload-area h3 {
+            color: var(--color-text-primary);
+            margin-bottom: var(--spacing-md);
+            font-size: var(--font-xl);
+        }
+
+        .upload-area p {
+            color: var(--color-text-muted);
+            font-size: var(--font-md);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .btn {
+            background: var(--color-bg-input);
+            color: var(--color-text-secondary);
+            border: 1px solid var(--color-border);
+            padding: 10px var(--spacing-xl);
+            font-size: var(--font-md);
+            cursor: pointer;
+            font-family: inherit;
+            transition: all var(--transition-fast);
+            margin: var(--spacing-sm);
+        }
+
+        .btn:hover {
+            background: #505050;
+        }
+
+        .btn-primary {
+            background: var(--color-accent-blue);
+            border-color: var(--color-accent-blue);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--color-accent-primary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-danger {
+            background: var(--color-danger);
+            border-color: var(--color-danger);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: var(--color-danger-hover);
+        }
+
+        .btn-group {
+            display: inline-flex;
+            gap: var(--spacing-sm);
+        }
+
+        .status {
+            margin-top: var(--spacing-xl);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--color-border);
+            display: none;
+            font-size: var(--font-md);
+        }
+
+        .status.success {
+            background: var(--color-success-bg);
+            color: var(--color-success);
+            border-color: var(--color-success);
+        }
+
+        .status.error {
+            background: rgba(197, 0, 11, 0.1);
+            color: var(--color-danger);
+            border-color: var(--color-danger);
+        }
+
+        .status.info {
+            background: rgba(0, 122, 204, 0.1);
+            color: var(--color-accent-primary);
+            border-color: var(--color-accent-primary);
+        }
+
+        .file-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: var(--color-bg-secondary);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--color-border);
+            margin-top: var(--spacing-lg);
+        }
+
+        .file-list strong {
+            color: var(--color-text-primary);
+            display: block;
+            margin-bottom: var(--spacing-md);
+        }
+
+        .file-item {
+            padding: var(--spacing-sm);
+            margin: var(--spacing-sm) 0;
+            background: var(--color-bg-input);
+            border: 1px solid var(--color-border);
+            font-size: var(--font-sm);
+            color: var(--color-text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 0;
+            cursor: pointer;
+            transition: background var(--transition-fast);
+            min-height: 32px;
+        }
+
+        .file-item:hover {
+            background: var(--color-bg-hover);
+        }
+
+        .file-item.selected {
+            background: var(--color-bg-active);
+            border-color: var(--color-accent-primary);
+        }
+
+        .file-select-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--spacing-md);
+            padding-bottom: var(--spacing-sm);
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        .file-select-actions {
+            display: flex;
+            gap: var(--spacing-sm);
+        }
+
+        .btn-link {
+            background: none;
+            border: none;
+            color: var(--color-accent-primary);
+            cursor: pointer;
+            font-size: var(--font-sm);
+            padding: 4px 8px;
+            text-decoration: underline;
+        }
+
+        .btn-link:hover {
+            color: var(--color-accent-primary-hover);
+        }
+
+        .folder-content {
+            display: block;
+        }
+
+        .folder-content.collapsed {
+            display: none;
+        }
+
+        .file-item input[type="checkbox"] {
+            cursor: pointer;
+            margin-left: 5px;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+
+        .file-item label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+        }
+
+        .icon {
+            font-size: 48px;
+            margin-bottom: var(--spacing-lg);
+        }
+
+        .progress-container {
+            margin-top: var(--spacing-xl);
+            display: none;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: var(--color-bg-input);
+            border: 1px solid var(--color-border);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--color-accent-primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            margin-top: var(--spacing-sm);
+            font-size: var(--font-sm);
+            color: var(--color-text-muted);
+            text-align: center;
+        }
+
+        .upload-area.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .error-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(197, 0, 11, 0.05);
+            padding: var(--spacing-lg);
+            border: 1px solid var(--color-danger);
+            margin-top: var(--spacing-lg);
+            display: none;
+        }
+
+        .error-log-header {
+            color: var(--color-danger);
+            font-weight: bold;
+            margin-bottom: var(--spacing-md);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .error-item {
+            padding: var(--spacing-sm);
+            margin: var(--spacing-sm) 0;
+            background: var(--color-bg-secondary);
+            border-left: 3px solid var(--color-danger);
+            font-size: var(--font-sm);
+            color: var(--color-text-secondary);
+        }
+
+        .error-file {
+            color: var(--color-danger);
+            font-weight: bold;
+        }
+
+        .error-reason {
+            color: var(--color-text-muted);
+            font-style: italic;
+            margin-top: 4px;
+        }
+
+        .btn-small {
+            padding: 4px 8px;
+            font-size: var(--font-sm);
+        }
+
+        .terminal-log {
+            max-height: 250px;
+            overflow-y: auto;
+            background: #0c0c0c;
+            padding: var(--spacing-lg);
+            border: 1px solid var(--color-border);
+            margin-top: var(--spacing-lg);
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: var(--font-sm);
+            display: none;
+        }
+
+        .terminal-line {
+            color: #00ff00;
+            margin: 2px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .terminal-line.error {
+            color: #ff4444;
+        }
+
+        .terminal-line.success {
+            color: #00ff00;
+        }
+
+        .terminal-line.info {
+            color: #00aaff;
+        }
+
+        .terminal-cursor {
+            display: inline-block;
+            width: 8px;
+            height: 14px;
+            background: #00ff00;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 49% { opacity: 1; }
+            50%, 100% { opacity: 0; }
+        }
+
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--color-bg-primary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #424242;
+            transition: background var(--transition-normal);
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4e4e4e;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>[Project Packer]</h1>
+            <p>Pack and unpack HTML/CSS/JS projects</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('pack')">📥 Pack Project</button>
+            <button class="tab" onclick="switchTab('unpack')">📤 Unpack Project</button>
+        </div>
+
+        <div class="content">
+            <!-- Tab Đóng gói -->
+            <div id="pack-tab" class="tab-content active">
+                <div class="upload-area" id="packUploadArea" onclick="document.getElementById('folderInput').click()">
+                    <div class="icon">📁</div>
+                    <h3>Select your project folder</h3>
+                    <p>Drag & drop folder here or click to select</p>
+                    <input type="file" id="folderInput" webkitdirectory directory multiple>
+                </div>
+                <div id="packTerminal" class="terminal-log"></div>
+                <div id="packFileList" class="file-list" style="display:none;"></div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="packBtn" onclick="packProject()" style="display:none;">
+                        [Save] Create .txt file
+                    </button>
+                    <button class="btn btn-danger" id="packStopBtn" onclick="stopProcess('pack')" style="display:none;">
+                        [■] Stop
+                    </button>
+                    <button class="btn" id="packResetBtn" onclick="resetProcess('pack')" style="display:none;">
+                        [↻] Reset
+                    </button>
+                </div>
+                <div class="progress-container" id="packProgress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="packProgressFill"></div>
+                    </div>
+                    <div class="progress-text" id="packProgressText">Processing...</div>
+                </div>
+                <div id="packErrorLog" class="error-log">
+                    <div class="error-log-header">
+                        <span>[!] Failed Files</span>
+                        <button class="btn btn-small" onclick="clearErrorLog('pack')">Clear</button>
+                    </div>
+                    <div id="packErrorList"></div>
+                </div>
+                <div id="packStatus" class="status"></div>
+            </div>
+
+            <!-- Tab Giải nén -->
+            <div id="unpack-tab" class="tab-content">
+                <div class="upload-area" id="unpackUploadArea">
+                    <div class="icon">[File]</div>
+                    <h3>Select packed .txt file</h3>
+                    <p>Drag & drop .txt file here or click to select</p>
+                    <input type="file" id="txtInput" accept=".txt">
+                </div>
+                <button class="btn" onclick="document.getElementById('txtInput').click()">
+                    Select .txt File
+                </button>
+                <div class="btn-group">
+                    <button class="btn btn-primary" id="unpackBtn" onclick="unpackProject()" style="display:none;">
+                        [>>] Unpack Project
+                    </button>
+                    <button class="btn btn-danger" id="unpackStopBtn" onclick="stopProcess('unpack')" style="display:none;">
+                        [■] Stop
+                    </button>
+                    <button class="btn" id="unpackResetBtn" onclick="resetProcess('unpack')" style="display:none;">
+                        [↻] Reset
+                    </button>
+                </div>
+                <div class="progress-container" id="unpackProgress">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="unpackProgressFill"></div>
+                    </div>
+                    <div class="progress-text" id="unpackProgressText">Processing...</div>
+                </div>
+                <div id="unpackErrorLog" class="error-log">
+                    <div class="error-log-header">
+                        <span>[!] Failed Files</span>
+                        <button class="btn btn-small" onclick="clearErrorLog('unpack')">Clear</button>
+                    </div>
+                    <div id="unpackErrorList"></div>
+                </div>
+                <div id="unpackStatus" class="status"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let projectFiles = [];
+        let packedContent = '';
+        let isProcessing = false;
+        let shouldStop = false; // Flag to stop processing
+        let errorLog = { pack: [], unpack: [] }; // Track errors for each tab
+
+        // Add error to log
+        function logError(tab, fileName, reason) {
+            errorLog[tab].push({ fileName, reason, timestamp: new Date() });
+            displayErrorLog(tab);
+        }
+
+        // Display error log
+        function displayErrorLog(tab) {
+            const errorLogDiv = document.getElementById(tab + 'ErrorLog');
+            const errorListDiv = document.getElementById(tab + 'ErrorList');
+
+            if (errorLog[tab].length === 0) {
+                errorLogDiv.style.display = 'none';
+                return;
+            }
+
+            errorLogDiv.style.display = 'block';
+            const fragment = document.createDocumentFragment();
+
+            errorLog[tab].forEach(error => {
+                const div = document.createElement('div');
+                div.className = 'error-item';
+                div.innerHTML = `
+                    <div class="error-file">[X] ${error.fileName}</div>
+                    <div class="error-reason">Reason: ${error.reason}</div>
+                `;
+                fragment.appendChild(div);
+            });
+
+            errorListDiv.innerHTML = '';
+            errorListDiv.appendChild(fragment);
+        }
+
+        // Clear error log
+        function clearErrorLog(tab) {
+            errorLog[tab] = [];
+            document.getElementById(tab + 'ErrorLog').style.display = 'none';
+            document.getElementById(tab + 'ErrorList').innerHTML = '';
+        }
+
+        // Terminal log functions
+        function terminalLog(tab, message, type = 'info') {
+            const terminal = document.getElementById(tab + 'Terminal');
+            if (!terminal) return;
+            
+            terminal.style.display = 'block';
+            
+            const line = document.createElement('div');
+            line.className = `terminal-line ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString('vi-VN', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                second: '2-digit' 
+            });
+            
+            line.textContent = `[${timestamp}] ${message}`;
+            terminal.appendChild(line);
+            
+            // Auto scroll to bottom
+            terminal.scrollTop = terminal.scrollHeight;
+            
+            // Keep only last 100 lines
+            while (terminal.children.length > 100) {
+                terminal.removeChild(terminal.firstChild);
+            }
+        }
+
+        function clearTerminal(tab) {
+            const terminal = document.getElementById(tab + 'Terminal');
+            if (terminal) {
+                terminal.innerHTML = '';
+                terminal.style.display = 'none';
+            }
+        }
+
+        // Switch tabs
+        function switchTab(tab) {
+            if (isProcessing) {
+                alert('Processing, please wait...');
+                return;
+            }
+
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            if (tab === 'pack') {
+                document.querySelectorAll('.tab')[0].classList.add('active');
+                document.getElementById('pack-tab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('unpack-tab').classList.add('active');
+            }
+        }
+
+        // Set processing state
+        function setProcessing(processing, tab) {
+            isProcessing = processing;
+            shouldStop = false; // Reset stop flag
+            const uploadArea = document.getElementById(tab + 'UploadArea');
+            const btn = document.getElementById(tab + 'Btn');
+            const stopBtn = document.getElementById(tab + 'StopBtn');
+            const resetBtn = document.getElementById(tab + 'ResetBtn');
+            const tabs = document.querySelectorAll('.tab');
+
+            if (processing) {
+                uploadArea.classList.add('disabled');
+                if (btn) btn.disabled = true;
+                if (stopBtn) stopBtn.style.display = 'inline-block';
+                if (resetBtn) resetBtn.style.display = 'none';
+                tabs.forEach(t => t.style.pointerEvents = 'none');
+            } else {
+                uploadArea.classList.remove('disabled');
+                if (btn) btn.disabled = false;
+                if (stopBtn) stopBtn.style.display = 'none';
+                if (resetBtn) resetBtn.style.display = 'inline-block';
+                tabs.forEach(t => t.style.pointerEvents = 'auto');
+            }
+        }
+
+        // Stop process
+        function stopProcess(tab) {
+            shouldStop = true;
+            terminalLog(tab, '[STOP] STOP signal received. Stopping...', 'error');
+            showStatus(tab + 'Status', '! Đã dừng xử lý', 'info');
+        }
+
+        // Reset process
+        function resetProcess(tab) {
+            // Clear all data
+            if (tab === 'pack') {
+                projectFiles = [];
+                document.getElementById('folderInput').value = '';
+                document.getElementById('packBtn').style.display = 'none';
+            } else {
+                packedContent = '';
+                document.getElementById('txtInput').value = '';
+                document.getElementById('unpackBtn').style.display = 'none';
+            }
+            
+            // Clear UI
+            clearTerminal(tab);
+            clearErrorLog(tab);
+            const fileList = document.getElementById(tab + 'FileList');
+            if (fileList) fileList.style.display = 'none';
+            document.getElementById(tab + 'Status').style.display = 'none';
+            document.getElementById(tab + 'ResetBtn').style.display = 'none';
+            
+            // Reset progress
+            updateProgress(tab, 0, '');
+            document.getElementById(tab + 'Progress').style.display = 'none';
+            
+            terminalLog(tab, '[RESET] Reset completed', 'info');
+            setTimeout(() => clearTerminal(tab), 1000);
+        }
+
+        // Update progress
+        function updateProgress(tab, percent, text) {
+            const progressContainer = document.getElementById(tab + 'Progress');
+            const progressFill = document.getElementById(tab + 'ProgressFill');
+            const progressText = document.getElementById(tab + 'ProgressText');
+
+            progressContainer.style.display = 'block';
+            progressFill.style.width = percent + '%';
+            progressText.textContent = text;
+
+            if (percent >= 100) {
+                setTimeout(() => {
+                    progressContainer.style.display = 'none';
+                    progressFill.style.width = '0%';
+                }, 1500);
+            }
+        }
+
+        // Folder input handler - Quick scan without reading content
+        document.getElementById('folderInput').addEventListener('change', async (e) => {
+            if (isProcessing) {
+                e.preventDefault();
+                return;
+            }
+
+            const files = Array.from(e.target.files);
+            projectFiles = files.map(file => ({
+                file: file,
+                path: file.webkitRelativePath || file.name,
+                selected: true,
+                content: null // Will be loaded later
+            }));
+            
+            clearErrorLog('pack');
+            clearTerminal('pack');
+            
+            terminalLog('pack', `Found ${files.length} files`, 'info');
+            terminalLog('pack', 'Ready to select files for packing', 'info');
+            
+            displayFileTree(projectFiles);
+            document.getElementById('packBtn').style.display = 'inline-block';
+            updatePackButton();
+        });
+
+        // Text file input handler
+        document.getElementById('txtInput').addEventListener('change', async (e) => {
+            if (isProcessing) {
+                e.preventDefault();
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (file) {
+                setProcessing(true, 'unpack');
+                updateProgress('unpack', 50, 'Reading file...');
+
+                packedContent = await readFileContent(file);
+                document.getElementById('unpackBtn').style.display = 'inline-block';
+                showStatus('unpackStatus', `✓ Đã tải file: ${file.name}`, 'success');
+
+                updateProgress('unpack', 100, 'Hoàn thành!');
+                setProcessing(false, 'unpack');
+            }
+        });
+
+        // Read file content
+        function readFileContent(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.onerror = (error) => {
+                    console.warn(`Không thể đọc file: ${file.name}`, error);
+                    resolve(''); // Resolve với empty string thay vì reject
+                };
+                reader.readAsText(file);
+            });
+        }
+
+        // Display file tree with folder structure and checkboxes
+        function displayFileTree(files) {
+            const listDiv = document.getElementById('packFileList');
+            listDiv.style.display = 'block';
+
+            // Build folder structure
+            const tree = {};
+            files.forEach((fileObj, index) => {
+                fileObj.index = index;
+                const parts = fileObj.path.split('/');
+                let current = tree;
+                
+                parts.forEach((part, i) => {
+                    if (i === parts.length - 1) {
+                        // It's a file
+                        if (!current._files) current._files = [];
+                        current._files.push(fileObj);
+                    } else {
+                        // It's a folder
+                        if (!current[part]) current[part] = {};
+                        current = current[part];
+                    }
+                });
+            });
+
+            const fragment = document.createDocumentFragment();
+            
+            // Header with select all/none
+            const headerDiv = document.createElement('div');
+            headerDiv.className = 'file-select-header';
+            headerDiv.innerHTML = `
+                <strong>Select files/folders to pack (${files.length} total)</strong>
+            `;
+            fragment.appendChild(headerDiv);
+
+            // Render tree
+            renderTree(tree, fragment, '');
+
+            listDiv.innerHTML = '';
+            listDiv.appendChild(fragment);
+            
+            updatePackButton();
+        }
+
+        // Render tree recursively
+        function renderTree(node, parent, prefix, depth = 0) {
+            const folders = Object.keys(node).filter(k => k !== '_files').sort();
+            const files = node._files || [];
+
+            // Render folders first
+            folders.forEach(folderName => {
+                const folderId = `folder-${prefix}${folderName}`.replace(/[^a-zA-Z0-9]/g, '-');
+                
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'file-item folder-item selected';
+                folderDiv.style.fontWeight = 'bold';
+                folderDiv.style.paddingLeft = `${depth * 20}px`;
+                folderDiv.dataset.folder = prefix + folderName;
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                checkbox.dataset.isFolder = 'true';
+                checkbox.onclick = (e) => e.stopPropagation(); // Only stop propagation, don't toggle collapse
+                checkbox.onchange = (e) => {
+                    toggleFolder(prefix + folderName, e.target.checked);
+                    folderDiv.classList.toggle('selected', e.target.checked);
+                    updatePackButton();
+                };
+                
+                const label = document.createElement('label');
+                label.textContent = `📂 ${folderName}/`;
+                label.style.cursor = 'pointer';
+                label.style.flex = '1';
+                
+                // Click on folder row (except checkbox) = toggle collapse
+                folderDiv.onclick = (e) => {
+                    if (e.target === checkbox) return; // Let checkbox handle its own click
+                    
+                    // Toggle collapse
+                    const content = document.getElementById(folderId);
+                    if (content) {
+                        content.classList.toggle('collapsed');
+                        // Update folder icon
+                        if (content.classList.contains('collapsed')) {
+                            label.textContent = `📁 ${folderName}/`;
+                        } else {
+                            label.textContent = `📂 ${folderName}/`;
+                        }
+                    }
+                };
+                
+                folderDiv.appendChild(checkbox);
+                folderDiv.appendChild(label);
+                parent.appendChild(folderDiv);
+
+                // Create container for folder contents
+                const folderContent = document.createElement('div');
+                folderContent.className = 'folder-content';
+                folderContent.id = folderId;
+                parent.appendChild(folderContent);
+
+                // Render subfolder contents into the container
+                renderTree(node[folderName], folderContent, prefix + folderName + '/', depth + 1);
+            });
+
+            // Render files
+            files.forEach(fileObj => {
+                const div = document.createElement('div');
+                div.className = 'file-item selected';
+                div.style.paddingLeft = `${depth * 20}px`;
+                div.dataset.index = fileObj.index;
+                div.dataset.folder = prefix.slice(0, -1);
+                
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.checked = true;
+                checkbox.id = `file-${fileObj.index}`;
+                checkbox.onchange = (e) => {
+                    projectFiles[fileObj.index].selected = e.target.checked;
+                    div.classList.toggle('selected', e.target.checked);
+                    updatePackButton();
+                };
+                
+                const label = document.createElement('label');
+                label.htmlFor = `file-${fileObj.index}`;
+                label.textContent = `📄 ${fileObj.path.split('/').pop()}`;
+                label.style.cursor = 'pointer';
+                label.style.flex = '1';
+                
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                
+                div.onclick = (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change'));
+                    }
+                };
+                
+                parent.appendChild(div);
+            });
+        }
+
+        // Toggle all files and subfolders in a folder
+        function toggleFolder(folderPath, checked) {
+            // Update all files in this folder
+            projectFiles.forEach((fileObj, index) => {
+                if (fileObj.path.startsWith(folderPath + '/')) {
+                    fileObj.selected = checked;
+                    const checkbox = document.getElementById(`file-${index}`);
+                    if (checkbox) {
+                        checkbox.checked = checked;
+                        checkbox.closest('.file-item').classList.toggle('selected', checked);
+                    }
+                }
+            });
+            
+            // Update all subfolder checkboxes
+            const folderCheckboxes = document.querySelectorAll('input[data-is-folder="true"]');
+            folderCheckboxes.forEach(cb => {
+                const folderDiv = cb.closest('.file-item');
+                const subFolderPath = folderDiv.dataset.folder;
+                
+                // If this subfolder is inside the toggled folder
+                if (subFolderPath && subFolderPath.startsWith(folderPath + '/')) {
+                    cb.checked = checked;
+                    folderDiv.classList.toggle('selected', checked);
+                }
+            });
+        }
+
+        // Select/Deselect all files
+        // Update pack button text with selected count
+        function updatePackButton() {
+            const selectedCount = projectFiles.filter(f => f.selected).length;
+            const packBtn = document.getElementById('packBtn');
+            
+            if (selectedCount > 0) {
+                packBtn.textContent = `[Save] Pack ${selectedCount} file${selectedCount > 1 ? 's' : ''}`;
+                packBtn.disabled = false;
+            } else {
+                packBtn.textContent = `[Save] Pack 0 files`;
+                packBtn.disabled = true;
+            }
+        }
+
+        // Get selected files and read their content
+        async function getSelectedFilesWithContent() {
+            const selectedFiles = projectFiles.filter(f => f.selected);
+            
+            if (selectedFiles.length === 0) return [];
+
+            setProcessing(true, 'pack');
+            updateProgress('pack', 0, 'Reading selected files...');
+            clearTerminal('pack');
+            
+            terminalLog('pack', `Reading ${selectedFiles.length} selected files...`, 'info');
+            terminalLog('pack', '─'.repeat(50), 'info');
+
+            const BATCH_SIZE = 20;
+            const filesWithContent = [];
+            let completed = 0;
+
+            for (let i = 0; i < selectedFiles.length; i += BATCH_SIZE) {
+                if (shouldStop) {
+                    terminalLog('pack', '[■] Process stopped by user', 'error');
+                    break;
+                }
+                
+                const batch = selectedFiles.slice(i, i + BATCH_SIZE);
+                
+                const batchResults = await Promise.all(
+                    batch.map(async (fileObj) => {
+                        try {
+                            terminalLog('pack', `[>] Reading: ${fileObj.path}`);
+                            const content = await readFileContent(fileObj.file);
+
+                            if (content === '') {
+                                terminalLog('pack', `[!] Skipped: ${fileObj.path} (binary file)`, 'error');
+                                logError('pack', fileObj.path, 'Cannot read file (possibly binary file)');
+                                return null;
+                            }
+                            
+                            terminalLog('pack', `✓ Success: ${fileObj.path} (${(content.length / 1024).toFixed(2)} KB)`, 'success');
+
+                            return {
+                                path: fileObj.path,
+                                content: content
+                            };
+                        } catch (error) {
+                            const errorMsg = error.message || 'Unknown error';
+                            terminalLog('pack', `✗ Error: ${fileObj.path} - ${errorMsg}`, 'error');
+                            logError('pack', fileObj.path, errorMsg);
+                            return null;
+                        }
+                    })
+                );
+
+                const validResults = batchResults.filter(r => r !== null);
+                filesWithContent.push(...validResults);
+                completed += batch.length;
+
+                const percent = (completed / selectedFiles.length) * 100;
+                updateProgress('pack', percent, `Read ${completed}/${selectedFiles.length} files`);
+            }
+
+            terminalLog('pack', '─'.repeat(50), 'info');
+            terminalLog('pack', `✓ Loaded ${filesWithContent.length} files successfully`, 'success');
+            
+            if (errorLog.pack.length > 0) {
+                terminalLog('pack', `[!] ${errorLog.pack.length} files failed`, 'error');
+            }
+
+            return filesWithContent;
+        }
+
+        // Pack project - OPTIMIZED: Array join with error handling
+        async function packProject() {
+            const selectedFiles = await getSelectedFilesWithContent();
+            
+            if (selectedFiles.length === 0) {
+                showStatus('packStatus', 'No files selected or all failed to read!', 'error');
+                setProcessing(false, 'pack');
+                return;
+            }
+
+            updateProgress('pack', 0, 'Packing...');
+
+            try {
+                const parts = ['===PROJECT_PACK_START===\n'];
+                const UPDATE_INTERVAL = 10;
+                
+                for (let i = 0; i < selectedFiles.length; i++) {
+                    const file = selectedFiles[i];
+                    
+                    try {
+                        parts.push(
+                            '\n===FILE_START===\n',
+                            'PATH: ', file.path, '\n',
+                            'CONTENT_START:\n',
+                            file.content,
+                            '\n===FILE_END===\n'
+                        );
+                    } catch (error) {
+                        logError('pack', file.path, `Error packing: ${error.message}`);
+                        continue;
+                    }
+
+                    if (i % UPDATE_INTERVAL === 0 || i === selectedFiles.length - 1) {
+                        const percent = ((i + 1) / selectedFiles.length) * 90;
+                        updateProgress('pack', percent, `Packing ${i + 1}/${selectedFiles.length} files`);
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+                
+                parts.push('\n===PROJECT_PACK_END===');
+                const packed = parts.join('');
+
+                updateProgress('pack', 95, 'Creating file...');
+
+                const blob = new Blob([packed], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'project-packed.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+
+                updateProgress('pack', 100, 'Complete!');
+                
+            } catch (error) {
+                showStatus('packStatus', `❌ Critical error: ${error.message}`, 'error');
+            }
+            
+            setProcessing(false, 'pack');
+        }
+
+        // Unpack project with error handling
+        async function unpackProject() {
+            if (!packedContent) {
+                showStatus('unpackStatus', 'Chưa có file .txt nào được chọn!', 'error');
+                return;
+            }
+
+            setProcessing(true, 'unpack');
+            clearErrorLog('unpack'); // Clear previous errors
+            updateProgress('unpack', 0, 'Đang phân tích...');
+
+            try {
+                const files = parsePackedContent(packedContent);
+                updateProgress('unpack', 30, `Tìm thấy ${files.length} files`);
+
+                await downloadAsZip(files);
+
+                updateProgress('unpack', 100, 'Hoàn thành!');
+
+                const errorCount = errorLog.unpack.length;
+                let statusMsg = `✓ Đã giải nén ${files.length - errorCount} files thành công!`;
+                if (errorCount > 0) {
+                    statusMsg += ` | ! ${errorCount} files bị lỗi`;
+                }
+                showStatus('unpackStatus', statusMsg, errorCount > 0 ? 'info' : 'success');
+            } catch (error) {
+                showStatus('unpackStatus', `❌ Lỗi: ${error.message}`, 'error');
+            }
+
+            setProcessing(false, 'unpack');
+        }
+
+        // Parse packed content - OPTIMIZED: indexOf with error handling
+        function parsePackedContent(content) {
+            const files = [];
+            let pos = 0;
+
+            // OPTIMIZATION 4: Use indexOf instead of regex for better performance
+            while (true) {
+                try {
+                    const fileStart = content.indexOf('===FILE_START===', pos);
+                    if (fileStart === -1) break;
+
+                    const pathStart = content.indexOf('PATH: ', fileStart);
+                    if (pathStart === -1) break;
+
+                    const pathEnd = content.indexOf('\n', pathStart + 6);
+                    if (pathEnd === -1) break;
+
+                    const path = content.substring(pathStart + 6, pathEnd).trim();
+
+                    const contentStart = content.indexOf('CONTENT_START:\n', pathEnd);
+                    if (contentStart === -1) break;
+
+                    const fileEnd = content.indexOf('\n===FILE_END===', contentStart + 15);
+                    if (fileEnd === -1) {
+                        logError('unpack', path, 'Không tìm thấy FILE_END marker');
+                        break;
+                    }
+
+                    const fileContent = content.substring(contentStart + 15, fileEnd);
+
+                    files.push({ path, content: fileContent });
+                    pos = fileEnd + 15;
+                } catch (error) {
+                    logError('unpack', 'Unknown file', `Lỗi parse: ${error.message}`);
+                    break;
+                }
+            }
+
+            return files;
+        }
+
+        // Download files as ZIP - OPTIMIZED: Single ZIP file instead of multiple downloads
+        async function downloadAsZip(files) {
+            updateProgress('unpack', 40, 'Đang tạo file ZIP...');
+
+            try {
+                // Check if JSZip is loaded
+                if (typeof JSZip === 'undefined') {
+                    throw new Error('JSZip library chưa được tải. Vui lòng refresh trang.');
+                }
+
+                const zip = new JSZip();
+
+                // Add all files to ZIP
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+
+                    try {
+                        // Add file to ZIP with proper path structure
+                        zip.file(file.path, file.content);
+
+                        // Update progress
+                        if (i % 10 === 0 || i === files.length - 1) {
+                            const percent = 40 + ((i + 1) / files.length) * 40;
+                            updateProgress('unpack', percent, `Đang thêm ${i + 1}/${files.length} files vào ZIP`);
+                        }
+                    } catch (error) {
+                        logError('unpack', file.path, `Lỗi thêm vào ZIP: ${error.message}`);
+                    }
+                }
+
+                updateProgress('unpack', 85, 'Đang nén file ZIP...');
+
+                // Generate ZIP file
+                const zipBlob = await zip.generateAsync({
+                    type: 'blob',
+                    compression: 'DEFLATE',
+                    compressionOptions: { level: 6 }
+                }, (metadata) => {
+                    // Update progress during compression
+                    const percent = 85 + (metadata.percent * 0.15);
+                    updateProgress('unpack', percent, `Đang nén... ${Math.round(metadata.percent)}%`);
+                });
+
+                updateProgress('unpack', 95, 'Đang tải xuống...');
+
+                // Download ZIP file
+                const url = URL.createObjectURL(zipBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'project-unpacked.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+
+            } catch (error) {
+                logError('unpack', 'ZIP Creation', `Lỗi tạo ZIP: ${error.message}`);
+                throw error;
+            }
+        }
+
+        // Show status message
+        function showStatus(elementId, message, type) {
+            const statusDiv = document.getElementById(elementId);
+            statusDiv.textContent = message;
+            statusDiv.className = `status ${type}`;
+            statusDiv.style.display = 'block';
+        }
+
+        // Drag and drop for pack
+        const packArea = document.getElementById('packUploadArea');
+        packArea.addEventListener('dragover', (e) => {
+            if (isProcessing) return;
+            e.preventDefault();
+            packArea.classList.add('dragover');
+        });
+        packArea.addEventListener('dragleave', () => {
+            packArea.classList.remove('dragover');
+        });
+        packArea.addEventListener('drop', (e) => {
+            if (isProcessing) return;
+            e.preventDefault();
+            packArea.classList.remove('dragover');
+            document.getElementById('folderInput').files = e.dataTransfer.files;
+            document.getElementById('folderInput').dispatchEvent(new Event('change'));
+        });
+
+        // Drag and drop for unpack
+        const unpackArea = document.getElementById('unpackUploadArea');
+        unpackArea.addEventListener('dragover', (e) => {
+            if (isProcessing) return;
+            e.preventDefault();
+            unpackArea.classList.add('dragover');
+        });
+        unpackArea.addEventListener('dragleave', () => {
+            unpackArea.classList.remove('dragover');
+        });
+        unpackArea.addEventListener('drop', (e) => {
+            if (isProcessing) return;
+            e.preventDefault();
+            unpackArea.classList.remove('dragover');
+            document.getElementById('txtInput').files = e.dataTransfer.files;
+            document.getElementById('txtInput').dispatchEvent(new Event('change'));
+        });
+    </script>
+
+    <!-- JSZip Library for creating ZIP files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</body>
+
+</html>
