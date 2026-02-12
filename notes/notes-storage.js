@@ -74,7 +74,8 @@ const StorageManager = {
                 url2: document.getElementById('noteUrl2')?.value || '',
                 url3: document.getElementById('noteUrl3')?.value || '',
                 url4: document.getElementById('noteUrl4')?.value || '',
-                url5: document.getElementById('noteUrl5')?.value || ''
+                url5: document.getElementById('noteUrl5')?.value || '',
+                linkedNotes: window.getSelectedLinkedNotes ? window.getSelectedLinkedNotes() : []
             };
             this.saveEditorState({ isEditing: true, formData });
         } catch (error) {

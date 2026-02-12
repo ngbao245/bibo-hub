@@ -50,8 +50,8 @@ async function loadNotes() {
         const response = await fetch(API_NOTES);
         const allNotes = await response.json();
         
-        // Filter out sources and secret notes (only show regular notes)
-        notes = allNotes.filter(n => n.type !== 'source' && n.type !== 'secret');
+        // Filter out sources, secret notes, and child notes (only show regular notes)
+        notes = allNotes.filter(n => n.type !== 'source' && n.type !== 'secret' && !n.isChildNote);
         notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         updateTypeCounts();
         restoreTypeFilter(); // Restore filter state
@@ -181,14 +181,22 @@ function renderNotesList() {
     `).join('');
 }
 
-function showViewMode() {
+async function showViewMode() {
     if (!currentNote) return;
     
     isEditing = false;
+    
+    // Render linked notes HTML if exists
+    let linkedNotesHtml = '';
+    if (currentNote.linkedNotes && currentNote.linkedNotes.length > 0) {
+        linkedNotesHtml = await renderLinkedNotesList(currentNote.linkedNotes);
+    }
+    
     editorView.innerHTML = `
         <div class="editor-header" ondblclick="editTitleFromHeader(event)">
             <div class="editor-title editable-title">${escapeHtml(currentNote.title)}</div>
             <div class="editor-actions">
+                <button class="btn btn-link-notes" onclick="openLinkedNotesModalFromView()">🔗 Link</button>
                 <button class="btn" onclick="editCurrentNote()">Edit</button>
                 <button class="btn btn-danger" onclick="deleteNote('${currentNote.id}')">Delete</button>
             </div>
@@ -228,6 +236,29 @@ function showViewMode() {
                 </div>
             ` : ''}
             
+            ${currentNote.linkedNotes && currentNote.linkedNotes.length > 0 ? `
+                <div class="content-section">
+                    <div class="child-notes-header">
+                        <div class="child-notes-title-row" onclick="toggleChildNotesSection()">
+                            <h3>Related Notes (${currentNote.linkedNotes.length})</h3>
+                            <span class="child-notes-toggle" id="childNotesToggle">▲</span>
+                        </div>
+                        <button class="btn-add-child-note" onclick="quickCreateChildNote()">+ Add Child Note</button>
+                    </div>
+                    <div class="child-notes-list collapsed" id="childNotesList">
+                        ${linkedNotesHtml}
+                    </div>
+                </div>
+            ` : `
+                <div class="content-section">
+                    <div class="child-notes-header">
+                        <h3>Related Notes</h3>
+                        <button class="btn-add-child-note" onclick="quickCreateChildNote()">+ Add Child Note</button>
+                    </div>
+                    <div class="no-child-notes">No child notes yet. Click the button above to create one.</div>
+                </div>
+            `}
+            
             ${hasAnyUrl(currentNote) ? `
                 <div class="content-section">
                     <h3>Resources</h3>
@@ -242,9 +273,12 @@ function showViewMode() {
             ` : ''}
         </div>
     `;
+    
+    // Restore collapsed state after rendering
+    restoreChildNotesState();
 }
 
-function showEditMode(restoreData = null) {
+async function showEditMode(restoreData = null) {
     isEditing = true;
     const note = restoreData || currentNote || {};
     
@@ -380,6 +414,31 @@ function showEditMode(restoreData = null) {
                 <div class="form-group">
                     <label>URL 5</label>
                     <input type="url" id="noteUrl5" value="${escapeHtml(note.url5 || '')}" placeholder="https://...">
+                </div>
+
+                <div class="form-group child-notes-section">
+                    <div class="child-notes-header-edit">
+                        <label>Related Notes</label>
+                        <div class="child-notes-quick-actions">
+                            <button type="button" class="btn-quick-action btn-new" onclick="createChildNoteFromEdit()" title="Create new child note">
+                                <span class="btn-icon">+</span>
+                                <span class="btn-text">New Child</span>
+                            </button>
+                            <button type="button" class="btn-quick-action btn-link" onclick="openLinkedNotesModal()" title="Link existing notes">
+                                <span class="btn-icon">🔗</span>
+                                <span class="btn-text">Link Notes</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="selectedLinkedNotes" class="child-notes-grid">
+                        ${note.linkedNotes && note.linkedNotes.length > 0 ? 
+                            await renderEditChildNotesGrid(note.linkedNotes)
+                            : '<div class="no-child-notes-edit">No child notes or linked notes yet. Click + New to create child note or 🔗 Link to link existing notes.</div>'
+                        }
+                    </div>
+                    <div class="child-notes-count">
+                        <span id="linkedNotesCount">${note.linkedNotes ? note.linkedNotes.length : 0}</span> note(s) total
+                    </div>
                 </div>
             </form>
         </div>
@@ -558,8 +617,11 @@ function saveCurrentNote() {
     const contentTextarea = document.getElementById('noteContent');
     let content = contentTextarea.value.trim();
     
-    // Convert plain text to HTML for storage (preserve line breaks)
-    if (content) {
+    // IMPORTANT: If textarea is readonly (rich text content), keep original content
+    if (contentTextarea.readOnly && currentNote && currentNote.content) {
+        content = currentNote.content;
+    } else if (content) {
+        // Convert plain text to HTML for storage (preserve line breaks)
         content = content.replace(/\n/g, '<br>');
         // Wrap in div if not already wrapped
         if (!content.startsWith('<div>')) {
@@ -573,7 +635,7 @@ function saveCurrentNote() {
     
     const noteData = {
         title: finalTitle,
-        content: content,
+        content: content || (currentNote ? currentNote.content : ''), // Keep existing content if empty
         type: document.getElementById('noteType').value,
         source: document.getElementById('noteSource').value,
         tags: document.getElementById('noteTags').value,
@@ -583,8 +645,9 @@ function saveCurrentNote() {
         url3: document.getElementById('noteUrl3').value,
         url4: document.getElementById('noteUrl4').value,
         url5: document.getElementById('noteUrl5').value,
-        wordCountEnabled: currentNote ? currentNote.wordCountEnabled : false, // Keep existing value or default
-        timerDuration: document.getElementById('noteTimerDuration').value || "0" // Manual input only
+        wordCountEnabled: currentNote ? currentNote.wordCountEnabled : false,
+        timerDuration: document.getElementById('noteTimerDuration').value || "0",
+        linkedNotes: getSelectedLinkedNotes() // Get selected linked notes from UI
     };
     
     saveNote(noteData);
@@ -875,4 +938,847 @@ function editContent(element) {
         },
         currentNote // Pass current note data for state restoration
     );
+}
+
+// Linked Notes Functions
+async function openLinkedNotesModal() {
+    // Fetch all notes including child notes
+    const allNotes = await getAllNotes();
+    const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
+    
+    const modal = document.createElement('div');
+    modal.className = 'linked-notes-modal';
+    modal.innerHTML = `
+        <div class="linked-notes-modal-content">
+            <div class="linked-notes-modal-header">
+                <h3>Select Notes to Link</h3>
+                <button class="btn-close" onclick="closeLinkedNotesModal()">×</button>
+            </div>
+            <div class="linked-notes-modal-search">
+                <input type="text" id="linkedNotesSearch" placeholder="Search notes by title or content..." class="search-input">
+            </div>
+            <div class="linked-notes-modal-body" id="linkedNotesModalBody">
+                ${renderLinkedNotesOptionsFromList(availableNotes)}
+            </div>
+            <div class="linked-notes-modal-footer">
+                <button class="btn btn-primary" onclick="closeLinkedNotesModal()">Done</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+    });
+    
+    // Setup search with debounce for better performance
+    const searchInput = document.getElementById('linkedNotesSearch');
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const query = e.target.value.toLowerCase();
+            const filteredNotes = availableNotes.filter(n => 
+                n.title.toLowerCase().includes(query) || 
+                (n.content && n.content.toLowerCase().includes(query))
+            );
+            document.getElementById('linkedNotesModalBody').innerHTML = renderLinkedNotesOptionsFromList(filteredNotes);
+        }, 200); // Debounce 200ms
+    });
+    
+    // Focus search
+    setTimeout(() => searchInput.focus(), 100);
+    
+    // Close on ESC key
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            closeLinkedNotesModal();
+            document.removeEventListener('keydown', handleEsc);
+        }
+    };
+    document.addEventListener('keydown', handleEsc);
+}
+
+function renderLinkedNotesOptionsFromList(notesToRender) {
+    const selectedIds = getSelectedLinkedNotes();
+    
+    if (notesToRender.length === 0) {
+        return '<div class="no-notes-available">No notes available</div>';
+    }
+    
+    return notesToRender.map(note => `
+        <div class="linked-note-option ${selectedIds.includes(note.id) ? 'selected' : ''}" 
+             onclick="toggleLinkedNote('${note.id}')">
+            <div class="linked-note-option-content">
+                <div class="linked-note-option-title">${note.isChildNote ? '📄 ' : ''}${escapeHtml(note.title)}</div>
+                <div class="linked-note-option-meta">
+                    <span class="meta-badge">${getTypeLabel(note.type)}</span>
+                    <span class="meta-badge">${formatDate(note.createdAt)}</span>
+                    ${note.isChildNote ? '<span class="meta-badge child-badge">Child Note</span>' : ''}
+                </div>
+            </div>
+            <div class="linked-note-option-check">
+                ${selectedIds.includes(note.id) ? '✓' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderLinkedNotesOptions(notesToRender = null) {
+    const availableNotes = notesToRender || notes.filter(n => n.id !== currentNote?.id);
+    const selectedIds = getSelectedLinkedNotes();
+    
+    if (availableNotes.length === 0) {
+        return '<div class="no-notes-available">No notes available</div>';
+    }
+    
+    return availableNotes.map(note => `
+        <div class="linked-note-option ${selectedIds.includes(note.id) ? 'selected' : ''}" 
+             onclick="toggleLinkedNote('${note.id}')">
+            <div class="linked-note-option-content">
+                <div class="linked-note-option-title">${note.isChildNote ? '📄 ' : ''}${escapeHtml(note.title)}</div>
+                <div class="linked-note-option-meta">
+                    <span class="meta-badge">${getTypeLabel(note.type)}</span>
+                    <span class="meta-badge">${formatDate(note.createdAt)}</span>
+                    ${note.isChildNote ? '<span class="meta-badge child-badge">Child Note</span>' : ''}
+                </div>
+            </div>
+            <div class="linked-note-option-check">
+                ${selectedIds.includes(note.id) ? '✓' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+async function toggleLinkedNote(noteId) {
+    const selectedContainer = document.getElementById('selectedLinkedNotes');
+    const countElement = document.getElementById('linkedNotesCount');
+    const selectedIds = getSelectedLinkedNotes();
+    
+    // Fetch all notes to get note details
+    const allNotes = await getAllNotes();
+    
+    if (selectedIds.includes(noteId)) {
+        // Remove - just re-render without this note
+        const newLinkedNotes = selectedIds.filter(id => id !== noteId);
+        if (newLinkedNotes.length > 0) {
+            selectedContainer.innerHTML = await renderEditChildNotesGrid(newLinkedNotes);
+        } else {
+            selectedContainer.innerHTML = '<div class="no-child-notes-edit">No child notes yet. Click + New or 🔗 Link to add.</div>';
+        }
+    } else {
+        // Add - re-render with new note
+        const newLinkedNotes = [...selectedIds, noteId];
+        selectedContainer.innerHTML = await renderEditChildNotesGrid(newLinkedNotes);
+    }
+    
+    // Update count
+    const newCount = getSelectedLinkedNotes().length;
+    countElement.textContent = newCount;
+    
+    // Update modal display
+    const modalBody = document.getElementById('linkedNotesModalBody');
+    if (modalBody) {
+        const searchInput = document.getElementById('linkedNotesSearch');
+        const query = searchInput ? searchInput.value.toLowerCase() : '';
+        const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
+        const filteredNotes = query ? 
+            availableNotes.filter(n => 
+                n.title.toLowerCase().includes(query) || 
+                (n.content && n.content.toLowerCase().includes(query))
+            ) : availableNotes;
+        modalBody.innerHTML = renderLinkedNotesOptionsFromList(filteredNotes);
+    }
+}
+
+function removeLinkedNote(noteId) {
+    const selectedContainer = document.getElementById('selectedLinkedNotes');
+    const countElement = document.getElementById('linkedNotesCount');
+    const chip = selectedContainer.querySelector(`[data-note-id="${noteId}"]`);
+    
+    if (chip) {
+        chip.remove();
+        
+        // Update count
+        const newCount = getSelectedLinkedNotes().length;
+        countElement.textContent = newCount;
+        
+        // Show "no linked notes" message if empty
+        if (newCount === 0) {
+            selectedContainer.innerHTML = '<div class="no-linked-notes">No linked notes selected</div>';
+        }
+        
+        // Update modal if open
+        const modalBody = document.getElementById('linkedNotesModalBody');
+        if (modalBody) {
+            const searchInput = document.getElementById('linkedNotesSearch');
+            const query = searchInput ? searchInput.value.toLowerCase() : '';
+            const filteredNotes = query ? 
+                notes.filter(n => 
+                    n.id !== currentNote?.id && 
+                    (n.title.toLowerCase().includes(query) || 
+                     (n.content && n.content.toLowerCase().includes(query)))
+                ) : null;
+            modalBody.innerHTML = renderLinkedNotesOptions(filteredNotes);
+        }
+    }
+}
+
+function getSelectedLinkedNotes() {
+    const selectedContainer = document.getElementById('selectedLinkedNotes');
+    if (!selectedContainer) return currentNote?.linkedNotes || [];
+    
+    const chips = selectedContainer.querySelectorAll('.selected-note-chip');
+    return Array.from(chips).map(chip => chip.getAttribute('data-note-id'));
+}
+
+function closeLinkedNotesModal() {
+    const modal = document.querySelector('.linked-notes-modal');
+    if (modal) {
+        // Fade out animation
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+        }, 200);
+    }
+}
+
+// Close modal when clicking outside
+document.addEventListener('click', (e) => {
+    const modal = document.querySelector('.linked-notes-modal');
+    if (modal && e.target === modal) {
+        closeLinkedNotesModal();
+    }
+});
+
+
+// Render linked notes list in view mode (async to fetch child notes)
+// Optimized: Cache API response
+let cachedAllNotes = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 5000; // 5 seconds
+
+async function getAllNotes() {
+    const now = Date.now();
+    if (cachedAllNotes && (now - cacheTimestamp) < CACHE_DURATION) {
+        return cachedAllNotes;
+    }
+    
+    const response = await fetch(API_NOTES);
+    cachedAllNotes = await response.json();
+    cacheTimestamp = now;
+    return cachedAllNotes;
+}
+
+async function renderLinkedNotesList(linkedNoteIds) {
+    const allNotes = await getAllNotes();
+    
+    return linkedNoteIds.map(noteId => {
+        const linkedNote = allNotes.find(n => n.id === noteId);
+        return linkedNote ? `
+            <div class="linked-note-content-item">
+                <div class="linked-note-header-bar">
+                    <div class="linked-note-title-bar">
+                        <span class="linked-note-icon">${linkedNote.isChildNote ? '📄' : '🔗'}</span>
+                        <span class="linked-note-title-text">${escapeHtml(linkedNote.title)}</span>
+                        <span class="linked-note-type-badge">${getTypeLabel(linkedNote.type)}</span>
+                        ${linkedNote.isChildNote ? '<span class="child-note-badge">Child</span>' : ''}
+                    </div>
+                    <div class="linked-note-actions">
+                        <button class="btn-open-linked-note" onclick="selectChildNote('${linkedNote.id}')" title="Open in editor">
+                            Open
+                        </button>
+                        <button class="btn-delete-child-note" onclick="deleteChildNote('${linkedNote.id}')" title="Delete child note">
+                            ×
+                        </button>
+                    </div>
+                </div>
+                <div class="linked-note-content-preview content-text editable-content" 
+                     ondblclick="openLinkedNoteForEdit('${linkedNote.id}')">
+                    ${linkedNote.content || '<em style="color: var(--color-text-muted);">No content</em>'}
+                </div>
+            </div>
+        ` : '';
+    }).join('');
+}
+
+// Render selected linked notes in edit mode
+async function renderSelectedLinkedNotes(linkedNoteIds) {
+    const allNotes = await getAllNotes();
+    
+    return linkedNoteIds.map(noteId => {
+        const linkedNote = allNotes.find(n => n.id === noteId);
+        return linkedNote ? `
+            <div class="selected-note-chip" data-note-id="${noteId}">
+                <span>${linkedNote.isChildNote ? '📄 ' : ''}${escapeHtml(linkedNote.title)}</span>
+                <button type="button" onclick="removeLinkedNote('${noteId}')" class="btn-remove-chip">×</button>
+            </div>
+        ` : '';
+    }).join('');
+}
+
+// Select child note (can view child notes even though they're hidden from main list)
+async function selectChildNote(id) {
+    try {
+        const allNotes = await getAllNotes();
+        const note = allNotes.find(n => n.id === id);
+        
+        if (note) {
+            currentNote = note;
+            StorageManager.saveCurrentNoteId(note.id);
+            StorageManager.saveCachedNote(note);
+            StorageManager.clearEditorState();
+            await showViewMode();
+            // Don't update notes list since child notes shouldn't appear there
+        }
+    } catch (error) {
+        console.error('Error loading child note:', error);
+    }
+}
+
+// Create a new child note
+async function createChildNote() {
+    if (!currentNote || !currentNote.id) {
+        alert('Please save the parent note first before creating child notes.');
+        return;
+    }
+    
+    const title = prompt('Enter title for the new child note:', 'Correction - ' + new Date().toLocaleDateString());
+    if (!title) return;
+    
+    try {
+        // Create new child note
+        const childNoteData = {
+            title: title,
+            content: '<div><br></div>',
+            type: currentNote.type, // Same type as parent
+            isChildNote: true, // Mark as child note
+            parentNoteId: currentNote.id, // Reference to parent
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        const response = await fetch(API_NOTES, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(childNoteData)
+        });
+        
+        const newChildNote = await response.json();
+        
+        // Add to parent's linkedNotes
+        if (!currentNote.linkedNotes) {
+            currentNote.linkedNotes = [];
+        }
+        currentNote.linkedNotes.push(newChildNote.id);
+        
+        // Update parent note
+        await fetch(`${API_NOTES}/${currentNote.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentNote)
+        });
+        
+        // Refresh edit mode to show new child note
+        showEditMode(currentNote);
+        
+        alert('Child note created! You can now edit it after saving this note.');
+    } catch (error) {
+        console.error('Error creating child note:', error);
+        alert('Error creating child note');
+    }
+}
+
+
+// Toggle Child Notes Section
+function toggleChildNotesSection() {
+    const list = document.getElementById('childNotesList');
+    const toggle = document.getElementById('childNotesToggle');
+    
+    if (list && toggle) {
+        const isCollapsed = list.classList.toggle('collapsed');
+        toggle.textContent = isCollapsed ? '▲' : '▼';
+        
+        // Save state to localStorage
+        localStorage.setItem('childNotes_collapsed', isCollapsed ? 'true' : 'false');
+    }
+}
+
+// Quick create child note from view mode
+async function quickCreateChildNote() {
+    if (!currentNote || !currentNote.id) {
+        alert('Please save the parent note first.');
+        return;
+    }
+    
+    const title = prompt('Enter title for the child note:', 'Correction - ' + new Date().toLocaleDateString());
+    if (!title) return;
+    
+    try {
+        // Create new child note
+        const childNoteData = {
+            title: title,
+            content: '<div><br></div>',
+            type: currentNote.type,
+            isChildNote: true,
+            parentNoteId: currentNote.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        const response = await fetch(API_NOTES, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(childNoteData)
+        });
+        
+        const newChildNote = await response.json();
+        
+        // Add to parent's linkedNotes
+        if (!currentNote.linkedNotes) {
+            currentNote.linkedNotes = [];
+        }
+        currentNote.linkedNotes.push(newChildNote.id);
+        
+        // Update parent note
+        await fetch(`${API_NOTES}/${currentNote.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentNote)
+        });
+        
+        // Clear cache to force refresh
+        cachedAllNotes = null;
+        
+        // Refresh view to show new child note
+        await showViewMode();
+    } catch (error) {
+        console.error('Error creating child note:', error);
+        alert('Error creating child note');
+    }
+}
+
+
+// Open linked note for editing (double-click on content)
+async function openLinkedNoteForEdit(noteId) {
+    try {
+        const allNotes = await getAllNotes();
+        const note = allNotes.find(n => n.id === noteId);
+        
+        if (note) {
+            // Set as current note temporarily for editing
+            const tempCurrentNote = currentNote;
+            currentNote = note;
+            
+            // Create container for rich text editor
+            const editorContainer = document.createElement('div');
+            document.body.appendChild(editorContainer);
+            
+            // Initialize rich text editor
+            const editor = new RichTextEditor(
+                editorContainer,
+                note.content || '',
+                async (newContent, editorState) => {
+                    // Save callback
+                    if (newContent !== note.content || 
+                        (editorState && editorState.wordCountEnabled !== note.wordCountEnabled)) {
+                        note.content = newContent;
+                        if (editorState) {
+                            note.wordCountEnabled = editorState.wordCountEnabled;
+                        }
+                        
+                        // Save to API
+                        await fetch(`${API_NOTES}/${note.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(note)
+                        });
+                        
+                        // Clear cache to force refresh
+                        cachedAllNotes = null;
+                        
+                        // Restore original current note and refresh view
+                        currentNote = tempCurrentNote;
+                        await showViewMode();
+                    } else {
+                        // Just restore if no changes
+                        currentNote = tempCurrentNote;
+                    }
+                },
+                note
+            );
+        }
+    } catch (error) {
+        console.error('Error opening linked note for edit:', error);
+    }
+}
+
+
+// Delete child note
+async function deleteChildNote(childNoteId) {
+    if (!confirm('Delete this child note? This action cannot be undone.')) return;
+    
+    try {
+        // Delete the child note from API
+        await fetch(`${API_NOTES}/${childNoteId}`, { 
+            method: 'DELETE' 
+        });
+        
+        // Remove from parent's linkedNotes array
+        if (currentNote.linkedNotes) {
+            currentNote.linkedNotes = currentNote.linkedNotes.filter(id => id !== childNoteId);
+            
+            // Update parent note
+            await fetch(`${API_NOTES}/${currentNote.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(currentNote)
+            });
+        }
+        
+        // Clear cache to force refresh
+        cachedAllNotes = null;
+        
+        // Refresh view
+        await showViewMode();
+    } catch (error) {
+        console.error('Error deleting child note:', error);
+        alert('Error deleting child note');
+    }
+}
+
+
+// Render child notes in grid layout for edit mode
+async function renderEditChildNotesGrid(linkedNoteIds) {
+    const allNotes = await getAllNotes();
+    
+    // Separate child notes and linked notes
+    const childNotes = [];
+    const linkedNotes = [];
+    
+    linkedNoteIds.forEach(noteId => {
+        const note = allNotes.find(n => n.id === noteId);
+        if (note) {
+            if (note.isChildNote) {
+                childNotes.push(note);
+            } else {
+                linkedNotes.push(note);
+            }
+        }
+    });
+    
+    let html = '';
+    
+    // Render child notes
+    if (childNotes.length > 0) {
+        html += '<div class="notes-group-label">Child Notes</div>';
+        html += childNotes.map(linkedNote => `
+            <div class="child-note-card is-child" data-note-id="${linkedNote.id}">
+                <div class="child-note-card-header">
+                    <span class="child-note-icon">📄</span>
+                    <button type="button" class="btn-card-remove" onclick="removeLinkedNoteFromEdit('${linkedNote.id}')" title="Remove">×</button>
+                </div>
+                <div class="child-note-card-body" onclick="selectChildNote('${linkedNote.id}')" title="Click to open">
+                    <div class="child-note-card-title">${escapeHtml(linkedNote.title)}</div>
+                    <div class="child-note-card-meta">
+                        <span class="child-note-type">${getTypeLabel(linkedNote.type)}</span>
+                        <span class="child-badge-mini">Child</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Render linked notes
+    if (linkedNotes.length > 0) {
+        html += '<div class="notes-group-label">Linked Notes</div>';
+        html += linkedNotes.map(linkedNote => `
+            <div class="child-note-card is-linked" data-note-id="${linkedNote.id}">
+                <div class="child-note-card-header">
+                    <span class="child-note-icon">🔗</span>
+                    <button type="button" class="btn-card-remove" onclick="removeLinkedNoteFromEdit('${linkedNote.id}')" title="Unlink">×</button>
+                </div>
+                <div class="child-note-card-body" onclick="selectChildNote('${linkedNote.id}')" title="Click to open">
+                    <div class="child-note-card-title">${escapeHtml(linkedNote.title)}</div>
+                    <div class="child-note-card-meta">
+                        <span class="child-note-type">${getTypeLabel(linkedNote.type)}</span>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    return html || '<div class="no-child-notes-edit">No child notes or linked notes yet. Click + New to create child note or 🔗 Link to link existing notes.</div>';
+}
+
+// Render child notes list in edit mode (legacy - for compatibility)
+async function renderEditChildNotesList(linkedNoteIds) {
+    return renderEditChildNotesGrid(linkedNoteIds);
+}
+
+// Remove linked note from edit mode (just unlink, don't delete)
+async function removeLinkedNoteFromEdit(noteId) {
+    const selectedContainer = document.getElementById('selectedLinkedNotes');
+    const countElement = document.getElementById('linkedNotesCount');
+    
+    // Re-render the list without this note
+    const currentLinkedNotes = getSelectedLinkedNotes().filter(id => id !== noteId);
+    
+    if (currentLinkedNotes.length > 0) {
+        selectedContainer.innerHTML = await renderEditChildNotesGrid(currentLinkedNotes);
+    } else {
+        selectedContainer.innerHTML = '<div class="no-child-notes-edit">No child notes yet. Click + New or 🔗 Link to add.</div>';
+    }
+    
+    // Update count
+    countElement.textContent = currentLinkedNotes.length;
+}
+
+// Get selected linked notes from UI
+function getSelectedLinkedNotes() {
+    const selectedContainer = document.getElementById('selectedLinkedNotes');
+    if (!selectedContainer) return currentNote?.linkedNotes || [];
+    
+    const cards = selectedContainer.querySelectorAll('.child-note-card');
+    return Array.from(cards).map(card => card.getAttribute('data-note-id')).filter(id => id !== null);
+}
+
+// Create child note from edit mode
+async function createChildNoteFromEdit() {
+    if (!currentNote || !currentNote.id) {
+        alert('Please save the parent note first before creating child notes.');
+        return;
+    }
+    
+    const title = prompt('Enter title for the new child note:', 'Correction - ' + new Date().toLocaleDateString());
+    if (!title) return;
+    
+    try {
+        // Create new child note
+        const childNoteData = {
+            title: title,
+            content: '<div><br></div>',
+            type: currentNote.type,
+            isChildNote: true,
+            parentNoteId: currentNote.id,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        };
+        
+        const response = await fetch(API_NOTES, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(childNoteData)
+        });
+        
+        const newChildNote = await response.json();
+        
+        // Clear cache
+        cachedAllNotes = null;
+        
+        // Add to UI
+        const selectedContainer = document.getElementById('selectedLinkedNotes');
+        const countElement = document.getElementById('linkedNotesCount');
+        
+        // Remove "no child notes" message if exists
+        const noNotesMsg = selectedContainer.querySelector('.no-linked-notes');
+        if (noNotesMsg) noNotesMsg.remove();
+        
+        // Get current linked notes and add new one
+        const currentLinkedNotes = getSelectedLinkedNotes();
+        currentLinkedNotes.push(newChildNote.id);
+        
+        // Re-render
+        selectedContainer.innerHTML = await renderEditChildNotesGrid(currentLinkedNotes);
+        countElement.textContent = currentLinkedNotes.length;
+        
+        alert('Child note created! Remember to save the parent note.');
+    } catch (error) {
+        console.error('Error creating child note:', error);
+        alert('Error creating child note');
+    }
+}
+
+
+// Open linked notes modal from view mode
+async function openLinkedNotesModalFromView() {
+    if (!currentNote || !currentNote.id) {
+        alert('Please save the note first.');
+        return;
+    }
+    
+    // Fetch all notes including child notes
+    const allNotes = await getAllNotes();
+    const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
+    
+    const modal = document.createElement('div');
+    modal.className = 'linked-notes-modal';
+    modal.innerHTML = `
+        <div class="linked-notes-modal-content">
+            <div class="linked-notes-modal-header">
+                <h3>Link Notes to "${escapeHtml(currentNote.title)}"</h3>
+                <button class="btn-close" onclick="closeLinkedNotesModalView()">×</button>
+            </div>
+            <div class="linked-notes-modal-search">
+                <input type="text" id="linkedNotesSearchView" placeholder="Search notes by title or content..." class="search-input">
+            </div>
+            <div class="linked-notes-modal-body" id="linkedNotesModalBodyView">
+                ${renderLinkedNotesOptionsFromListView(availableNotes)}
+            </div>
+            <div class="linked-notes-modal-footer">
+                <button class="btn btn-primary" onclick="saveLinkedNotesFromView()">Save & Close</button>
+                <button class="btn" onclick="closeLinkedNotesModalView()">Cancel</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Trigger animation
+    requestAnimationFrame(() => {
+        modal.style.opacity = '1';
+    });
+    
+    // Setup search with debounce
+    const searchInput = document.getElementById('linkedNotesSearchView');
+    let searchTimeout;
+    searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            const query = e.target.value.toLowerCase();
+            const filteredNotes = availableNotes.filter(n => 
+                n.title.toLowerCase().includes(query) || 
+                (n.content && n.content.toLowerCase().includes(query))
+            );
+            document.getElementById('linkedNotesModalBodyView').innerHTML = renderLinkedNotesOptionsFromListView(filteredNotes);
+        }, 200);
+    });
+    
+    // Focus search
+    setTimeout(() => searchInput.focus(), 100);
+    
+    // Close on ESC key
+    const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+            closeLinkedNotesModalView();
+            document.removeEventListener('keydown', handleEsc);
+        }
+    };
+    document.addEventListener('keydown', handleEsc);
+}
+
+// Render options for view mode modal
+function renderLinkedNotesOptionsFromListView(notesToRender) {
+    const selectedIds = currentNote?.linkedNotes || [];
+    
+    if (notesToRender.length === 0) {
+        return '<div class="no-notes-available">No notes available</div>';
+    }
+    
+    return notesToRender.map(note => `
+        <div class="linked-note-option ${selectedIds.includes(note.id) ? 'selected' : ''}" 
+             onclick="toggleLinkedNoteView('${note.id}')">
+            <div class="linked-note-option-content">
+                <div class="linked-note-option-title">${note.isChildNote ? '📄 ' : ''}${escapeHtml(note.title)}</div>
+                <div class="linked-note-option-meta">
+                    <span class="meta-badge">${getTypeLabel(note.type)}</span>
+                    <span class="meta-badge">${formatDate(note.createdAt)}</span>
+                    ${note.isChildNote ? '<span class="meta-badge child-badge">Child Note</span>' : ''}
+                </div>
+            </div>
+            <div class="linked-note-option-check">
+                ${selectedIds.includes(note.id) ? '✓' : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+// Toggle note selection in view mode
+function toggleLinkedNoteView(noteId) {
+    if (!currentNote.linkedNotes) {
+        currentNote.linkedNotes = [];
+    }
+    
+    const index = currentNote.linkedNotes.indexOf(noteId);
+    if (index > -1) {
+        currentNote.linkedNotes.splice(index, 1);
+    } else {
+        currentNote.linkedNotes.push(noteId);
+    }
+    
+    // Re-render modal body
+    const modalBody = document.getElementById('linkedNotesModalBodyView');
+    if (modalBody) {
+        const searchInput = document.getElementById('linkedNotesSearchView');
+        const query = searchInput ? searchInput.value.toLowerCase() : '';
+        
+        getAllNotes().then(allNotes => {
+            const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
+            const filteredNotes = query ? 
+                availableNotes.filter(n => 
+                    n.title.toLowerCase().includes(query) || 
+                    (n.content && n.content.toLowerCase().includes(query))
+                ) : availableNotes;
+            modalBody.innerHTML = renderLinkedNotesOptionsFromListView(filteredNotes);
+        });
+    }
+}
+
+// Save linked notes from view mode
+async function saveLinkedNotesFromView() {
+    try {
+        // Update note in API
+        await fetch(`${API_NOTES}/${currentNote.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(currentNote)
+        });
+        
+        // Clear cache
+        cachedAllNotes = null;
+        
+        // Close modal
+        closeLinkedNotesModalView();
+        
+        // Refresh view
+        await showViewMode();
+    } catch (error) {
+        console.error('Error saving linked notes:', error);
+        alert('Error saving linked notes');
+    }
+}
+
+// Close modal from view mode
+function closeLinkedNotesModalView() {
+    const modal = document.querySelector('.linked-notes-modal');
+    if (modal) {
+        modal.style.opacity = '0';
+        setTimeout(() => {
+            modal.remove();
+        }, 200);
+    }
+}
+
+
+// Restore child notes collapsed state after rendering
+function restoreChildNotesState() {
+    const list = document.getElementById('childNotesList');
+    const toggle = document.getElementById('childNotesToggle');
+    
+    if (list && toggle) {
+        const savedState = localStorage.getItem('childNotes_collapsed');
+        
+        // Default is collapsed (true), unless user has opened it (false)
+        const shouldBeCollapsed = savedState === null ? true : savedState === 'true';
+        
+        if (shouldBeCollapsed) {
+            list.classList.add('collapsed');
+            toggle.textContent = '▲';
+        } else {
+            list.classList.remove('collapsed');
+            toggle.textContent = '▼';
+        }
+    }
 }
