@@ -62,8 +62,11 @@ async function loadTranslateModal() {
     }
 }
 
-// Lazy open function with toggle
+// Lazy open function with toggle and auto-fill selected text
 async function openTranslateModalLazy() {
+    // Get selected text before loading modal
+    const selectedText = window.getSelection().toString().trim();
+    
     // Load modal first if not loaded
     await loadTranslateModal();
     
@@ -80,6 +83,16 @@ async function openTranslateModalLazy() {
         // Otherwise open it
         if (typeof openTranslateModal === 'function') {
             openTranslateModal();
+            
+            // Auto-fill selected text if exists
+            if (selectedText) {
+                const sourceInput = document.getElementById('translateSource');
+                if (sourceInput) {
+                    sourceInput.value = selectedText;
+                    // Trigger translation
+                    sourceInput.dispatchEvent(new Event('input'));
+                }
+            }
         } else {
             modal.classList.add('show');
         }

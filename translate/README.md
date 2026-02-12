@@ -1,15 +1,16 @@
 # Translate Modal
 
-Auto-detect Vietnamese/English translation modal accessible globally via Alt+T.
+Auto-detect Vietnamese/English translation modal accessible globally via Alt+T. Supports auto-fill from selected text.
 
 ## 📋 Overview
 
-Translate modal is a global modal that provides quick translation between Vietnamese and English. Features auto-detection of language and real-time translation with 500ms debounce.
+Translate modal is a global modal that provides quick translation between Vietnamese and English. Features auto-detection of language, real-time translation with 500ms debounce, and auto-fill from selected text.
 
 ## 🚀 Features
 
 - **Auto-detect Language**: Automatically detects Vietnamese or English
 - **Real-time Translation**: Translates as you type (500ms debounce)
+- **Auto-fill Selected Text**: Select any text and press Alt+T to auto-translate
 - **Copy to Clipboard**: One-click copy of translation
 - **Clear Function**: Quick clear of both input and output
 - **Global Access**: Open from any page with Alt+T
@@ -140,8 +141,11 @@ async function loadTranslateModal() {
     }
 }
 
-// Lazy open with toggle
+// Lazy open with toggle and auto-fill selected text
 async function openTranslateModalLazy() {
+    // Get selected text before loading modal
+    const selectedText = window.getSelection().toString().trim();
+    
     await loadTranslateModal();
     
     const modal = document.getElementById('translateModal');
@@ -156,6 +160,16 @@ async function openTranslateModalLazy() {
     } else if (modal) {
         if (typeof openTranslateModal === 'function') {
             openTranslateModal();
+            
+            // Auto-fill selected text if exists
+            if (selectedText) {
+                const sourceInput = document.getElementById('translateSource');
+                if (sourceInput) {
+                    sourceInput.value = selectedText;
+                    // Trigger translation
+                    sourceInput.dispatchEvent(new Event('input'));
+                }
+            }
         } else {
             modal.classList.add('show');
         }
@@ -210,6 +224,11 @@ async function openTranslateModalLazy() {
 1. Press `Alt+T` from any page
 2. Or click "Translate" button in Hub
 3. Modal opens with focus on input
+
+### Quick Translate Selected Text (NEW)
+1. Select/highlight any text on the page
+2. Press `Alt+T`
+3. Modal opens with text auto-filled and translation starts automatically
 
 ### Translating
 1. Type text in left textarea
