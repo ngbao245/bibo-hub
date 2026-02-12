@@ -4,6 +4,7 @@ const API_TAGS = API_CONFIG.TAGS;
 
 // State
 let notes = [];
+let allNotesCache = []; // Cache ALL notes including child notes
 let currentNote = null;
 let isEditing = false;
 let searchQuery = '';
@@ -50,6 +51,9 @@ async function loadNotes() {
         const response = await fetch(API_NOTES);
         const allNotes = await response.json();
         
+        // Store ALL notes in memory cache (including child notes)
+        allNotesCache = allNotes;
+        
         // Filter out sources, secret notes, and child notes (only show regular notes)
         notes = allNotes.filter(n => n.type !== 'source' && n.type !== 'secret' && !n.isChildNote);
         notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -62,6 +66,11 @@ async function loadNotes() {
     }
 }
 
+// Get all notes from memory cache (NO API CALL - instant access)
+function getAllNotesFromCache() {
+    return allNotesCache;
+}
+
 async function saveNote(noteData) {
     try {
         if (currentNote && currentNote.id) {
@@ -69,6 +78,11 @@ async function saveNote(noteData) {
             const updatedNote = { ...currentNote, ...noteData, updatedAt: new Date().toISOString() };
             const index = notes.findIndex(n => n.id === currentNote.id);
             if (index !== -1) notes[index] = updatedNote;
+            
+            // Update in allNotesCache
+            const cacheIndex = allNotesCache.findIndex(n => n.id === currentNote.id);
+            if (cacheIndex !== -1) allNotesCache[cacheIndex] = updatedNote;
+            
             currentNote = updatedNote;
             
             // Update UI immediately
@@ -95,6 +109,7 @@ async function saveNote(noteData) {
                 updatedAt: new Date().toISOString() 
             };
             notes.unshift(tempNote);
+            allNotesCache.unshift(tempNote);
             currentNote = tempNote;
             
             // Update UI immediately with temp note
@@ -114,6 +129,10 @@ async function saveNote(noteData) {
             // Replace temp note with real note
             const index = notes.findIndex(n => n.id === tempNote.id);
             if (index !== -1) notes[index] = newNote;
+            
+            const cacheIndex = allNotesCache.findIndex(n => n.id === tempNote.id);
+            if (cacheIndex !== -1) allNotesCache[cacheIndex] = newNote;
+            
             currentNote = newNote;
             StorageManager.saveCurrentNoteId(newNote.id);
             updateTypeCounts();
@@ -131,6 +150,7 @@ async function deleteNote(id) {
     try {
         // Optimistic UI - remove immediately
         notes = notes.filter(n => n.id !== id);
+        allNotesCache = allNotesCache.filter(n => n.id !== id);
         currentNote = null;
         StorageManager.saveCurrentNoteId(null);
         StorageManager.saveCachedNote(null);
@@ -942,8 +962,8 @@ function editContent(element) {
 
 // Linked Notes Functions
 async function openLinkedNotesModal() {
-    // Fetch all notes including child notes
-    const allNotes = await getAllNotes();
+    // Get all notes from memory cache (instant - no API call)
+    const allNotes = getAllNotesFromCache();
     const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
     
     const modal = document.createElement('div');
@@ -1057,8 +1077,8 @@ async function toggleLinkedNote(noteId) {
     const countElement = document.getElementById('linkedNotesCount');
     const selectedIds = getSelectedLinkedNotes();
     
-    // Fetch all notes to get note details
-    const allNotes = await getAllNotes();
+    // Get all notes from memory cache (instant - no API call)
+    const allNotes = getAllNotesFromCache();
     
     if (selectedIds.includes(noteId)) {
         // Remove - just re-render without this note
@@ -1154,26 +1174,14 @@ document.addEventListener('click', (e) => {
 });
 
 
-// Render linked notes list in view mode (async to fetch child notes)
-// Optimized: Cache API response
-let cachedAllNotes = null;
-let cacheTimestamp = 0;
-const CACHE_DURATION = 5000; // 5 seconds
-
-async function getAllNotes() {
-    const now = Date.now();
-    if (cachedAllNotes && (now - cacheTimestamp) < CACHE_DURATION) {
-        return cachedAllNotes;
-    }
-    
-    const response = await fetch(API_NOTES);
-    cachedAllNotes = await response.json();
-    cacheTimestamp = now;
-    return cachedAllNotes;
+// Get all notes from memory cache (NO API CALL)
+function getAllNotesFromCache() {
+    return allNotesCache;
 }
 
+// Render linked notes list in view mode
 async function renderLinkedNotesList(linkedNoteIds) {
-    const allNotes = await getAllNotes();
+    const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
     
     return linkedNoteIds.map(noteId => {
         const linkedNote = allNotes.find(n => n.id === noteId);
@@ -1206,7 +1214,7 @@ async function renderLinkedNotesList(linkedNoteIds) {
 
 // Render selected linked notes in edit mode
 async function renderSelectedLinkedNotes(linkedNoteIds) {
-    const allNotes = await getAllNotes();
+    const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
     
     return linkedNoteIds.map(noteId => {
         const linkedNote = allNotes.find(n => n.id === noteId);
@@ -1222,7 +1230,7 @@ async function renderSelectedLinkedNotes(linkedNoteIds) {
 // Select child note (can view child notes even though they're hidden from main list)
 async function selectChildNote(id) {
     try {
-        const allNotes = await getAllNotes();
+        const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
         const note = allNotes.find(n => n.id === id);
         
         if (note) {
@@ -1349,8 +1357,8 @@ async function quickCreateChildNote() {
             body: JSON.stringify(currentNote)
         });
         
-        // Clear cache to force refresh
-        cachedAllNotes = null;
+        // Update cache with new child note
+        allNotesCache.push(newChildNote);
         
         // Refresh view to show new child note
         await showViewMode();
@@ -1361,10 +1369,11 @@ async function quickCreateChildNote() {
 }
 
 
-// Open linked note for editing (double-click on content)
+// Open linked note for editing (double-click on content) - OPTIMIZED
 async function openLinkedNoteForEdit(noteId) {
     try {
-        const allNotes = await getAllNotes();
+        // Get note from memory cache (INSTANT - no API call)
+        const allNotes = getAllNotesFromCache();
         const note = allNotes.find(n => n.id === noteId);
         
         if (note) {
@@ -1396,8 +1405,9 @@ async function openLinkedNoteForEdit(noteId) {
                             body: JSON.stringify(note)
                         });
                         
-                        // Clear cache to force refresh
-                        cachedAllNotes = null;
+                        // Update memory cache
+                        const cacheIndex = allNotesCache.findIndex(n => n.id === note.id);
+                        if (cacheIndex !== -1) allNotesCache[cacheIndex] = note;
                         
                         // Restore original current note and refresh view
                         currentNote = tempCurrentNote;
@@ -1412,6 +1422,7 @@ async function openLinkedNoteForEdit(noteId) {
         }
     } catch (error) {
         console.error('Error opening linked note for edit:', error);
+        alert('Error opening note');
     }
 }
 
@@ -1438,8 +1449,8 @@ async function deleteChildNote(childNoteId) {
             });
         }
         
-        // Clear cache to force refresh
-        cachedAllNotes = null;
+        // Update cache - remove deleted note
+        allNotesCache = allNotesCache.filter(n => n.id !== id);
         
         // Refresh view
         await showViewMode();
@@ -1452,7 +1463,7 @@ async function deleteChildNote(childNoteId) {
 
 // Render child notes in grid layout for edit mode
 async function renderEditChildNotesGrid(linkedNoteIds) {
-    const allNotes = await getAllNotes();
+    const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
     
     // Separate child notes and linked notes
     const childNotes = [];
@@ -1575,8 +1586,8 @@ async function createChildNoteFromEdit() {
         
         const newChildNote = await response.json();
         
-        // Clear cache
-        cachedAllNotes = null;
+        // Update cache with new child note
+        allNotesCache.push(newChildNote);
         
         // Add to UI
         const selectedContainer = document.getElementById('selectedLinkedNotes');
@@ -1609,8 +1620,8 @@ async function openLinkedNotesModalFromView() {
         return;
     }
     
-    // Fetch all notes including child notes
-    const allNotes = await getAllNotes();
+    // Get all notes from memory cache (instant - no API call)
+    const allNotes = getAllNotesFromCache();
     const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
     
     const modal = document.createElement('div');
@@ -1714,15 +1725,14 @@ function toggleLinkedNoteView(noteId) {
         const searchInput = document.getElementById('linkedNotesSearchView');
         const query = searchInput ? searchInput.value.toLowerCase() : '';
         
-        getAllNotes().then(allNotes => {
-            const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
-            const filteredNotes = query ? 
-                availableNotes.filter(n => 
-                    n.title.toLowerCase().includes(query) || 
-                    (n.content && n.content.toLowerCase().includes(query))
-                ) : availableNotes;
-            modalBody.innerHTML = renderLinkedNotesOptionsFromListView(filteredNotes);
-        });
+        const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
+        const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
+        const filteredNotes = query ? 
+            availableNotes.filter(n => 
+                n.title.toLowerCase().includes(query) || 
+                (n.content && n.content.toLowerCase().includes(query))
+            ) : availableNotes;
+        modalBody.innerHTML = renderLinkedNotesOptionsFromListView(filteredNotes);
     }
 }
 
@@ -1736,8 +1746,7 @@ async function saveLinkedNotesFromView() {
             body: JSON.stringify(currentNote)
         });
         
-        // Clear cache
-        cachedAllNotes = null;
+        // No need to update cache - linkedNotes is just an array of IDs
         
         // Close modal
         closeLinkedNotesModalView();

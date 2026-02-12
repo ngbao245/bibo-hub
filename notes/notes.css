@@ -999,7 +999,6 @@
     border: 1px solid var(--color-border);
     border-left: 3px solid var(--color-accent-primary);
     overflow: hidden;
-    animation: slideInChildNote 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .linked-note-header-bar {
@@ -1479,16 +1478,11 @@
 }
 
 .child-notes-list.collapsed {
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
-    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    display: none;
 }
 
 .child-notes-list:not(.collapsed) {
-    max-height: 3000px;
-    opacity: 1;
-    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    display: flex;
 }
 
 .no-child-notes {
@@ -1583,18 +1577,6 @@
 
     to {
         opacity: 1;
-    }
-}
-
-@keyframes slideInChildNote {
-    from {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
     }
 }
 
