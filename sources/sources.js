@@ -181,6 +181,7 @@ function showEditMode() {
                                 <input type="text" class="code-file-name-input" value="${escapeHtml(file.name)}" placeholder="File name">
                                 <div class="code-file-actions">
                                     <button type="button" class="btn-copy-code" onclick="copyCode('codeContent${index}')">Copy</button>
+                                    <button type="button" class="btn-download-code" onclick="downloadCode('codeContent${index}')">Download</button>
                                     ${files.length > 1 ? `<button type="button" class="btn-remove-block" onclick="removeCodeBlock(${index})">×</button>` : ''}
                                 </div>
                             </div>
@@ -260,7 +261,10 @@ function showViewMode() {
                     <div class="code-file-view">
                         <div class="code-file-view-header">
                             <span class="code-file-view-label">${escapeHtml(file.name)}</span>
-                            <button class="btn-copy-code" onclick="copyCodeView('codeView${index}')">Copy</button>
+                            <div class="code-file-view-actions">
+                                <button class="btn-copy-code" onclick="copyCodeView('codeView${index}')">Copy</button>
+                                <button class="btn-download-code" onclick="downloadCodeView('codeView${index}')">Download</button>
+                            </div>
                         </div>
                         <pre class="code-file-view-content" id="codeView${index}">${escapeHtml(file.content)}</pre>
                     </div>
@@ -349,6 +353,7 @@ function addCodeBlock() {
                 <input type="text" class="code-file-name-input" value="Code ${newIndex + 1}" placeholder="File name">
                 <div class="code-file-actions">
                     <button type="button" class="btn-copy-code" onclick="copyCode('codeContent${newIndex}')">Copy</button>
+                    <button type="button" class="btn-download-code" onclick="downloadCode('codeContent${newIndex}')">Download</button>
                     <button type="button" class="btn-remove-block" onclick="removeCodeBlock(${newIndex})">×</button>
                 </div>
             </div>
@@ -388,6 +393,12 @@ function reindexCodeBlocks() {
         const copyBtn = block.querySelector('.btn-copy-code');
         if (copyBtn) {
             copyBtn.setAttribute('onclick', `copyCode('${newId}')`);
+        }
+        
+        // Update download button onclick
+        const downloadBtn = block.querySelector('.btn-download-code');
+        if (downloadBtn) {
+            downloadBtn.setAttribute('onclick', `downloadCode('${newId}')`);
         }
         
         // Update remove button onclick
@@ -440,6 +451,30 @@ function copyCode(textareaId) {
             }, 1500);
         }
     }
+}
+
+// Download code (edit mode)
+function downloadCode(textareaId) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    
+    const block = textarea.closest('.code-file-block');
+    const nameInput = block.querySelector('.code-file-name-input');
+    const defaultName = nameInput ? nameInput.value.trim() : 'code';
+    
+    showDownloadModal(defaultName, textarea.value);
+}
+
+// Download code (view mode)
+function downloadCodeView(preId) {
+    const pre = document.getElementById(preId);
+    if (!pre) return;
+    
+    const view = pre.closest('.code-file-view');
+    const label = view.querySelector('.code-file-view-label');
+    const defaultName = label ? label.textContent.trim() : 'code';
+    
+    showDownloadModal(defaultName, pre.textContent);
 }
 
 // Copy code (view mode)

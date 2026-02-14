@@ -161,16 +161,19 @@
 .code-file-name-input {
     flex: 1;
     padding: var(--spacing-xs) var(--spacing-sm);
-    background: var(--color-bg-input);
-    border: 1px solid var(--color-border);
+    background: transparent;
+    border: none;
     color: var(--color-text-primary);
     font-size: var(--font-sm);
     font-family: 'Consolas', monospace;
+    margin-right: var(--spacing-sm);
+    transition: all var(--transition-normal);
 }
 
 .code-file-name-input:focus {
     outline: none;
-    border-color: var(--color-border-focus);
+    background: var(--color-bg-input);
+    box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.3);
 }
 
 .code-file-actions {
@@ -184,7 +187,8 @@
     font-family: 'Consolas', monospace;
 }
 
-.btn-copy-code {
+.btn-copy-code,
+.btn-download-code {
     padding: var(--spacing-xs) var(--spacing-md);
     background: var(--color-accent-primary);
     border: 1px solid var(--color-accent-primary);
@@ -195,7 +199,8 @@
     transition: all var(--transition-fast);
 }
 
-.btn-copy-code:hover {
+.btn-copy-code:hover,
+.btn-download-code:hover {
     background: var(--color-accent-primary-hover);
 }
 
@@ -255,6 +260,11 @@
     color: var(--color-text-primary);
     font-family: 'Consolas', monospace;
     font-weight: 500;
+}
+
+.code-file-view-actions {
+    display: flex;
+    gap: var(--spacing-xs);
 }
 
 .code-file-view-content {
@@ -463,3 +473,4 @@
         flex: 1;
     }
 }
+
