@@ -498,6 +498,45 @@ To add new type:
 - Verify `notes-mobile.js` is loaded
 - Check `.mobile-visible` class is added
 
+### Child notes showing extra whitespace
+**Problem**: Child note content displays with unwanted spaces/line breaks at the beginning, while parent note content displays correctly.
+
+**Root Cause**: HTML whitespace in template strings. When you write HTML with line breaks and indentation like this:
+```javascript
+<div class="linked-note-content-preview">
+    ${content}
+</div>
+```
+
+Browser creates **text nodes** containing the whitespace (line breaks + spaces), which get rendered as visible spaces on screen.
+
+**Solution**: Write HTML on a single line without line breaks between opening tag and content:
+```javascript
+// ❌ BAD - Creates whitespace nodes
+<div class="linked-note-content-preview">
+    ${content}
+</div>
+
+// ✅ GOOD - No whitespace nodes
+<div class="linked-note-content-preview">${content}</div>
+```
+
+**Where to check**: 
+- `renderLinkedNotesList()` function in `notes.js`
+- Any template string that renders user content
+- Look for line breaks between `>` and `${variable}`
+
+**Why parent notes don't have this issue**: Parent note content is rendered on a single line:
+```javascript
+<div class="content-text editable-content" ondblclick="editContent(this)">${currentNote.content || ''}</div>
+```
+
+**Technical explanation**: 
+- HTML spec says whitespace between tags is preserved as text nodes
+- Browser renders these text nodes as actual spaces
+- Single-line HTML eliminates these whitespace text nodes
+- This is standard HTML/browser behavior, not a bug
+
 ## 📝 Development Notes
 
 ### Adding New Features

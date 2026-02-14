@@ -6,6 +6,7 @@ const API_TAGS = API_CONFIG.TAGS;
 let notes = [];
 let allNotesCache = []; // Cache ALL notes including child notes
 let currentNote = null;
+let parentNoteContext = null; // Track parent note when viewing child notes
 let isEditing = false;
 let searchQuery = '';
 let currentTypeFilter = localStorage.getItem('notes_typeFilter') || 'all'; // Filter by type, restore from localStorage
@@ -145,21 +146,93 @@ async function saveNote(noteData) {
 }
 
 async function deleteNote(id) {
-    if (!confirm('Delete this note?')) return;
+    // Find the note to check if it has child notes
+    const noteToDelete = allNotesCache.find(n => n.id === id);
+    
+    // Check if this is a child note
+    const isChildNote = noteToDelete && noteToDelete.isChildNote;
+    const parentId = isChildNote ? noteToDelete.parentNoteId : null;
+    
+    // Customize confirm message based on child notes
+    let confirmMessage = 'Delete this note?';
+    if (noteToDelete && noteToDelete.linkedNotes && noteToDelete.linkedNotes.length > 0) {
+        const childCount = noteToDelete.linkedNotes.length;
+        confirmMessage = `Delete this note and its ${childCount} child note(s)?`;
+    }
+    
+    if (!confirm(confirmMessage)) return;
     
     try {
-        // Optimistic UI - remove immediately
+        // If note has child notes, delete them all
+        if (noteToDelete && noteToDelete.linkedNotes && noteToDelete.linkedNotes.length > 0) {
+            // Delete all child notes
+            for (const childId of noteToDelete.linkedNotes) {
+                // Delete from API
+                fetch(`${API_NOTES}/${childId}`, { method: 'DELETE' }).catch(error => {
+                    console.error('Error deleting child note from API:', error);
+                });
+                
+                // Remove from cache
+                allNotesCache = allNotesCache.filter(n => n.id !== childId);
+            }
+        }
+        
+        // If deleting a child note, remove it from parent's linkedNotes
+        if (isChildNote && parentId) {
+            const parent = allNotesCache.find(n => n.id === parentId);
+            if (parent && parent.linkedNotes) {
+                parent.linkedNotes = parent.linkedNotes.filter(childId => childId !== id);
+                
+                // Update parent in API
+                await fetch(`${API_NOTES}/${parentId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parent)
+                });
+                
+                // Update parent in cache
+                const parentCacheIndex = allNotesCache.findIndex(n => n.id === parentId);
+                if (parentCacheIndex !== -1) {
+                    allNotesCache[parentCacheIndex] = parent;
+                }
+            }
+        }
+        
+        // Optimistic UI - remove note
         notes = notes.filter(n => n.id !== id);
         allNotesCache = allNotesCache.filter(n => n.id !== id);
-        currentNote = null;
-        StorageManager.saveCurrentNoteId(null);
-        StorageManager.saveCachedNote(null);
+        
+        // If deleted a child note, navigate back to parent
+        if (isChildNote && parentId) {
+            const parent = allNotesCache.find(n => n.id === parentId);
+            if (parent) {
+                currentNote = parent;
+                parentNoteContext = null;
+                StorageManager.saveCurrentNoteId(parent.id);
+                StorageManager.saveCachedNote(parent);
+                await showViewMode();
+            } else {
+                // Parent not found, go to empty state
+                currentNote = null;
+                parentNoteContext = null;
+                StorageManager.saveCurrentNoteId(null);
+                StorageManager.saveCachedNote(null);
+                editorView.innerHTML = '<div class="empty-editor">Select a note or create a new one</div>';
+            }
+        } else {
+            // Deleted a regular note, go to empty state
+            currentNote = null;
+            parentNoteContext = null;
+            StorageManager.saveCurrentNoteId(null);
+            StorageManager.saveCachedNote(null);
+            editorView.innerHTML = '<div class="empty-editor">Select a note or create a new one</div>';
+        }
+        
         StorageManager.clearEditorState();
         updateTypeCounts();
         renderNotesList();
-        editorView.innerHTML = '<div class="empty-editor">Select a note or create a new one</div>';
         
-        // Delete from API in background
+        // Delete note from API in background
         fetch(`${API_NOTES}/${id}`, { method: 'DELETE' }).catch(error => {
             console.error('Error deleting from API:', error);
         });
@@ -216,7 +289,7 @@ async function showViewMode() {
         <div class="editor-header" ondblclick="editTitleFromHeader(event)">
             <div class="editor-title editable-title">${escapeHtml(currentNote.title)}</div>
             <div class="editor-actions">
-                <button class="btn btn-link-notes" onclick="openLinkedNotesModalFromView()">🔗 Link</button>
+                <button class="btn btn-link-notes" onclick="openLinkedNotesModalFromView()">Link</button>
                 <button class="btn" onclick="editCurrentNote()">Edit</button>
                 <button class="btn btn-danger" onclick="deleteNote('${currentNote.id}')">Delete</button>
             </div>
@@ -602,6 +675,7 @@ function detectRichTextContent(note) {
 // Actions
 function newNote() {
     currentNote = null;
+    parentNoteContext = null; // Clear parent context when creating new note
     StorageManager.saveCurrentNoteId(null);
     StorageManager.clearEditorState();
     showEditMode();
@@ -611,6 +685,7 @@ function selectNote(id) {
     const note = notes.find(n => n.id === id);
     if (note) {
         currentNote = note;
+        parentNoteContext = null; // Clear parent context when selecting regular note
         StorageManager.saveCurrentNoteId(note.id);
         StorageManager.saveCachedNote(note);
         StorageManager.clearEditorState();
@@ -624,6 +699,9 @@ function editCurrentNote() {
 }
 
 function cancelEdit() {
+    // Clean up temp child notes from cache
+    allNotesCache = allNotesCache.filter(n => !n._isTemp);
+    
     StorageManager.clearEditorState();
     if (currentNote) {
         showViewMode();
@@ -670,7 +748,74 @@ function saveCurrentNote() {
         linkedNotes: getSelectedLinkedNotes() // Get selected linked notes from UI
     };
     
-    saveNote(noteData);
+    saveNoteWithTempChildren(noteData);
+}
+
+async function saveNoteWithTempChildren(noteData) {
+    try {
+        // First, create any temp child notes in DB
+        const linkedNotes = noteData.linkedNotes || [];
+        const realLinkedNotes = [];
+        
+        for (const noteId of linkedNotes) {
+            if (noteId.startsWith('temp_child_')) {
+                // This is a temp child note - create it in DB
+                const tempNote = allNotesCache.find(n => n.id === noteId);
+                if (tempNote) {
+                    const childData = {
+                        title: tempNote.title,
+                        content: tempNote.content,
+                        type: tempNote.type,
+                        source: tempNote.source || '',
+                        tags: tempNote.tags || '',
+                        example: tempNote.example || '',
+                        url1: tempNote.url1 || '',
+                        url2: tempNote.url2 || '',
+                        url3: tempNote.url3 || '',
+                        url4: tempNote.url4 || '',
+                        url5: tempNote.url5 || '',
+                        isChildNote: tempNote.isChildNote,
+                        parentNoteId: tempNote.parentNoteId,
+                        linkedNotes: tempNote.linkedNotes || [],
+                        wordCountEnabled: tempNote.wordCountEnabled || false,
+                        timerDuration: tempNote.timerDuration || '0',
+                        createdAt: tempNote.createdAt,
+                        updatedAt: new Date().toISOString()
+                    };
+                    
+                    const response = await fetch(API_NOTES, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(childData)
+                    });
+                    
+                    const newChildNote = await response.json();
+                    
+                    // Replace temp note with real note in cache
+                    const tempIndex = allNotesCache.findIndex(n => n.id === noteId);
+                    if (tempIndex !== -1) {
+                        allNotesCache[tempIndex] = newChildNote;
+                    }
+                    
+                    // Use real ID
+                    realLinkedNotes.push(newChildNote.id);
+                }
+            } else {
+                // This is a real note ID
+                realLinkedNotes.push(noteId);
+            }
+        }
+        
+        // Update noteData with real IDs
+        noteData.linkedNotes = realLinkedNotes;
+        
+        // Now save the parent note
+        await saveNote(noteData);
+        
+    } catch (error) {
+        console.error('Error saving note with temp children:', error);
+        alert('Error saving note');
+    }
 }
 
 // Event Listeners
@@ -872,6 +1017,27 @@ function htmlToPlainText(html) {
     return plainText;
 }
 
+// Clean HTML content for preview - remove empty tags and excessive whitespace
+function cleanHtmlForPreview(html) {
+    if (!html) return '';
+    
+    // Remove empty divs with only whitespace or &nbsp;
+    let cleaned = html
+        .replace(/<div[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/div>/gi, '')
+        .replace(/<p[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '')
+        .replace(/<span[^>]*>(\s|&nbsp;)*<\/span>/gi, '');
+    
+    // Remove leading/trailing empty divs and brs
+    cleaned = cleaned
+        .replace(/^(<div[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/div>|<br\s*\/?>|\s)+/gi, '')
+        .replace(/(<div[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/div>|<br\s*\/?>|\s)+$/gi, '');
+    
+    // Remove multiple consecutive <br> tags (more than 2)
+    cleaned = cleaned.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
+    
+    return cleaned.trim();
+}
+
 function hasAnyUrl(note) {
     return note.url1 || note.url2 || note.url3 || note.url4 || note.url5;
 }
@@ -891,13 +1057,19 @@ function editTitleFromHeader(event) {
 
 function editTitle(element) {
     const currentText = element.textContent;
-    const input = document.createElement('input');
-    input.type = 'text';
-    input.value = currentText;
-    input.className = 'inline-edit-input';
+    const textarea = document.createElement('textarea');
+    textarea.value = currentText;
+    textarea.className = 'inline-edit-input';
+    textarea.rows = 1;
+    
+    // Auto-resize textarea based on content
+    const autoResize = () => {
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+    };
     
     const saveTitle = async () => {
-        const newTitle = input.value.trim();
+        const newTitle = textarea.value.trim();
         if (newTitle && newTitle !== currentText) {
             currentNote.title = newTitle;
             await saveNote(currentNote);
@@ -905,9 +1077,10 @@ function editTitle(element) {
         showViewMode();
     };
     
-    input.addEventListener('blur', saveTitle);
-    input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+    textarea.addEventListener('blur', saveTitle);
+    textarea.addEventListener('input', autoResize);
+    textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             saveTitle();
         } else if (e.key === 'Escape') {
@@ -915,9 +1088,10 @@ function editTitle(element) {
         }
     });
     
-    element.replaceWith(input);
-    input.focus();
-    input.select();
+    element.replaceWith(textarea);
+    textarea.focus();
+    textarea.select();
+    autoResize();
 }
 
 function editContent(element) {
@@ -1203,10 +1377,7 @@ async function renderLinkedNotesList(linkedNoteIds) {
                         </button>
                     </div>
                 </div>
-                <div class="linked-note-content-preview content-text editable-content" 
-                     ondblclick="openLinkedNoteForEdit('${linkedNote.id}')">
-                    ${linkedNote.content || '<em style="color: var(--color-text-muted);">No content</em>'}
-                </div>
+                <div class="linked-note-content-preview" ondblclick="openLinkedNoteForEdit('${linkedNote.id}')">${cleanHtmlForPreview(linkedNote.content) || '<em style="color: var(--color-text-muted);">No content</em>'}</div>
             </div>
         ` : '';
     }).join('');
@@ -1234,6 +1405,11 @@ async function selectChildNote(id) {
         const note = allNotes.find(n => n.id === id);
         
         if (note) {
+            // Save parent context before switching to child note
+            if (currentNote && !currentNote.isChildNote) {
+                parentNoteContext = currentNote;
+            }
+            
             currentNote = note;
             StorageManager.saveCurrentNoteId(note.id);
             StorageManager.saveCachedNote(note);
@@ -1316,7 +1492,28 @@ function toggleChildNotesSection() {
 
 // Quick create child note from view mode
 async function quickCreateChildNote() {
-    if (!currentNote || !currentNote.id) {
+    // Determine the actual parent note
+    let actualParent = currentNote;
+    
+    // If current note is a child note, find its parent
+    if (currentNote && currentNote.isChildNote) {
+        if (currentNote.parentNoteId) {
+            // Find parent from cache using parentNoteId
+            const allNotes = getAllNotesFromCache();
+            const parent = allNotes.find(n => n.id === currentNote.parentNoteId);
+            if (parent) {
+                actualParent = parent;
+            } else {
+                alert('Cannot find parent note. Please navigate back to the parent note first.');
+                return;
+            }
+        } else {
+            alert('Cannot create child note. Please navigate back to the parent note first.');
+            return;
+        }
+    }
+    
+    if (!actualParent || !actualParent.id) {
         alert('Please save the parent note first.');
         return;
     }
@@ -1325,13 +1522,24 @@ async function quickCreateChildNote() {
     if (!title) return;
     
     try {
-        // Create new child note
+        // Create new child note with actual parent ID
         const childNoteData = {
             title: title,
             content: '<div><br></div>',
-            type: currentNote.type,
+            type: actualParent.type,
+            source: '',
+            tags: '',
+            example: '',
+            url1: '',
+            url2: '',
+            url3: '',
+            url4: '',
+            url5: '',
             isChildNote: true,
-            parentNoteId: currentNote.id,
+            parentNoteId: actualParent.id,
+            linkedNotes: [],
+            wordCountEnabled: false,
+            timerDuration: '0',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
@@ -1344,23 +1552,33 @@ async function quickCreateChildNote() {
         
         const newChildNote = await response.json();
         
-        // Add to parent's linkedNotes
-        if (!currentNote.linkedNotes) {
-            currentNote.linkedNotes = [];
+        // Add to actual parent's linkedNotes
+        if (!actualParent.linkedNotes) {
+            actualParent.linkedNotes = [];
         }
-        currentNote.linkedNotes.push(newChildNote.id);
+        actualParent.linkedNotes.push(newChildNote.id);
         
-        // Update parent note
-        await fetch(`${API_NOTES}/${currentNote.id}`, {
+        // Update actual parent note in API
+        await fetch(`${API_NOTES}/${actualParent.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(currentNote)
+            body: JSON.stringify(actualParent)
         });
         
         // Update cache with new child note
         allNotesCache.push(newChildNote);
         
-        // Refresh view to show new child note
+        // Update parent in cache
+        const parentCacheIndex = allNotesCache.findIndex(n => n.id === actualParent.id);
+        if (parentCacheIndex !== -1) {
+            allNotesCache[parentCacheIndex] = actualParent;
+        }
+        
+        // Switch back to parent note to show new child
+        currentNote = actualParent;
+        parentNoteContext = null;
+        StorageManager.saveCurrentNoteId(actualParent.id);
+        StorageManager.saveCachedNote(actualParent);
         await showViewMode();
     } catch (error) {
         console.error('Error creating child note:', error);
@@ -1450,7 +1668,7 @@ async function deleteChildNote(childNoteId) {
         }
         
         // Update cache - remove deleted note
-        allNotesCache = allNotesCache.filter(n => n.id !== id);
+        allNotesCache = allNotesCache.filter(n => n.id !== childNoteId);
         
         // Refresh view
         await showViewMode();
@@ -1485,21 +1703,30 @@ async function renderEditChildNotesGrid(linkedNoteIds) {
     // Render child notes
     if (childNotes.length > 0) {
         html += '<div class="notes-group-label">Child Notes</div>';
-        html += childNotes.map(linkedNote => `
-            <div class="child-note-card is-child" data-note-id="${linkedNote.id}">
-                <div class="child-note-card-header">
-                    <span class="child-note-icon">📄</span>
+        html += childNotes.map(linkedNote => {
+            const isTemp = linkedNote._isTemp || linkedNote.id.startsWith('temp_child_');
+            const clickHandler = isTemp ? '' : `onclick="selectChildNote('${linkedNote.id}')"`;
+            const clickTitle = isTemp ? 'Save parent note first to open this child note' : 'Click to open';
+            const cardStyle = isTemp ? 'opacity: 0.6; cursor: not-allowed;' : 'cursor: pointer;';
+            
+            return `
+            <div class="child-note-card is-child" data-note-id="${linkedNote.id}" style="${cardStyle}">
+                <div class="child-note-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0;">
+                        <span class="child-note-icon">📄</span>
+                        <span style="font-size: 12px; color: var(--color-text-primary); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(linkedNote.title)}</span>
+                    </div>
                     <button type="button" class="btn-card-remove" onclick="removeLinkedNoteFromEdit('${linkedNote.id}')" title="Remove">×</button>
                 </div>
-                <div class="child-note-card-body" onclick="selectChildNote('${linkedNote.id}')" title="Click to open">
-                    <div class="child-note-card-title">${escapeHtml(linkedNote.title)}</div>
+                <div class="child-note-card-body" ${clickHandler} title="${clickTitle}">
                     <div class="child-note-card-meta">
                         <span class="child-note-type">${getTypeLabel(linkedNote.type)}</span>
                         <span class="child-badge-mini">Child</span>
                     </div>
                 </div>
             </div>
-        `).join('');
+        `;
+        }).join('');
     }
     
     // Render linked notes
@@ -1567,45 +1794,50 @@ async function createChildNoteFromEdit() {
     if (!title) return;
     
     try {
-        // Create new child note
-        const childNoteData = {
+        // Create TEMP child note (not saved to DB yet)
+        const tempChildNote = {
+            id: 'temp_child_' + Date.now(), // Temp ID
             title: title,
             content: '<div><br></div>',
             type: currentNote.type,
+            source: '',
+            tags: '',
+            example: '',
+            url1: '',
+            url2: '',
+            url3: '',
+            url4: '',
+            url5: '',
             isChildNote: true,
             parentNoteId: currentNote.id,
+            linkedNotes: [],
+            wordCountEnabled: false,
+            timerDuration: '0',
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            _isTemp: true // Flag to identify temp notes
         };
         
-        const response = await fetch(API_NOTES, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(childNoteData)
-        });
-        
-        const newChildNote = await response.json();
-        
-        // Update cache with new child note
-        allNotesCache.push(newChildNote);
+        // Add to cache temporarily (will be replaced with real note on save)
+        allNotesCache.push(tempChildNote);
         
         // Add to UI
         const selectedContainer = document.getElementById('selectedLinkedNotes');
         const countElement = document.getElementById('linkedNotesCount');
         
         // Remove "no child notes" message if exists
-        const noNotesMsg = selectedContainer.querySelector('.no-linked-notes');
+        const noNotesMsg = selectedContainer.querySelector('.no-child-notes-edit');
         if (noNotesMsg) noNotesMsg.remove();
         
-        // Get current linked notes and add new one
+        // Get current linked notes and add new temp one
         const currentLinkedNotes = getSelectedLinkedNotes();
-        currentLinkedNotes.push(newChildNote.id);
+        currentLinkedNotes.push(tempChildNote.id);
         
         // Re-render
         selectedContainer.innerHTML = await renderEditChildNotesGrid(currentLinkedNotes);
         countElement.textContent = currentLinkedNotes.length;
         
-        alert('Child note created! Remember to save the parent note.');
+        // No alert needed - will be saved when parent is saved
     } catch (error) {
         console.error('Error creating child note:', error);
         alert('Error creating child note');

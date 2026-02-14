@@ -175,7 +175,8 @@
     border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
+    gap: var(--spacing-md);
     cursor: pointer;
     user-select: none;
     transition: background var(--transition-normal);
@@ -188,11 +189,17 @@
 .editor-title {
     font-size: var(--font-md);
     color: var(--color-text-secondary);
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    line-height: 1.5;
 }
 
 .editor-actions {
     display: flex;
     gap: var(--spacing-sm);
+    flex-shrink: 0;
 }
 
 .editor-content {
@@ -645,11 +652,18 @@
     border: 1px solid var(--color-border-focus);
     color: var(--color-text-primary);
     font-size: var(--font-md);
-    font-family: 'Consolas', 'Courier New', monospace;
+    font-family: inherit;
+    line-height: 1.5;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    resize: none;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .inline-edit-input:focus {
     outline: none;
+    box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.3);
 }
 
 /* ===== EDIT MODAL ===== */
@@ -1093,15 +1107,150 @@
     overflow-y: auto;
     cursor: pointer;
     transition: background var(--transition-normal);
-    line-height: 1.6;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    color: var(--color-text-primary);
 }
 
 .linked-note-content-preview:hover {
     background: var(--color-bg-hover);
 }
 
+/* Apply same HTML handling rules as .content-text */
+.linked-note-content-preview div[style*="white-space: pre"] {
+    white-space: pre !important;
+    overflow-x: auto !important;
+    word-wrap: normal !important;
+    max-width: 100% !important;
+    display: block !important;
+}
+
+.linked-note-content-preview div[style*="font-size"],
+.linked-note-content-preview div[style*="line-height"],
+.linked-note-content-preview div[style*="background-color"] {
+    overflow-x: auto !important;
+    white-space: pre !important;
+    word-wrap: normal !important;
+    max-width: 100% !important;
+}
+
+.linked-note-content-preview strong {
+    color: var(--color-accent-secondary);
+    font-weight: bold;
+}
+
 .linked-note-content-preview em {
+    color: var(--color-accent-secondary);
     font-style: italic;
+}
+
+.linked-note-content-preview u {
+    color: var(--color-accent-secondary);
+    text-decoration: underline;
+}
+
+.linked-note-content-preview ul,
+.linked-note-content-preview ol {
+    margin-left: 20px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.linked-note-content-preview li {
+    margin-bottom: 4px;
+}
+
+.linked-note-content-preview ul {
+    list-style-type: disc;
+}
+
+.linked-note-content-preview ol {
+    list-style-type: decimal;
+}
+
+/* Rich text formatting - same as .view-mode .content-text */
+.linked-note-content-preview strong,
+.linked-note-content-preview b {
+    color: var(--color-accent-secondary);
+    font-weight: bold;
+}
+
+.linked-note-content-preview em,
+.linked-note-content-preview i {
+    color: var(--color-accent-secondary);
+    font-style: italic;
+}
+
+.linked-note-content-preview s,
+.linked-note-content-preview strike,
+.linked-note-content-preview del {
+    text-decoration: line-through;
+}
+
+.linked-note-content-preview mark.highlight {
+    background-color: #ffeb3b;
+    color: #000;
+    padding: 2px 4px;
+}
+
+.linked-note-content-preview span[style*="background-color: rgb(255, 235, 59)"],
+.linked-note-content-preview span[style*="background-color:#ffeb3b"],
+.linked-note-content-preview span[style*="background-color: #ffeb3b"] {
+    background-color: #ffeb3b !important;
+    color: #000 !important;
+    padding: 2px 4px;
+}
+
+/* Code block in linked note preview */
+.linked-note-content-preview .code-block-wrapper {
+    position: relative;
+    margin: var(--spacing-md) 0;
+}
+
+.linked-note-content-preview .code-paste-btn,
+.linked-note-content-preview .code-clear-btn {
+    display: none;
+}
+
+.linked-note-content-preview .code-copy-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 4px;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.linked-note-content-preview .code-copy-btn:hover {
+    background: var(--color-bg-elevated);
+}
+
+.linked-note-content-preview .code-block {
+    background: #1a1a1a;
+    border: 1px solid var(--color-border);
+    padding: var(--spacing-md);
+    padding-top: 40px;
+    overflow-x: auto;
+    white-space: pre;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #d4d4d4;
+    border-radius: 4px;
+}
+
+.linked-note-content-preview .code-block code {
+    background: transparent;
+    padding: 0;
+    color: inherit;
+    font-family: inherit;
 }
 
 /* Old styles - keep for backward compatibility */
