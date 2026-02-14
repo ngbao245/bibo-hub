@@ -14,8 +14,17 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="BiBo Tools">
+    
+    <!-- Common Styles -->
+    <link rel="stylesheet" href="common.css">
 </head>
 <body>
+    <!-- Config -->
+    <script src="config.js"></script>
+    
+    <!-- Daily Reminder Loader -->
+    <script src="daily-reminder/daily-reminder-loader.js"></script>
+    
     <script>
         // Redirect to last visited page or hub
         const lastPage = localStorage.getItem('app_currentPage');
