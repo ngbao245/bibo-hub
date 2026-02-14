@@ -1,18 +1,22 @@
 # Backup Modal
 
-Export and import notes data with statistics display.
+Export and import notes and tasks data with statistics display and tab-based interface.
 
 ## 📋 Overview
 
-Backup modal provides data export/import functionality for notes. Features JSON export, merge/replace import modes, and statistics display showing note counts by type.
+Backup modal provides data export/import functionality for both notes and tasks. Features JSON export, merge/replace import modes, file type validation, and statistics display showing counts by type. Organized in tabs for easy navigation between Notes and Tasks backup.
 
 ## 🚀 Features
 
-- **Export Notes**: Export all notes as JSON file
+- **Dual Tab Interface**: Separate tabs for Notes and Tasks backup
+- **Export Data**: Export notes or tasks as JSON file
 - **Import Modes**: 
-  - Merge: Add imported notes to existing notes
-  - Replace: Replace all notes with imported notes
-- **Statistics Display**: Show counts by type (Total, IELTS, Code, Course)
+  - Merge: Add imported data to existing data
+  - Replace: Replace all data with imported data
+- **File Type Validation**: Automatically detects and prevents wrong file type imports
+- **Statistics Display**: 
+  - Notes: Total, Note, IELTS, Code, Course, Secret, Source
+  - Tasks: Total, Pending, Completed, Lists
 - **Global Access**: Open from any page with Alt+B
 - **Toggle Support**: Press Alt+B once to open, again to close
 
@@ -21,133 +25,172 @@ Backup modal provides data export/import functionality for notes. Features JSON 
 ```
 backup/
 ├── backup-loader.js        # Dynamic modal loader
-├── backup-modal.js         # Modal logic
-├── backup-modal.css        # Modal styles
+├── backup-modal.js         # Modal logic with tabs
+├── backup-modal.css        # Modal styles with tabs
 └── README.md               # This file
 ```
 
 ## 🔧 Technical Implementation
 
-### Statistics Loading (backup-modal.js)
+### Tab System
 
-**Load and Display Counts:**
+**Switch Between Tabs:**
+```javascript
+function dmSwitchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.dm-tab').forEach(btn => btn.classList.remove('active'));
+    event.target.classList.add('active');
+    document.querySelectorAll('.dm-tab-content').forEach(content => content.classList.remove('active'));
+    document.getElementById(tab === 'notes' ? 'dmNotesTab' : 'dmTasksTab').classList.add('active');
+}
+```
+
+### Statistics Loading
+
+**Notes Statistics (Optimized - Single Pass):**
 ```javascript
 async function dmLoadStatistics() {
-    try {
-        const response = await fetch(API_CONFIG.NOTES);
-        const allNotes = await response.json();
-        
-        // Filter out secret and source notes
-        const notes = allNotes.filter(n => n.type !== 'secret' && n.type !== 'source');
-        
-        // Count by type
-        const counts = {
-            total: notes.length,
-            ielts: notes.filter(n => n.type === 'ielts').length,
-            code: notes.filter(n => n.type === 'code').length,
-            course: notes.filter(n => n.type === 'course').length
-        };
-        
-        // Update UI
-        document.getElementById('dmTotalNotes').textContent = counts.total;
-        document.getElementById('dmIeltsNotes').textContent = counts.ielts;
-        document.getElementById('dmCodeNotes').textContent = counts.code;
-        document.getElementById('dmCourseNotes').textContent = counts.course;
-    } catch (error) {
-        console.error('Error loading statistics:', error);
-    }
+    const response = await fetch(DM_API_URL);
+    const notes = await response.json();
+
+    // Count by type in single pass
+    const counts = { total: notes.length, note: 0, ielts: 0, code: 0, course: 0, secret: 0, source: 0 };
+    notes.forEach(n => { if (counts.hasOwnProperty(n.type)) counts[n.type]++; });
+
+    document.getElementById('dmTotalNotes').textContent = counts.total;
+    document.getElementById('dmRegularNotes').textContent = counts.note;
+    // ... update other counts
 }
 ```
 
-### Export Function
+**Tasks Statistics (Optimized - Single Pass):**
+```javascript
+async function dmLoadTasksStatistics() {
+    const response = await fetch(DM_TASKS_URL);
+    const allTasks = await response.json();
+    
+    // Count in single pass
+    const counts = { tasks: 0, pending: 0, completed: 0, lists: 0 };
+    allTasks.forEach(t => {
+        if (t.type === 'task') {
+            counts.tasks++;
+            if (t.status === 'pending') counts.pending++;
+            if (t.status === 'completed') counts.completed++;
+        } else if (t.type === 'list') {
+            counts.lists++;
+        }
+    });
 
-**Export as JSON:**
+    document.getElementById('dmTotalTasks').textContent = counts.tasks;
+    // ... update other counts
+}
+```
+
+### File Type Validation
+
+**Detect Notes vs Tasks File:**
+```javascript
+// Validate file type
+const firstItem = importedData[0];
+const hasNotesFields = 'content' in firstItem || 'wordCountEnabled' in firstItem || 'timerDuration' in firstItem;
+const hasTasksFields = 'status' in firstItem || 'priority' in firstItem || 'dueDate' in firstItem;
+
+if (hasTasksFields) {
+    throw new Error('Wrong file type: This is a Tasks backup file. Please use the Tasks tab to import.');
+}
+
+if (!hasNotesFields) {
+    throw new Error('Invalid notes file format: Missing required note fields');
+}
+```
+
+**Why this approach:**
+- Checks unique fields that only exist in notes or tasks
+- Fast validation (only checks first item)
+- Clear error messages guide user to correct tab
+- Prevents accidental data corruption
+
+### Export Functions
+
+**Export Notes:**
 ```javascript
 async function dmExportNotes() {
-    try {
-        const response = await fetch(API_CONFIG.NOTES);
-        const allNotes = await response.json();
-        
-        // Filter out secret and source notes
-        const notes = allNotes.filter(n => n.type !== 'secret' && n.type !== 'source');
-        
-        // Create JSON file
-        const dataStr = JSON.stringify(notes, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
-        
-        // Download file
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `notes-backup-${new Date().toISOString().split('T')[0]}.json`;
-        link.click();
-        
-        // Cleanup
-        URL.revokeObjectURL(url);
-        
-        alert('Notes exported successfully!');
-    } catch (error) {
-        console.error('Error exporting notes:', error);
-        alert('Error exporting notes');
+    const response = await fetch(DM_API_URL);
+    const notes = await response.json();
+    
+    const dataStr = JSON.stringify(notes, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bibo-notes-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+```
+
+**Export Tasks:**
+```javascript
+async function dmExportTasks() {
+    const response = await fetch(DM_TASKS_URL);
+    const tasks = await response.json();
+    
+    const dataStr = JSON.stringify(tasks, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `bibo-tasks-backup-${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+}
+```
+
+### Import Functions
+
+**Import with Validation:**
+```javascript
+async function dmImportNotes(mode) {
+    const file = fileInput.files[0];
+    const text = await file.text();
+    const importedData = JSON.parse(text);
+    
+    // Validate array
+    if (!Array.isArray(importedData) || importedData.length === 0) {
+        throw new Error('Invalid file format');
+    }
+    
+    // Validate file type
+    const firstItem = importedData[0];
+    const hasNotesFields = 'content' in firstItem || 'wordCountEnabled' in firstItem;
+    const hasTasksFields = 'status' in firstItem || 'priority' in firstItem;
+    
+    if (hasTasksFields) {
+        throw new Error('Wrong file type: This is a Tasks backup file');
+    }
+    
+    // Import logic
+    if (mode === 'replace') {
+        await dmDeleteAllNotes();
+    }
+    
+    for (const note of importedData) {
+        await fetch(DM_API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(noteData)
+        });
     }
 }
 ```
 
-### Import Function
-
-**Import with Merge/Replace:**
-```javascript
-async function dmImportNotes(mode) {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    
-    input.onchange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        try {
-            const text = await file.text();
-            const importedNotes = JSON.parse(text);
-            
-            if (!Array.isArray(importedNotes)) {
-                alert('Invalid file format');
-                return;
-            }
-            
-            if (mode === 'replace') {
-                // Delete all existing notes
-                const response = await fetch(API_CONFIG.NOTES);
-                const existingNotes = await response.json();
-                const regularNotes = existingNotes.filter(n => n.type !== 'secret' && n.type !== 'source');
-                
-                for (const note of regularNotes) {
-                    await fetch(`${API_CONFIG.NOTES}/${note.id}`, { method: 'DELETE' });
-                }
-            }
-            
-            // Import notes
-            for (const note of importedNotes) {
-                // Remove id to create new notes
-                const { id, ...noteData } = note;
-                await fetch(API_CONFIG.NOTES, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(noteData)
-                });
-            }
-            
-            alert(`Imported ${importedNotes.length} notes successfully!`);
-            dmLoadStatistics(); // Refresh statistics
-        } catch (error) {
-            console.error('Error importing notes:', error);
-            alert('Error importing notes');
-        }
-    };
-    
-    input.click();
-}
-```
+**Why this approach:**
+- Validates file type before any operations
+- Prevents accidental data loss
+- Clear error messages
+- Optimized single-pass counting
 
 ### Modal Loader (backup-loader.js)
 
