@@ -175,7 +175,7 @@
     border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--spacing-md);
     cursor: pointer;
     user-select: none;
@@ -1001,6 +1001,112 @@
 
 /* ===== LINKED NOTES STYLES ===== */
 
+/* Context Menu for Child Notes */
+.child-note-context-menu {
+    position: absolute;
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+    z-index: 10000;
+    min-width: 200px;
+    padding: 6px;
+    animation: contextMenuFadeIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes contextMenuFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    border-radius: 6px;
+    position: relative;
+}
+
+.context-menu-item:not(.disabled):hover {
+    background: var(--color-accent-blue);
+    transform: translateX(4px);
+}
+
+.context-menu-item:not(.disabled):hover .context-menu-text {
+    color: white;
+}
+
+.context-menu-item:not(.disabled):hover .context-menu-icon {
+    transform: scale(1.2);
+}
+
+.context-menu-item:not(.disabled):active {
+    transform: translateX(2px) scale(0.98);
+}
+
+.context-menu-item.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.context-menu-item.context-menu-danger:hover:not(.disabled) {
+    background: var(--color-danger);
+}
+
+.context-menu-item.context-menu-danger:hover:not(.disabled) .context-menu-text {
+    color: white;
+}
+
+.context-menu-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.context-menu-text {
+    font-size: 14px;
+    color: var(--color-text-primary);
+    flex: 1;
+    font-weight: 500;
+    transition: color 0.15s ease;
+}
+
+.context-menu-separator {
+    height: 1px;
+    background: var(--color-border);
+    margin: 6px 8px;
+}
+
+/* Hover indicator */
+.context-menu-item:not(.disabled)::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%) scaleX(0);
+    width: 3px;
+    height: 60%;
+    background: white;
+    border-radius: 0 2px 2px 0;
+    transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.context-menu-item:not(.disabled):hover::before {
+    transform: translateY(-50%) scaleX(1);
+}
+
 /* Linked Notes in View Mode */
 .linked-notes-list {
     display: flex;
@@ -1013,6 +1119,52 @@
     border: 1px solid var(--color-border);
     border-left: 3px solid var(--color-accent-primary);
     overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+/* Reorder animations */
+.linked-note-content-item.reorder-move-up {
+    animation: moveUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.linked-note-content-item.reorder-move-down {
+    animation: moveDown 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes moveUp {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    50% {
+        transform: translateY(-120%);
+        opacity: 0.5;
+        z-index: 100;
+    }
+
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes moveDown {
+    0% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+
+    50% {
+        transform: translateY(120%);
+        opacity: 0.5;
+        z-index: 100;
+    }
+
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 .linked-note-header-bar {
@@ -1096,6 +1248,29 @@
 }
 
 .btn-delete-child-note:hover {
+    background: var(--color-danger);
+    color: white;
+    border-color: var(--color-danger);
+}
+
+.btn-unlink-note {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    padding: 2px 8px;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    border-radius: 3px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-unlink-note:hover {
     background: var(--color-danger);
     color: white;
     border-color: var(--color-danger);
@@ -1603,8 +1778,8 @@
 
 .btn-add-child-note {
     padding: 6px 12px;
-    background: var(--color-accent-secondary);
-    border: 1px solid var(--color-accent-secondary);
+    background: var(--color-accent-primary);
+    border: 1px solid var(--color-accent-primary);
     color: white;
     font-size: var(--font-sm);
     font-family: inherit;
@@ -1615,8 +1790,8 @@
 }
 
 .btn-add-child-note:hover {
-    background: #00a8e8;
-    border-color: #00a8e8;
+    background: var(--color-accent-primary-hover);
+    border-color: var(--color-accent-primary-hover);
     transform: translateY(-1px);
 }
 
