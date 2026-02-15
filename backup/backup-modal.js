@@ -40,7 +40,7 @@ async function dmLoadStatistics() {
         const notes = await response.json();
 
         // Count by type in single pass
-        const counts = { total: notes.length, note: 0, ielts: 0, code: 0, course: 0, secret: 0, source: 0 };
+        const counts = { total: notes.length, note: 0, ielts: 0, code: 0, course: 0, interview: 0, secret: 0, source: 0 };
         notes.forEach(n => { if (counts.hasOwnProperty(n.type)) counts[n.type]++; });
 
         document.getElementById('dmTotalNotes').textContent = counts.total;
@@ -48,6 +48,7 @@ async function dmLoadStatistics() {
         document.getElementById('dmIeltsNotes').textContent = counts.ielts;
         document.getElementById('dmCodeNotes').textContent = counts.code;
         document.getElementById('dmCourseNotes').textContent = counts.course;
+        document.getElementById('dmInterviewNotes').textContent = counts.interview;
         document.getElementById('dmSecretNotes').textContent = counts.secret;
         document.getElementById('dmSourceNotes').textContent = counts.source;
     } catch (error) {

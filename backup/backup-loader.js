@@ -62,6 +62,10 @@ async function loadBackupModal() {
                                         <div class="dm-stat-label">Course</div>
                                     </div>
                                     <div class="dm-stat-item">
+                                        <div class="dm-stat-value secondary" id="dmInterviewNotes">0</div>
+                                        <div class="dm-stat-label">Interview</div>
+                                    </div>
+                                    <div class="dm-stat-item">
                                         <div class="dm-stat-value secondary" id="dmSecretNotes">0</div>
                                         <div class="dm-stat-label">Secret</div>
                                     </div>

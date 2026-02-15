@@ -474,6 +474,9 @@ async function showEditMode(restoreData = null) {
                                 <div class="note-type-option" onclick="setNoteType('code')">
                                     <span class="option-text">Code</span>
                                 </div>
+                                <div class="note-type-option" onclick="setNoteType('interview')">
+                                    <span class="option-text">Interview</span>
+                                </div>
                             </div>
                         </div>
                         <!-- Hidden input for note type -->
@@ -977,7 +980,8 @@ function updateTypeCounts() {
         note: notes.filter(n => n.type === 'note').length,
         ielts: notes.filter(n => n.type === 'ielts').length,
         course: notes.filter(n => n.type === 'course').length,
-        code: notes.filter(n => n.type === 'code').length
+        code: notes.filter(n => n.type === 'code').length,
+        interview: notes.filter(n => n.type === 'interview').length
     };
     
     document.getElementById('countAll').textContent = counts.all;
@@ -985,6 +989,7 @@ function updateTypeCounts() {
     document.getElementById('countIelts').textContent = counts.ielts;
     document.getElementById('countCourse').textContent = counts.course;
     document.getElementById('countCode').textContent = counts.code;
+    document.getElementById('countInterview').textContent = counts.interview;
 }
 
 // Restore state from cache IMMEDIATELY (no API wait)
