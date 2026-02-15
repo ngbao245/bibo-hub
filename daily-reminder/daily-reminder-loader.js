@@ -16,7 +16,6 @@ async function loadDailyReminder() {
             <div id="dailyReminderModal" class="daily-reminder-modal">
                 <div class="daily-reminder-content">
                     <div class="daily-reminder-header">
-                        <div class="daily-reminder-icon">☀️</div>
                         <div class="daily-reminder-header-text">
                             <h2>Daily Tasks Reminder</h2>
                             <p>You have pending daily tasks</p>

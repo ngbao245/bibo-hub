@@ -107,11 +107,41 @@ function showDailyReminder(tasks) {
     
     // Show modal
     modal.classList.add('show');
+    
+    // Add click outside to close
+    setTimeout(() => {
+        modal.addEventListener('click', handleModalOutsideClick);
+    }, 100);
+    
+    // Add ESC key to close
+    document.addEventListener('keydown', handleEscapeKey);
+}
+
+function handleModalOutsideClick(e) {
+    const modal = document.getElementById('dailyReminderModal');
+    const modalContent = modal.querySelector('.daily-reminder-content');
+    
+    // Check if click is outside modal content
+    if (e.target === modal && !modalContent.contains(e.target)) {
+        closeDailyReminder();
+        modal.removeEventListener('click', handleModalOutsideClick);
+    }
+}
+
+function handleEscapeKey(e) {
+    if (e.key === 'Escape') {
+        closeDailyReminder();
+        document.removeEventListener('keydown', handleEscapeKey);
+    }
 }
 
 async function closeDailyReminder() {
     const modal = document.getElementById('dailyReminderModal');
     if (!modal) return;
+    
+    // Remove event listeners
+    modal.removeEventListener('click', handleModalOutsideClick);
+    document.removeEventListener('keydown', handleEscapeKey);
     
     // Close modal immediately
     modal.classList.remove('show');
