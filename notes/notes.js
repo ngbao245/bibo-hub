@@ -761,13 +761,13 @@ function cancelEdit() {
 function saveCurrentNote() {
     const title = document.getElementById('noteTitle').value.trim();
     const contentTextarea = document.getElementById('noteContent');
-    let content = contentTextarea.value.trim();
+    let content = contentTextarea.value; // Don't trim to preserve leading/trailing whitespace
     
     // IMPORTANT: If textarea is readonly (rich text content), keep original content
     if (contentTextarea.readOnly && currentNote && currentNote.content) {
         content = currentNote.content;
     } else if (content) {
-        // Convert plain text to HTML for storage (preserve line breaks)
+        // Convert plain text to HTML for storage (preserve ALL line breaks including multiple empty lines)
         content = content.replace(/\n/g, '<br>');
         // Wrap in div if not already wrapped
         if (!content.startsWith('<div>')) {
@@ -1072,31 +1072,22 @@ function htmlToPlainText(html) {
     // Get plain text content
     let plainText = temp.textContent || temp.innerText || '';
     
-    // Clean up multiple consecutive line breaks
-    plainText = plainText.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
-    
+    // Don't trim or limit consecutive line breaks - preserve all whitespace
     return plainText;
 }
 
-// Clean HTML content for preview - remove empty tags and excessive whitespace
+// Clean HTML content for preview - minimal cleaning to preserve formatting
 function cleanHtmlForPreview(html) {
     if (!html) return '';
     
-    // Remove empty divs with only whitespace or &nbsp;
+    // Only remove completely empty tags (no content at all)
     let cleaned = html
-        .replace(/<div[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/div>/gi, '')
-        .replace(/<p[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '')
-        .replace(/<span[^>]*>(\s|&nbsp;)*<\/span>/gi, '');
+        .replace(/<div[^>]*><\/div>/gi, '')
+        .replace(/<p[^>]*><\/p>/gi, '')
+        .replace(/<span[^>]*><\/span>/gi, '');
     
-    // Remove leading/trailing empty divs and brs
-    cleaned = cleaned
-        .replace(/^(<div[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/div>|<br\s*\/?>|\s)+/gi, '')
-        .replace(/(<div[^>]*>(\s|&nbsp;|<br\s*\/?>)*<\/div>|<br\s*\/?>|\s)+$/gi, '');
-    
-    // Remove multiple consecutive <br> tags (more than 2)
-    cleaned = cleaned.replace(/(<br\s*\/?>\s*){3,}/gi, '<br><br>');
-    
-    return cleaned.trim();
+    // Don't trim or remove line breaks - preserve all formatting
+    return cleaned;
 }
 
 function hasAnyUrl(note) {

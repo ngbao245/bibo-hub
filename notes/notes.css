@@ -1278,7 +1278,7 @@
 
 .linked-note-content-preview {
     padding: var(--spacing-md);
-    max-height: 300px;
+    max-height: calc(100vh - 300px);
     overflow-y: auto;
     cursor: pointer;
     transition: background var(--transition-normal);
@@ -1286,6 +1286,7 @@
     white-space: pre-wrap;
     overflow-x: auto;
     color: var(--color-text-primary);
+    -webkit-overflow-scrolling: touch;
 }
 
 .linked-note-content-preview:hover {
