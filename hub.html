@@ -342,6 +342,11 @@
                 Notes
             </button>
 
+            <button class="tool-btn" onclick="openTasks()" data-shortcut="Alt+D">
+                <span class="tool-icon">📋</span>
+                Tasks
+            </button>
+
             <button class="tool-btn" onclick="openEncoderModalLazy()" data-shortcut="Alt+E">
                 <span class="tool-icon">🔐</span>
                 Encoder
@@ -358,12 +363,12 @@
             </button>
 
             <button class="tool-btn" onclick="openJSON()" data-shortcut="Alt+J">
-                <span class="tool-icon">📋</span>
+                <span class="tool-icon">📄</span>
                 JSON
             </button>
 
             <button class="tool-btn" onclick="openMarkdown()" data-shortcut="Alt+M">
-                <span class="tool-icon">📄</span>
+                <span class="tool-icon">🗒️</span>
                 Markdown
             </button>
 
@@ -485,6 +490,7 @@
         // Placeholder functions
         function openTimer() { alert('Timer - Coming soon!'); }
         function openNotes() { window.location.href = 'notes/notes.html'; }
+        function openTasks() { window.location.href = 'tasks/tasks.html'; }
         function openColor() { alert('Color Picker - Coming soon!'); }
         function openQR() { alert('QR Code - Coming soon!'); }
         function openJSON() { alert('JSON Formatter - Coming soon!'); }

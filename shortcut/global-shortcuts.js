@@ -65,3 +65,31 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Navigation functions
+function openNotes() {
+    // Detect current path
+    const isSubPage = window.location.pathname.includes('/notes/') || 
+                      window.location.pathname.includes('/tasks/') ||
+                      window.location.pathname.includes('/sources/') ||
+                      window.location.pathname.includes('/project-packer/');
+    
+    if (isSubPage) {
+        window.location.href = '../notes/notes.html';
+    } else {
+        window.location.href = './notes/notes.html';
+    }
+}
+
+function openTasks() {
+    // Detect current path
+    const isSubPage = window.location.pathname.includes('/notes/') || 
+                      window.location.pathname.includes('/tasks/') ||
+                      window.location.pathname.includes('/sources/') ||
+                      window.location.pathname.includes('/project-packer/');
+    
+    if (isSubPage) {
+        window.location.href = '../tasks/tasks.html';
+    } else {
+        window.location.href = './tasks/tasks.html';
+    }
+}

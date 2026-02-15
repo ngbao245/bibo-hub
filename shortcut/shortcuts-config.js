@@ -11,6 +11,7 @@ const SHORTCUTS_CONFIG = {
     
     // Navigation
     'alt+n': { name: 'Notes', action: 'openNotes' },
+    'alt+d': { name: 'Tasks', action: 'openTasks' },
     
     // Future features (not yet implemented)
     'alt+shift+t': { name: 'Timer', action: 'openTimer' },
