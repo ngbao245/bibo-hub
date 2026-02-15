@@ -2138,10 +2138,25 @@ let pendingSaves = 0; // Track số lượng saves đang pending
 
 // Warn user before leaving if there are unsaved changes
 window.addEventListener('beforeunload', (e) => {
+    // Check if there are pending saves
     if (pendingSaves > 0) {
         e.preventDefault();
         e.returnValue = ''; // Chrome requires returnValue to be set
         return 'You have unsaved changes. Are you sure you want to leave?';
+    }
+    
+    // Check if rich text editor is open
+    if (window.isRichTextEditorOpen) {
+        e.preventDefault();
+        e.returnValue = '';
+        return 'You are currently editing. Are you sure you want to leave?';
+    }
+    
+    // Check if in edit mode
+    if (isEditing) {
+        e.preventDefault();
+        e.returnValue = '';
+        return 'You are currently editing. Are you sure you want to leave?';
     }
 });
 

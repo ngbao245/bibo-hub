@@ -7,6 +7,9 @@ class RichTextEditor {
         this.initialContent = initialContent; // Store initial content for comparison
         this.timerInterval = null;
         
+        // Set global flag that editor is open
+        window.isRichTextEditorOpen = true;
+        
         // Restore timer from session storage (per note)
         const noteId = noteData.id || 'new';
         const sessionKey = `richtext_timer_${noteId}`;
