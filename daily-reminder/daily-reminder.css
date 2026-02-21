@@ -14,7 +14,7 @@
 }
 
 .daily-reminder-modal.show {
-    display: flex;
+    display: flex !important;
     animation: fadeIn var(--transition-normal);
 }
 
@@ -231,10 +231,6 @@
     font-size: 13px;
     color: var(--color-text-secondary);
     transition: color var(--transition-fast);
-}
-
-.daily-reminder-snooze-checkbox:hover .checkbox-label {
-    color: var(--color-text-primary);
 }
 
 .daily-reminder-snooze-checkbox:hover .checkbox-label {

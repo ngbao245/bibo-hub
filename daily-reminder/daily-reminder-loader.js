@@ -11,9 +11,9 @@ async function loadDailyReminder() {
                          window.location.pathname.includes('/sources/') ||
                          window.location.pathname.includes('/project-packer/') ? '../' : './';
         
-        // Inject HTML directly
+        // Inject HTML directly with inline style to prevent FOUC
         const html = `
-            <div id="dailyReminderModal" class="daily-reminder-modal">
+            <div id="dailyReminderModal" class="daily-reminder-modal" style="display: none;">
                 <div class="daily-reminder-content">
                     <div class="daily-reminder-header">
                         <div class="daily-reminder-header-text">
