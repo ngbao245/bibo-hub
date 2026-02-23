@@ -6,17 +6,17 @@ class RichTextEditor {
         this.editor = null;
         this.initialContent = initialContent; // Store initial content for comparison
         this.timerInterval = null;
-        
+
         // Set global flag that editor is open
         window.isRichTextEditorOpen = true;
-        
+
         // Restore timer from session storage (per note)
         const noteId = noteData.id || 'new';
         const sessionKey = `richtext_timer_${noteId}`;
         const savedTimer = localStorage.getItem(sessionKey);
         this.timerSeconds = savedTimer ? parseInt(savedTimer) : 0;
         this.sessionTimerKey = sessionKey;
-        
+
         this.timerRunning = false;
         this.wordCountActive = noteData.wordCountEnabled || false; // Restore word count state
         this.wordCountInterval = null;
@@ -66,40 +66,47 @@ class RichTextEditor {
         `;
 
         this.editor = this.container.querySelector('#richtextEditor');
-        
+
         // Set content safely
         if (content) {
-            this.editor.innerHTML = this.sanitizeContent(content);
+            const sanitizedContent = this.sanitizeContent(content);
+            this.editor.innerHTML = sanitizedContent;
         }
-        
+
         this.setupEventListeners();
-        
+
         // Setup code block buttons for existing code blocks
         this.setupCodeBlockButtons();
-        
+
         // Restore word count state if it was active
         if (this.wordCountActive) {
             this.startWordCount();
         }
-        
+
         // Update timer display with restored duration
         this.updateTimerDisplay();
-        
+
         // Focus editor
         this.editor.focus();
         this.moveCursorToEnd();
+
+        // Store initial content AFTER browser has fully rendered and normalized the HTML
+        // This ensures accurate comparison in hasContentChanged()
+        setTimeout(() => {
+            this.initialContent = this.editor.innerHTML;
+        }, 100);
     }
 
     setupCodeBlockButtons() {
         // Find all existing code blocks and attach event listeners to their buttons
         const codeBlockWrappers = this.editor.querySelectorAll('.code-block-wrapper');
-        
+
         codeBlockWrappers.forEach(wrapper => {
             const copyBtn = wrapper.querySelector('.code-copy-btn');
             const pasteBtn = wrapper.querySelector('.code-paste-btn');
             const clearBtn = wrapper.querySelector('.code-clear-btn');
             const codeBlock = wrapper.querySelector('.code-block');
-            
+
             if (copyBtn && codeBlock) {
                 copyBtn.onclick = async (e) => {
                     e.preventDefault();
@@ -117,7 +124,7 @@ class RichTextEditor {
                     }
                 };
             }
-            
+
             if (pasteBtn && codeBlock) {
                 pasteBtn.onclick = async (e) => {
                     e.preventDefault();
@@ -133,7 +140,7 @@ class RichTextEditor {
                     }
                 };
             }
-            
+
             if (clearBtn && codeBlock) {
                 clearBtn.onclick = (e) => {
                     e.preventDefault();
@@ -189,7 +196,7 @@ class RichTextEditor {
 
         // Keyboard shortcuts
         this.editor.addEventListener('keydown', (e) => this.handleKeydown(e));
-        
+
         // Update toolbar state on selection change
         this.editor.addEventListener('keyup', () => this.updateToolbar());
         this.editor.addEventListener('mouseup', () => this.updateToolbar());
@@ -206,7 +213,7 @@ class RichTextEditor {
             if (selection.rangeCount > 0) {
                 let node = selection.anchorNode;
                 let codeBlockElement = null;
-                
+
                 // Check if inside code block
                 while (node && node !== this.editor) {
                     if (node.classList && node.classList.contains('code-block')) {
@@ -215,7 +222,7 @@ class RichTextEditor {
                     }
                     node = node.parentNode;
                 }
-                
+
                 // If inside code block, copy as plain text
                 if (codeBlockElement) {
                     e.preventDefault();
@@ -235,7 +242,7 @@ class RichTextEditor {
             if (selection.rangeCount > 0) {
                 let node = selection.anchorNode;
                 let codeBlockElement = null;
-                
+
                 // Check if inside code block
                 while (node && node !== this.editor) {
                     if (node.classList && node.classList.contains('code-block')) {
@@ -244,12 +251,12 @@ class RichTextEditor {
                     }
                     node = node.parentNode;
                 }
-                
+
                 // If inside code block, select all content
                 if (codeBlockElement) {
                     e.preventDefault();
                     e.stopPropagation();
-                    
+
                     const range = document.createRange();
                     range.selectNodeContents(codeBlockElement);
                     selection.removeAllRanges();
@@ -308,7 +315,7 @@ class RichTextEditor {
             if (selection.rangeCount > 0) {
                 let node = selection.anchorNode;
                 let codeElement = null;
-                
+
                 // Check if inside code block
                 while (node && node !== this.editor) {
                     if (node.tagName === 'CODE' && node.parentElement && node.parentElement.classList.contains('code-block')) {
@@ -317,7 +324,7 @@ class RichTextEditor {
                     }
                     node = node.parentNode;
                 }
-                
+
                 // If inside code block and content is only zero-width space, clear it
                 if (codeElement && codeElement.textContent === '\u200B') {
                     e.preventDefault();
@@ -331,7 +338,7 @@ class RichTextEditor {
             if (selection.rangeCount > 0) {
                 let node = selection.anchorNode;
                 let isInCodeBlock = false;
-                
+
                 // Check if inside code block (check for both <pre> tag and code-block class)
                 while (node && node !== this.editor) {
                     if ((node.tagName === 'PRE' && node.classList && node.classList.contains('code-block')) ||
@@ -341,7 +348,7 @@ class RichTextEditor {
                     }
                     node = node.parentNode;
                 }
-                
+
                 // If inside code block, insert plain newline instead of creating new <pre>
                 if (isInCodeBlock) {
                     e.preventDefault();
@@ -373,21 +380,21 @@ class RichTextEditor {
     toggleHighlight() {
         const selection = window.getSelection();
         if (!selection.rangeCount) return;
-        
+
         const range = selection.getRangeAt(0);
         const selectedText = range.toString();
-        
+
         if (!selectedText) return;
-        
+
         // Check if selection is inside a highlight (check for both <mark> and <span> with background)
         let node = range.commonAncestorContainer;
         if (node.nodeType === Node.TEXT_NODE) {
             node = node.parentNode;
         }
-        
+
         let highlightElement = null;
         let tempNode = node;
-        
+
         while (tempNode && tempNode !== this.editor) {
             // Check for <mark> with highlight class
             if (tempNode.tagName === 'MARK' && tempNode.classList.contains('highlight')) {
@@ -404,14 +411,14 @@ class RichTextEditor {
             }
             tempNode = tempNode.parentNode;
         }
-        
+
         if (highlightElement) {
             // Remove highlight - select the element and remove format
             const newRange = document.createRange();
             newRange.selectNodeContents(highlightElement);
             selection.removeAllRanges();
             selection.addRange(newRange);
-            
+
             // Use execCommand to maintain undo history
             document.execCommand('removeFormat', false, null);
         } else {
@@ -423,14 +430,14 @@ class RichTextEditor {
     insertCodeBlock() {
         const selection = window.getSelection();
         const selectedText = selection.toString();
-        
+
         // Create line break before code block
         const brBefore = document.createElement('br');
-        
+
         // Create code block wrapper
         const codeBlockWrapper = document.createElement('div');
         codeBlockWrapper.className = 'code-block-wrapper';
-        
+
         // Create paste button
         const pasteBtn = document.createElement('button');
         pasteBtn.className = 'code-paste-btn';
@@ -449,11 +456,11 @@ class RichTextEditor {
             e.stopPropagation();
             try {
                 const text = await navigator.clipboard.readText();
-                
+
                 // Traverse to find code block
                 let node = pasteBtn;
                 let codeBlockElement = null;
-                
+
                 while (node && node !== document.body) {
                     if (node.classList && node.classList.contains('code-block')) {
                         codeBlockElement = node;
@@ -465,7 +472,7 @@ class RichTextEditor {
                     }
                     node = node.parentElement;
                 }
-                
+
                 if (codeBlockElement) {
                     codeBlockElement.innerHTML = '';
                     codeBlockElement.textContent = text;
@@ -476,7 +483,7 @@ class RichTextEditor {
                 alert('Cannot access clipboard. Please paste manually (Ctrl+V)');
             }
         };
-        
+
         // Create copy button
         const copyBtn = document.createElement('button');
         copyBtn.className = 'code-copy-btn';
@@ -498,12 +505,12 @@ class RichTextEditor {
                 // Traverse up from button to find code-block (same logic as Ctrl+A)
                 let node = copyBtn;
                 let codeBlockElement = null;
-                
+
                 console.log('Starting from:', node);
-                
+
                 while (node && node !== document.body) {
                     console.log('Checking node:', node, 'classList:', node.classList);
-                    
+
                     if (node.classList && node.classList.contains('code-block')) {
                         codeBlockElement = node;
                         console.log('Found code-block via parent!');
@@ -520,20 +527,20 @@ class RichTextEditor {
                     }
                     node = node.parentElement;
                 }
-                
+
                 console.log('Final code block:', codeBlockElement);
-                
+
                 if (codeBlockElement) {
                     // Get ALL text from code block
                     let text = codeBlockElement.innerText || codeBlockElement.textContent || '';
                     console.log('Text to copy:', text.substring(0, 100));
-                    
+
                     if (text === '\u200B') {
                         text = '';
                     }
                     await navigator.clipboard.writeText(text);
                     console.log('COPY SUCCESS!');
-                    
+
                     const originalText = copyBtn.textContent;
                     copyBtn.textContent = 'Copied';
                     setTimeout(() => {
@@ -547,7 +554,7 @@ class RichTextEditor {
                 alert('Cannot copy to clipboard. Please copy manually (Ctrl+C)');
             }
         };
-        
+
         // Create clear button for code block
         const clearBtn = document.createElement('button');
         clearBtn.className = 'code-clear-btn';
@@ -564,11 +571,11 @@ class RichTextEditor {
         clearBtn.onclick = (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Traverse to find code block
             let node = clearBtn;
             let codeBlockElement = null;
-            
+
             while (node && node !== document.body) {
                 if (node.classList && node.classList.contains('code-block')) {
                     codeBlockElement = node;
@@ -580,43 +587,43 @@ class RichTextEditor {
                 }
                 node = node.parentElement;
             }
-            
+
             if (codeBlockElement) {
                 codeBlockElement.innerHTML = '';
                 codeBlockElement.textContent = '\u200B';
                 codeBlockElement.focus();
             }
         };
-        
+
         // Create code block element
         const codeBlock = document.createElement('pre');
         codeBlock.className = 'code-block';
         codeBlock.contentEditable = 'true';
-        
+
         const code = document.createElement('code');
         // Use zero-width space to make empty code block clickable
         code.textContent = selectedText || '\u200B';
         codeBlock.appendChild(code);
-        
+
         // Assemble wrapper
         codeBlockWrapper.appendChild(copyBtn);
         codeBlockWrapper.appendChild(pasteBtn);
         codeBlockWrapper.appendChild(clearBtn);
         codeBlockWrapper.appendChild(codeBlock);
-        
+
         // Create line break after code block
         const brAfter = document.createElement('br');
-        
+
         // Insert code block
         if (selection.rangeCount > 0) {
             const range = selection.getRangeAt(0);
             range.deleteContents();
-            
+
             // Insert: line break + code block wrapper + line break
             range.insertNode(brAfter);
             range.insertNode(codeBlockWrapper);
             range.insertNode(brBefore);
-            
+
             // Move cursor inside code block
             const newRange = document.createRange();
             const codeContent = codeBlock.querySelector('code');
@@ -626,11 +633,11 @@ class RichTextEditor {
             selection.addRange(newRange);
         }
     }
-    
+
     updateToolbar() {
         // Update button states based on current selection
         const commands = ['bold', 'italic', 'underline', 'strikeThrough', 'insertUnorderedList', 'insertOrderedList'];
-        
+
         commands.forEach(command => {
             const btn = this.container.querySelector(`[data-command="${command}"]`);
             if (btn) {
@@ -641,7 +648,7 @@ class RichTextEditor {
                 }
             }
         });
-        
+
         // Check if cursor is inside code block
         const codeBtn = this.container.querySelector('[data-command="code"]');
         if (codeBtn) {
@@ -649,7 +656,7 @@ class RichTextEditor {
             if (selection.rangeCount > 0) {
                 let node = selection.anchorNode;
                 let isInCodeBlock = false;
-                
+
                 // Traverse up to check if inside code block
                 while (node && node !== this.editor) {
                     if (node.classList && node.classList.contains('code-block')) {
@@ -658,7 +665,7 @@ class RichTextEditor {
                     }
                     node = node.parentNode;
                 }
-                
+
                 if (isInCodeBlock) {
                     codeBtn.classList.add('active');
                 } else {
@@ -666,7 +673,7 @@ class RichTextEditor {
                 }
             }
         }
-        
+
         // Check if cursor is inside highlight
         const highlightBtn = this.container.querySelector('[data-command="highlight"]');
         if (highlightBtn) {
@@ -674,7 +681,7 @@ class RichTextEditor {
             if (selection.rangeCount > 0) {
                 let node = selection.anchorNode;
                 let isHighlighted = false;
-                
+
                 // Traverse up to check if inside highlight
                 while (node && node !== this.editor) {
                     // Check for <mark> with highlight class
@@ -692,7 +699,7 @@ class RichTextEditor {
                     }
                     node = node.parentNode;
                 }
-                
+
                 if (isHighlighted) {
                     highlightBtn.classList.add('active');
                 } else {
@@ -714,7 +721,7 @@ class RichTextEditor {
     toggleFullscreen() {
         const modal = this.container.querySelector('.richtext-modal');
         const btn = this.container.querySelector('[data-action="fullscreen"]');
-        
+
         if (modal.classList.contains('fullscreen')) {
             modal.classList.remove('fullscreen');
             btn.innerHTML = '⛶';
@@ -724,7 +731,7 @@ class RichTextEditor {
             btn.innerHTML = '🗗';
             btn.title = 'Exit Fullscreen';
         }
-        
+
         setTimeout(() => {
             this.editor.focus();
         }, 100);
@@ -736,16 +743,16 @@ class RichTextEditor {
 
     sanitizeContent(content) {
         if (!content) return '';
-        
+
         try {
             // Create a temporary div to parse and clean HTML
             const temp = document.createElement('div');
             temp.innerHTML = content;
-            
+
             // Remove script tags and other dangerous elements
             const dangerousElements = temp.querySelectorAll('script, iframe, object, embed, link, meta, style');
             dangerousElements.forEach(el => el.remove());
-            
+
             // Remove dangerous attributes
             const allElements = temp.querySelectorAll('*');
             allElements.forEach(el => {
@@ -753,13 +760,13 @@ class RichTextEditor {
                 const safeAttributes = ['class', 'style'];
                 const attributes = [...el.attributes];
                 attributes.forEach(attr => {
-                    if (!safeAttributes.includes(attr.name.toLowerCase()) && 
+                    if (!safeAttributes.includes(attr.name.toLowerCase()) &&
                         !attr.name.startsWith('data-')) {
                         el.removeAttribute(attr.name);
                     }
                 });
             });
-            
+
             // Clean up malformed HTML by getting innerHTML again
             return temp.innerHTML;
         } catch (error) {
@@ -773,14 +780,32 @@ class RichTextEditor {
 
     hasContentChanged() {
         const currentContent = this.getContent();
-        const initialContent = this.sanitizeContent(this.initialContent);
-        
-        // Normalize both contents for comparison (remove extra whitespace)
+
+        // Normalize both contents for comparison to handle browser HTML differences
         const normalize = (html) => {
-            return html.replace(/\s+/g, ' ').trim();
+            if (!html) return '';
+
+            // Create temp div to let browser parse HTML consistently
+            const temp = document.createElement('div');
+            temp.innerHTML = html;
+
+            // Get text content (ignores HTML structure differences)
+            const textContent = temp.textContent || temp.innerText || '';
+
+            // Get simplified HTML structure (remove dynamic attributes)
+            const simplifiedHtml = temp.innerHTML
+                .replace(/>\s+</g, '><') // Remove whitespace between tags
+                .replace(/\s+/g, ' ') // Normalize multiple spaces
+                .replace(/<br\s*\/?>/gi, '<br>') // Normalize br tags
+                .replace(/\s*style="[^"]*"/gi, '') // Remove inline styles
+                .replace(/\s*class="[^"]*"/gi, '') // Remove classes
+                .trim();
+
+            // Return combination of text + simplified structure
+            return textContent + '|||' + simplifiedHtml;
         };
-        
-        return normalize(currentContent) !== normalize(initialContent);
+
+        return normalize(currentContent) !== normalize(this.initialContent);
     }
 
     closeWithConfirmation() {
@@ -803,10 +828,10 @@ class RichTextEditor {
             };
             this.onSave(content, editorState);
         }
-        
+
         // Clear session timer when saving
         localStorage.removeItem(this.sessionTimerKey);
-        
+
         this.close();
     }
 
@@ -821,15 +846,15 @@ class RichTextEditor {
     startWordCount() {
         this.wordCountActive = true;
         const wordCountBtn = this.container.querySelector('[data-action="word-count"]');
-        
+
         // Update immediately
         this.updateWordCount();
-        
+
         // Update every time user types
         this.wordCountInterval = setInterval(() => {
             this.updateWordCount();
         }, 500);
-        
+
         if (wordCountBtn) {
             wordCountBtn.classList.add('word-count-active');
         }
@@ -837,19 +862,19 @@ class RichTextEditor {
 
     stopWordCount() {
         this.wordCountActive = false;
-        
+
         if (this.wordCountInterval) {
             clearInterval(this.wordCountInterval);
             this.wordCountInterval = null;
         }
-        
+
         const wordCountBtn = this.container.querySelector('[data-action="word-count"]');
         const wordCountDisplay = this.container.querySelector('.word-count-display');
-        
+
         if (wordCountBtn) {
             wordCountBtn.classList.remove('word-count-active');
         }
-        
+
         if (wordCountDisplay) {
             wordCountDisplay.textContent = '-- words';
         }
@@ -857,20 +882,20 @@ class RichTextEditor {
 
     updateWordCount() {
         if (!this.wordCountActive) return;
-        
+
         let text = '';
         const selection = window.getSelection();
-        
+
         // Priority 1: If text is selected, count selected text
         if (selection && selection.toString().trim().length > 0) {
             text = selection.toString();
-        } 
+        }
         // Priority 2: If content has `` markers, count text between them
         else {
             const fullText = this.editor.innerText || '';
             const markerRegex = /``([\s\S]*?)``/;
             const match = fullText.match(markerRegex);
-            
+
             if (match && match[1]) {
                 text = match[1];
             } else {
@@ -878,13 +903,13 @@ class RichTextEditor {
                 text = fullText;
             }
         }
-        
+
         // Remove zero-width space and other invisible characters before counting
         text = text.replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
-        
+
         const words = text.trim().split(/\s+/).filter(word => word.length > 0);
         const count = words.length;
-        
+
         const wordCountDisplay = this.container.querySelector('.word-count-display');
         if (wordCountDisplay) {
             wordCountDisplay.textContent = `${count} ${count === 1 ? 'word' : 'words'}`;
@@ -902,17 +927,17 @@ class RichTextEditor {
     startTimer() {
         this.timerRunning = true;
         const timerBtn = this.container.querySelector('[data-action="timer"]');
-        
+
         this.timerInterval = setInterval(() => {
             this.timerSeconds++;
             this.updateTimerDisplay();
-            
+
             // Save to session storage every 5 seconds (performance optimization)
             if (this.timerSeconds % 5 === 0) {
                 localStorage.setItem(this.sessionTimerKey, this.timerSeconds.toString());
             }
         }, 1000);
-        
+
         if (timerBtn) {
             timerBtn.classList.add('timer-running');
         }
@@ -920,15 +945,15 @@ class RichTextEditor {
 
     stopTimer() {
         this.timerRunning = false;
-        
+
         if (this.timerInterval) {
             clearInterval(this.timerInterval);
             this.timerInterval = null;
         }
-        
+
         // Save timer when stopping (performance optimization)
         localStorage.setItem(this.sessionTimerKey, this.timerSeconds.toString());
-        
+
         const timerBtn = this.container.querySelector('[data-action="timer"]');
         if (timerBtn) {
             timerBtn.classList.remove('timer-running');
@@ -939,7 +964,7 @@ class RichTextEditor {
         const minutes = Math.floor(this.timerSeconds / 60);
         const seconds = this.timerSeconds % 60;
         const display = `⏱ ${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        
+
         const timerBtn = this.container.querySelector('[data-action="timer"]');
         if (timerBtn) {
             timerBtn.textContent = display;
@@ -947,11 +972,14 @@ class RichTextEditor {
     }
 
     close() {
+        // Clear global flag that editor is open
+        window.isRichTextEditorOpen = false;
+
         // Save timer before closing (if not already saved)
         if (this.timerSeconds > 0) {
             localStorage.setItem(this.sessionTimerKey, this.timerSeconds.toString());
         }
-        
+
         // Stop timer when closing
         if (this.timerInterval) {
             clearInterval(this.timerInterval);

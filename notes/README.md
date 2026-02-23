@@ -498,6 +498,33 @@ To add new type:
 - Verify `notes-mobile.js` is loaded
 - Check `.mobile-visible` class is added
 
+### Rich text editor always shows "unsaved changes" warning
+**Problem**: After opening rich text editor and closing it without making any changes, the app still warns about unsaved changes when trying to refresh or navigate away.
+
+**Root Cause**: The global flag `window.isRichTextEditorOpen` is set to `true` when editor opens, but was not cleared to `false` when editor closes. The `beforeunload` event handler in `notes.js` checks this flag and always prevents navigation if it's `true`.
+
+**Solution**: Clear the flag in the `close()` method of RichTextEditor:
+```javascript
+close() {
+    // Clear global flag that editor is open
+    window.isRichTextEditorOpen = false;
+    
+    // ... rest of cleanup code
+}
+```
+
+**Technical explanation**:
+- `window.isRichTextEditorOpen = true` is set in constructor (line 11)
+- `beforeunload` event checks this flag (notes.js line 2154-2157)
+- If flag is `true`, it prevents navigation with warning
+- Must set flag to `false` in `close()` to allow normal navigation
+- This is separate from content change detection in `hasContentChanged()`
+
+**Related code locations**:
+- Flag set: `notes-richtext.js` constructor
+- Flag check: `notes.js` beforeunload event handler
+- Flag clear: `notes-richtext.js` close() method
+
 ### Child notes showing extra whitespace
 **Problem**: Child note content displays with unwanted spaces/line breaks at the beginning, while parent note content displays correctly.
 
