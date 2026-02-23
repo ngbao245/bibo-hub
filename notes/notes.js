@@ -35,13 +35,13 @@ init();
 async function init() {
     // Restore state IMMEDIATELY from cache (no API wait)
     restoreStateFromCache();
-    
+
     // Setup listeners
     setupEventListeners();
-    
+
     // Load notes from API in background
     await loadNotes();
-    
+
     // Update with fresh API data
     updateStateFromAPI();
 }
@@ -51,10 +51,10 @@ async function loadNotes() {
     try {
         const response = await fetch(API_NOTES);
         const allNotes = await response.json();
-        
+
         // Store ALL notes in memory cache (including child notes)
         allNotesCache = allNotes;
-        
+
         // Filter out sources, secret notes, and child notes (only show regular notes)
         notes = allNotes.filter(n => n.type !== 'source' && n.type !== 'secret' && !n.isChildNote);
         notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -79,20 +79,20 @@ async function saveNote(noteData) {
             const updatedNote = { ...currentNote, ...noteData, updatedAt: new Date().toISOString() };
             const index = notes.findIndex(n => n.id === currentNote.id);
             if (index !== -1) notes[index] = updatedNote;
-            
+
             // Update in allNotesCache
             const cacheIndex = allNotesCache.findIndex(n => n.id === currentNote.id);
             if (cacheIndex !== -1) allNotesCache[cacheIndex] = updatedNote;
-            
+
             currentNote = updatedNote;
-            
+
             // Update UI immediately
             StorageManager.saveCurrentNoteId(currentNote.id);
             StorageManager.clearEditorState();
             updateTypeCounts();
             renderNotesList();
             showViewMode();
-            
+
             // Save to API in background
             fetch(`${API_NOTES}/${currentNote.id}`, {
                 method: 'PUT',
@@ -103,22 +103,22 @@ async function saveNote(noteData) {
             });
         } else {
             // Create new note - need to wait for ID from API
-            const tempNote = { 
-                ...noteData, 
+            const tempNote = {
+                ...noteData,
                 id: 'temp_' + Date.now(),
-                createdAt: new Date().toISOString(), 
-                updatedAt: new Date().toISOString() 
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
             };
             notes.unshift(tempNote);
             allNotesCache.unshift(tempNote);
             currentNote = tempNote;
-            
+
             // Update UI immediately with temp note
             StorageManager.clearEditorState();
             updateTypeCounts();
             renderNotesList();
             showViewMode();
-            
+
             // Create in API and update with real ID
             const response = await fetch(API_NOTES, {
                 method: 'POST',
@@ -126,14 +126,14 @@ async function saveNote(noteData) {
                 body: JSON.stringify({ ...noteData, createdAt: tempNote.createdAt, updatedAt: tempNote.updatedAt })
             });
             const newNote = await response.json();
-            
+
             // Replace temp note with real note
             const index = notes.findIndex(n => n.id === tempNote.id);
             if (index !== -1) notes[index] = newNote;
-            
+
             const cacheIndex = allNotesCache.findIndex(n => n.id === tempNote.id);
             if (cacheIndex !== -1) allNotesCache[cacheIndex] = newNote;
-            
+
             currentNote = newNote;
             StorageManager.saveCurrentNoteId(newNote.id);
             updateTypeCounts();
@@ -148,11 +148,11 @@ async function saveNote(noteData) {
 async function deleteNote(id) {
     // Find the note to check if it has child notes
     const noteToDelete = allNotesCache.find(n => n.id === id);
-    
+
     // Check if this is a child note
     const isChildNote = noteToDelete && noteToDelete.isChildNote;
     const parentId = isChildNote ? noteToDelete.parentNoteId : null;
-    
+
     // Count actual child notes (not just linked notes)
     let childNotesCount = 0;
     if (noteToDelete && noteToDelete.linkedNotes && noteToDelete.linkedNotes.length > 0) {
@@ -161,28 +161,28 @@ async function deleteNote(id) {
             return linkedNote && linkedNote.isChildNote;
         }).length;
     }
-    
+
     // Customize confirm message based on child notes
     let confirmMessage = 'Delete this note?';
     if (childNotesCount > 0) {
         confirmMessage = `Delete this note and its ${childNotesCount} child note(s)?`;
     }
-    
+
     if (!confirm(confirmMessage)) return;
-    
+
     try {
         // If note has linked notes, process them
         if (noteToDelete && noteToDelete.linkedNotes && noteToDelete.linkedNotes.length > 0) {
             for (const linkedId of noteToDelete.linkedNotes) {
                 const linkedNote = allNotesCache.find(n => n.id === linkedId);
-                
+
                 // Only DELETE if it's a child note
                 if (linkedNote && linkedNote.isChildNote) {
                     try {
                         // Delete from API - AWAIT để đảm bảo xóa xong
                         await fetch(`${API_NOTES}/${linkedId}`, { method: 'DELETE' });
                         console.log(`Deleted child note: ${linkedId}`);
-                        
+
                         // Remove from both arrays
                         notes = notes.filter(n => n.id !== linkedId);
                         allNotesCache = allNotesCache.filter(n => n.id !== linkedId);
@@ -194,20 +194,20 @@ async function deleteNote(id) {
                 // The linkedNotes array will be removed when parent is deleted
             }
         }
-        
+
         // If deleting a child note, remove it from parent's linkedNotes
         if (isChildNote && parentId) {
             const parent = allNotesCache.find(n => n.id === parentId);
             if (parent && parent.linkedNotes) {
                 parent.linkedNotes = parent.linkedNotes.filter(childId => childId !== id);
-                
+
                 // Update parent in API
                 await fetch(`${API_NOTES}/${parentId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(parent)
                 });
-                
+
                 // Update parent in cache
                 const parentCacheIndex = allNotesCache.findIndex(n => n.id === parentId);
                 if (parentCacheIndex !== -1) {
@@ -215,16 +215,16 @@ async function deleteNote(id) {
                 }
             }
         }
-        
+
         // Remove this note from linkedNotes of ALL other notes that reference it
-        const notesReferencingThis = allNotesCache.filter(n => 
+        const notesReferencingThis = allNotesCache.filter(n =>
             n.linkedNotes && n.linkedNotes.includes(id)
         );
-        
+
         for (const referencingNote of notesReferencingThis) {
             // Remove the deleted note from linkedNotes array
             referencingNote.linkedNotes = referencingNote.linkedNotes.filter(linkedId => linkedId !== id);
-            
+
             // Update in API
             try {
                 await fetch(`${API_NOTES}/${referencingNote.id}`, {
@@ -233,7 +233,7 @@ async function deleteNote(id) {
                     body: JSON.stringify(referencingNote)
                 });
                 console.log(`Removed reference from note: ${referencingNote.id}`);
-                
+
                 // Update in cache
                 const cacheIndex = allNotesCache.findIndex(n => n.id === referencingNote.id);
                 if (cacheIndex !== -1) {
@@ -243,11 +243,11 @@ async function deleteNote(id) {
                 console.error(`Error updating note ${referencingNote.id}:`, error);
             }
         }
-        
+
         // Optimistic UI - remove note
         notes = notes.filter(n => n.id !== id);
         allNotesCache = allNotesCache.filter(n => n.id !== id);
-        
+
         // If deleted a child note, navigate back to parent
         if (isChildNote && parentId) {
             const parent = allNotesCache.find(n => n.id === parentId);
@@ -273,11 +273,11 @@ async function deleteNote(id) {
             StorageManager.saveCachedNote(null);
             editorView.innerHTML = '<div class="empty-editor">Select a note or create a new one</div>';
         }
-        
+
         StorageManager.clearEditorState();
         updateTypeCounts();
         renderNotesList();
-        
+
         // Delete note from API in background
         fetch(`${API_NOTES}/${id}`, { method: 'DELETE' }).catch(error => {
             console.error('Error deleting from API:', error);
@@ -292,21 +292,21 @@ async function deleteNote(id) {
 function renderNotesList() {
     const filteredNotes = notes.filter(note => {
         // Filter by search query
-        const matchesSearch = !searchQuery || 
+        const matchesSearch = !searchQuery ||
             note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             note.content.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         // Filter by type
         const matchesType = currentTypeFilter === 'all' || note.type === currentTypeFilter;
-        
+
         return matchesSearch && matchesType;
     });
-    
+
     if (filteredNotes.length === 0) {
         notesList.innerHTML = '<div style="padding: 20px; text-align: center; color: #858585;">No notes found</div>';
         return;
     }
-    
+
     notesList.innerHTML = filteredNotes.map(note => `
         <div class="note-item ${currentNote && currentNote.id === note.id ? 'active' : ''}" onclick="selectNote('${note.id}')">
             <div class="note-item-content">
@@ -322,15 +322,15 @@ function renderNotesList() {
 
 async function showViewMode() {
     if (!currentNote) return;
-    
+
     isEditing = false;
-    
+
     // Render linked notes HTML if exists
     let linkedNotesHtml = '';
     if (currentNote.linkedNotes && currentNote.linkedNotes.length > 0) {
         linkedNotesHtml = await renderLinkedNotesList(currentNote.linkedNotes);
     }
-    
+
     editorView.innerHTML = `
         <div class="editor-header" ondblclick="editTitleFromHeader(event)">
             <div class="editor-title editable-title">${escapeHtml(currentNote.title)}</div>
@@ -411,7 +411,7 @@ async function showViewMode() {
             ` : ''}
         </div>
     `;
-    
+
     // Restore collapsed state after rendering
     restoreChildNotesState();
 }
@@ -419,18 +419,20 @@ async function showViewMode() {
 async function showEditMode(restoreData = null) {
     isEditing = true;
     const note = restoreData || currentNote || {};
-    
+
     // Set default type based on current filter
     if (!note.id && !note.type) {
         // New note: use current filter as default type (if not 'all')
         if (currentTypeFilter !== 'all') {
             note.type = currentTypeFilter;
+        } else {
+            note.type = 'note'; // Default to 'note' if filter is 'all'
         }
     }
-    
+
     // Generate default placeholder for new note
     const defaultPlaceholder = `New ${new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}`;
-    
+
     editorView.innerHTML = `
         <div class="editor-header">
             <div class="editor-title">${note.id ? 'Edit Note' : 'New Note'}</div>
@@ -480,7 +482,7 @@ async function showEditMode(restoreData = null) {
                             </div>
                         </div>
                         <!-- Hidden input for note type -->
-                        <input type="text" id="noteType" value="${note.type || 'note'}" style="display: none;">
+                        <input type="text" id="noteType" value="${note.type}" style="display: none;">
                     </div>
 
                     <div class="form-group">
@@ -572,10 +574,10 @@ async function showEditMode(restoreData = null) {
                         </div>
                     </div>
                     <div id="selectedLinkedNotes" class="child-notes-grid">
-                        ${note.linkedNotes && note.linkedNotes.length > 0 ? 
-                            await renderEditChildNotesGrid(note.linkedNotes)
-                            : '<div class="no-child-notes-edit">No child notes yet. Click + New or Link to add.</div>'
-                        }
+                        ${note.linkedNotes && note.linkedNotes.length > 0 ?
+            await renderEditChildNotesGrid(note.linkedNotes)
+            : '<div class="no-child-notes-edit">No child notes yet. Click + New or Link to add.</div>'
+        }
                     </div>
                     <div class="child-notes-count">
                         <span id="linkedNotesCount">${note.linkedNotes ? note.linkedNotes.length : 0}</span> note(s) total
@@ -584,19 +586,19 @@ async function showEditMode(restoreData = null) {
             </form>
         </div>
     `;
-    
+
     // Focus on title
     document.getElementById('noteTitle').focus();
-    
+
     // Setup auto-save for form fields
     StorageManager.setupAutoSave();
-    
+
     // Initialize timer duration dropdown display
     updateTimerDurationDisplay();
-    
+
     // Initialize note type dropdown display
     updateNoteTypeDisplay();
-    
+
     // Detect and warn about rich text content
     detectRichTextContent(note);
 }
@@ -612,10 +614,10 @@ function toggleNoteTypeDropdown() {
 function setNoteType(type) {
     const input = document.getElementById('noteType');
     const options = document.getElementById('noteTypeOptions');
-    
+
     input.value = type;
     updateNoteTypeDisplay();
-    
+
     // Close dropdown
     if (options) {
         options.style.display = 'none';
@@ -625,18 +627,19 @@ function setNoteType(type) {
 function updateNoteTypeDisplay() {
     const input = document.getElementById('noteType');
     const displayText = document.getElementById('noteTypeText');
-    
+
     if (!input || !displayText) return;
-    
+
     const type = input.value || 'note';
-    
+
     const typeLabels = {
         'note': 'Note',
         'ielts': 'IELTS',
         'course': 'Course',
-        'code': 'Code'
+        'code': 'Code',
+        'interview': 'Interview'
     };
-    
+
     displayText.textContent = typeLabels[type] || 'Note';
 }
 
@@ -651,7 +654,7 @@ function toggleTimerDurationDropdown() {
 function setTimerDuration(value) {
     const input = document.getElementById('noteTimerDuration');
     const options = document.getElementById('timerDurationOptions');
-    
+
     if (value === 'custom') {
         // Show prompt for custom duration
         const customValue = prompt('Enter duration in minutes:', input.value || '0');
@@ -666,7 +669,7 @@ function setTimerDuration(value) {
         input.value = value;
         updateTimerDurationDisplay();
     }
-    
+
     // Close dropdown
     if (options) {
         options.style.display = 'none';
@@ -676,11 +679,11 @@ function setTimerDuration(value) {
 function updateTimerDurationDisplay() {
     const input = document.getElementById('noteTimerDuration');
     const displayText = document.getElementById('timerDurationText');
-    
+
     if (!input || !displayText) return;
-    
+
     const minutes = parseInt(input.value) || 0;
-    
+
     if (minutes === 0) {
         displayText.textContent = 'Not set';
     } else if (minutes === 20) {
@@ -701,15 +704,15 @@ function updateTimerDurationDisplay() {
 // Detect if content has rich text formatting
 function detectRichTextContent(note) {
     if (!note || !note.content) return;
-    
+
     // Check if content has rich text tags (not just <div> and <br>)
     const richTextTags = /<(strong|em|u|b|i|ul|ol|li|code|pre|h[1-6]|span|p)[^>]*>/i;
     const hasRichText = richTextTags.test(note.content);
-    
+
     if (hasRichText) {
         const textarea = document.getElementById('noteContent');
         const warning = document.getElementById('richTextWarning');
-        
+
         if (textarea && warning) {
             // Make textarea readonly and show warning
             textarea.readOnly = true;
@@ -749,7 +752,7 @@ function editCurrentNote() {
 function cancelEdit() {
     // Clean up temp child notes from cache
     allNotesCache = allNotesCache.filter(n => !n._isTemp);
-    
+
     StorageManager.clearEditorState();
     if (currentNote) {
         showViewMode();
@@ -762,7 +765,7 @@ function saveCurrentNote() {
     const title = document.getElementById('noteTitle').value.trim();
     const contentTextarea = document.getElementById('noteContent');
     let content = contentTextarea.value; // Don't trim to preserve leading/trailing whitespace
-    
+
     // IMPORTANT: If textarea is readonly (rich text content), keep original content
     if (contentTextarea.readOnly && currentNote && currentNote.content) {
         content = currentNote.content;
@@ -774,11 +777,11 @@ function saveCurrentNote() {
             content = `<div>${content}</div>`;
         }
     }
-    
+
     // Use placeholder text as default title if empty
     const placeholder = document.getElementById('noteTitle').placeholder;
     const finalTitle = title || placeholder;
-    
+
     const noteData = {
         title: finalTitle,
         content: content || (currentNote ? currentNote.content : ''), // Keep existing content if empty
@@ -795,7 +798,7 @@ function saveCurrentNote() {
         timerDuration: document.getElementById('noteTimerDuration').value || "0",
         linkedNotes: getSelectedLinkedNotes() // Get selected linked notes from UI
     };
-    
+
     saveNoteWithTempChildren(noteData);
 }
 
@@ -804,7 +807,7 @@ async function saveNoteWithTempChildren(noteData) {
         // First, create any temp child notes in DB
         const linkedNotes = noteData.linkedNotes || [];
         const realLinkedNotes = [];
-        
+
         for (const noteId of linkedNotes) {
             if (noteId.startsWith('temp_child_')) {
                 // This is a temp child note - create it in DB
@@ -830,21 +833,21 @@ async function saveNoteWithTempChildren(noteData) {
                         createdAt: tempNote.createdAt,
                         updatedAt: new Date().toISOString()
                     };
-                    
+
                     const response = await fetch(API_NOTES, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(childData)
                     });
-                    
+
                     const newChildNote = await response.json();
-                    
+
                     // Replace temp note with real note in cache
                     const tempIndex = allNotesCache.findIndex(n => n.id === noteId);
                     if (tempIndex !== -1) {
                         allNotesCache[tempIndex] = newChildNote;
                     }
-                    
+
                     // Use real ID
                     realLinkedNotes.push(newChildNote.id);
                 }
@@ -853,13 +856,13 @@ async function saveNoteWithTempChildren(noteData) {
                 realLinkedNotes.push(noteId);
             }
         }
-        
+
         // Update noteData with real IDs
         noteData.linkedNotes = realLinkedNotes;
-        
+
         // Now save the parent note
         await saveNote(noteData);
-        
+
     } catch (error) {
         console.error('Error saving note with temp children:', error);
         alert('Error saving note');
@@ -869,13 +872,13 @@ async function saveNoteWithTempChildren(noteData) {
 // Event Listeners
 function setupEventListeners() {
     const clearSearchBtn = document.getElementById('clearSearch');
-    
+
     // Debounced search for smooth performance
     const debouncedSearch = debounce((value) => {
         searchQuery = value;
         renderNotesList();
     }, 300);
-    
+
     searchInput.addEventListener('input', (e) => {
         const value = e.target.value;
         // Show/hide clear button immediately (no debounce)
@@ -883,7 +886,7 @@ function setupEventListeners() {
         // Debounce the search
         debouncedSearch(value);
     });
-    
+
     // Close timer duration dropdown when clicking outside
     document.addEventListener('click', (e) => {
         const timerDropdown = document.getElementById('timerDurationOptions');
@@ -891,7 +894,7 @@ function setupEventListeners() {
         if (timerDropdown && timerBtn && !timerDropdown.contains(e.target) && !timerBtn.contains(e.target)) {
             timerDropdown.style.display = 'none';
         }
-        
+
         // Close note type dropdown when clicking outside
         const typeDropdown = document.getElementById('noteTypeOptions');
         const typeBtn = document.getElementById('noteTypeBtn');
@@ -899,7 +902,7 @@ function setupEventListeners() {
             typeDropdown.style.display = 'none';
         }
     });
-    
+
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         // Ctrl+S: Save note
@@ -930,7 +933,7 @@ function generateChildNoteTitle(parentNote) {
         const note = getAllNotesFromCache().find(n => n.id === id);
         return note && note.isChildNote;
     }).length : 0;
-    
+
     return `New ${childCount + 1} - ${new Date().toLocaleDateString()}`;
 }
 
@@ -938,23 +941,23 @@ function generateChildNoteTitle(parentNote) {
 function toggleTypeFilter() {
     const list = document.getElementById('noteTypeList');
     const toggle = document.getElementById('filterToggle');
-    
+
     list.classList.toggle('open');
     toggle.classList.toggle('open');
 }
 
 function filterByType(type) {
     currentTypeFilter = type;
-    
+
     // Save to localStorage
     localStorage.setItem('notes_typeFilter', type);
-    
+
     // Update active state
     document.querySelectorAll('.note-type-item').forEach(item => {
         item.classList.remove('active');
     });
     document.querySelector(`.note-type-item[data-type="${type}"]`).classList.add('active');
-    
+
     // Render filtered notes
     renderNotesList();
 }
@@ -963,11 +966,11 @@ function restoreTypeFilter() {
     // Restore active state from localStorage
     const savedFilter = localStorage.getItem('notes_typeFilter') || 'all';
     currentTypeFilter = savedFilter;
-    
+
     document.querySelectorAll('.note-type-item').forEach(item => {
         item.classList.remove('active');
     });
-    
+
     const activeItem = document.querySelector(`.note-type-item[data-type="${savedFilter}"]`);
     if (activeItem) {
         activeItem.classList.add('active');
@@ -983,7 +986,7 @@ function updateTypeCounts() {
         code: notes.filter(n => n.type === 'code').length,
         interview: notes.filter(n => n.type === 'interview').length
     };
-    
+
     document.getElementById('countAll').textContent = counts.all;
     document.getElementById('countNote').textContent = counts.note;
     document.getElementById('countIelts').textContent = counts.ielts;
@@ -1000,7 +1003,7 @@ function restoreStateFromCache() {
         showEditMode(editorState.formData);
         return;
     }
-    
+
     // Restore current note from cache
     const savedNoteId = StorageManager.loadCurrentNoteId();
     if (savedNoteId) {
@@ -1035,17 +1038,18 @@ function getTypeLabel(type) {
         note: 'Note',
         ielts: 'IELTS',
         course: 'Course',
-        code: 'Code'
+        code: 'Code',
+        interview: 'Interview'
     };
     return labels[type] || 'Note';
 }
 
 function formatDate(dateString) {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
     });
 }
 
@@ -1058,20 +1062,20 @@ function escapeHtml(text) {
 
 function htmlToPlainText(html) {
     if (!html) return '';
-    
+
     // Create a temporary div to parse HTML
     const temp = document.createElement('div');
     temp.innerHTML = html;
-    
+
     // Replace <br> and </div> with line breaks
     temp.innerHTML = temp.innerHTML
         .replace(/<br\s*\/?>/gi, '\n')
         .replace(/<\/div>/gi, '\n')
         .replace(/<div>/gi, '');
-    
+
     // Get plain text content
     let plainText = temp.textContent || temp.innerText || '';
-    
+
     // Don't trim or limit consecutive line breaks - preserve all whitespace
     return plainText;
 }
@@ -1079,13 +1083,13 @@ function htmlToPlainText(html) {
 // Clean HTML content for preview - minimal cleaning to preserve formatting
 function cleanHtmlForPreview(html) {
     if (!html) return '';
-    
+
     // Only remove completely empty tags (no content at all)
     let cleaned = html
         .replace(/<div[^>]*><\/div>/gi, '')
         .replace(/<p[^>]*><\/p>/gi, '')
         .replace(/<span[^>]*><\/span>/gi, '');
-    
+
     // Don't trim or remove line breaks - preserve all formatting
     return cleaned;
 }
@@ -1100,7 +1104,7 @@ function editTitleFromHeader(event) {
     if (event.target.tagName === 'BUTTON' || event.target.closest('button')) {
         return;
     }
-    
+
     const titleElement = event.currentTarget.querySelector('.editor-title');
     if (titleElement) {
         editTitle(titleElement);
@@ -1113,13 +1117,13 @@ function editTitle(element) {
     textarea.value = currentText;
     textarea.className = 'inline-edit-input';
     textarea.rows = 1;
-    
+
     // Auto-resize textarea based on content
     const autoResize = () => {
         textarea.style.height = 'auto';
         textarea.style.height = textarea.scrollHeight + 'px';
     };
-    
+
     const saveTitle = async () => {
         const newTitle = textarea.value.trim();
         if (newTitle && newTitle !== currentText) {
@@ -1128,7 +1132,7 @@ function editTitle(element) {
         }
         showViewMode();
     };
-    
+
     textarea.addEventListener('blur', saveTitle);
     textarea.addEventListener('input', autoResize);
     textarea.addEventListener('keydown', (e) => {
@@ -1139,7 +1143,7 @@ function editTitle(element) {
             showViewMode();
         }
     });
-    
+
     element.replaceWith(textarea);
     textarea.focus();
     textarea.select();
@@ -1150,10 +1154,10 @@ function editContent(element) {
     // Create container for rich text editor
     const editorContainer = document.createElement('div');
     document.body.appendChild(editorContainer);
-    
+
     // Sanitize content before passing to editor
     let contentToEdit = currentNote.content || '';
-    
+
     // If content looks like it might have malformed HTML, clean it
     if (contentToEdit.includes('<') && contentToEdit.includes('>')) {
         const temp = document.createElement('div');
@@ -1166,14 +1170,14 @@ function editContent(element) {
             contentToEdit = temp.innerHTML;
         }
     }
-    
+
     // Initialize rich text editor
     const editor = new RichTextEditor(
         editorContainer,
         contentToEdit,
         async (newContent, editorState) => {
             // Save callback with editor state
-            if (newContent !== currentNote.content || 
+            if (newContent !== currentNote.content ||
                 (editorState && editorState.wordCountEnabled !== currentNote.wordCountEnabled)) {
                 currentNote.content = newContent;
                 if (editorState) {
@@ -1191,7 +1195,7 @@ async function openLinkedNotesModal() {
     // Get all notes from memory cache (instant - no API call)
     const allNotes = getAllNotesFromCache();
     const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret' && !n.isChildNote);
-    
+
     const modal = document.createElement('div');
     modal.className = 'linked-notes-modal';
     modal.innerHTML = `
@@ -1211,14 +1215,14 @@ async function openLinkedNotesModal() {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Trigger animation
     requestAnimationFrame(() => {
         modal.style.opacity = '1';
     });
-    
+
     // Setup search with debounce for better performance
     const searchInput = document.getElementById('linkedNotesSearch');
     let searchTimeout;
@@ -1229,22 +1233,22 @@ async function openLinkedNotesModal() {
             const filteredNotes = availableNotes.filter(n => {
                 // Search in title
                 const matchTitle = n.title.toLowerCase().includes(query);
-                
+
                 // Search in content
                 const matchContent = n.content && n.content.toLowerCase().includes(query);
-                
+
                 // Search in type (e.g., "note", "code", "ielts", "course")
                 const matchType = n.type.toLowerCase().includes(query);
-                
+
                 return matchTitle || matchContent || matchType;
             });
             document.getElementById('linkedNotesModalBody').innerHTML = renderLinkedNotesOptionsFromList(filteredNotes);
         }, 200); // Debounce 200ms
     });
-    
+
     // Focus search
     setTimeout(() => searchInput.focus(), 100);
-    
+
     // Close on ESC key
     const handleEsc = (e) => {
         if (e.key === 'Escape') {
@@ -1257,11 +1261,11 @@ async function openLinkedNotesModal() {
 
 function renderLinkedNotesOptionsFromList(notesToRender) {
     const selectedIds = getSelectedLinkedNotes();
-    
+
     if (notesToRender.length === 0) {
         return '<div class="no-notes-available">No notes available</div>';
     }
-    
+
     return notesToRender.map(note => `
         <div class="linked-note-option ${selectedIds.includes(note.id) ? 'selected' : ''}" 
              onclick="toggleLinkedNote('${note.id}')">
@@ -1283,11 +1287,11 @@ function renderLinkedNotesOptionsFromList(notesToRender) {
 function renderLinkedNotesOptions(notesToRender = null) {
     const availableNotes = notesToRender || notes.filter(n => n.id !== currentNote?.id);
     const selectedIds = getSelectedLinkedNotes();
-    
+
     if (availableNotes.length === 0) {
         return '<div class="no-notes-available">No notes available</div>';
     }
-    
+
     return availableNotes.map(note => `
         <div class="linked-note-option ${selectedIds.includes(note.id) ? 'selected' : ''}" 
              onclick="toggleLinkedNote('${note.id}')">
@@ -1310,10 +1314,10 @@ async function toggleLinkedNote(noteId) {
     const selectedContainer = document.getElementById('selectedLinkedNotes');
     const countElement = document.getElementById('linkedNotesCount');
     const selectedIds = getSelectedLinkedNotes();
-    
+
     // Get all notes from memory cache (instant - no API call)
     const allNotes = getAllNotesFromCache();
-    
+
     if (selectedIds.includes(noteId)) {
         // Remove - just re-render without this note
         const newLinkedNotes = selectedIds.filter(id => id !== noteId);
@@ -1327,20 +1331,20 @@ async function toggleLinkedNote(noteId) {
         const newLinkedNotes = [...selectedIds, noteId];
         selectedContainer.innerHTML = await renderEditChildNotesGrid(newLinkedNotes);
     }
-    
+
     // Update count
     const newCount = getSelectedLinkedNotes().length;
     countElement.textContent = newCount;
-    
+
     // Update modal display
     const modalBody = document.getElementById('linkedNotesModalBody');
     if (modalBody) {
         const searchInput = document.getElementById('linkedNotesSearch');
         const query = searchInput ? searchInput.value.toLowerCase() : '';
         const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
-        const filteredNotes = query ? 
-            availableNotes.filter(n => 
-                n.title.toLowerCase().includes(query) || 
+        const filteredNotes = query ?
+            availableNotes.filter(n =>
+                n.title.toLowerCase().includes(query) ||
                 (n.content && n.content.toLowerCase().includes(query))
             ) : availableNotes;
         modalBody.innerHTML = renderLinkedNotesOptionsFromList(filteredNotes);
@@ -1351,29 +1355,29 @@ function removeLinkedNote(noteId) {
     const selectedContainer = document.getElementById('selectedLinkedNotes');
     const countElement = document.getElementById('linkedNotesCount');
     const chip = selectedContainer.querySelector(`[data-note-id="${noteId}"]`);
-    
+
     if (chip) {
         chip.remove();
-        
+
         // Update count
         const newCount = getSelectedLinkedNotes().length;
         countElement.textContent = newCount;
-        
+
         // Show "no linked notes" message if empty
         if (newCount === 0) {
             selectedContainer.innerHTML = '<div class="no-linked-notes">No linked notes selected</div>';
         }
-        
+
         // Update modal if open
         const modalBody = document.getElementById('linkedNotesModalBody');
         if (modalBody) {
             const searchInput = document.getElementById('linkedNotesSearch');
             const query = searchInput ? searchInput.value.toLowerCase() : '';
-            const filteredNotes = query ? 
-                notes.filter(n => 
-                    n.id !== currentNote?.id && 
-                    (n.title.toLowerCase().includes(query) || 
-                     (n.content && n.content.toLowerCase().includes(query)))
+            const filteredNotes = query ?
+                notes.filter(n =>
+                    n.id !== currentNote?.id &&
+                    (n.title.toLowerCase().includes(query) ||
+                        (n.content && n.content.toLowerCase().includes(query)))
                 ) : null;
             modalBody.innerHTML = renderLinkedNotesOptions(filteredNotes);
         }
@@ -1383,7 +1387,7 @@ function removeLinkedNote(noteId) {
 function getSelectedLinkedNotes() {
     const selectedContainer = document.getElementById('selectedLinkedNotes');
     if (!selectedContainer) return currentNote?.linkedNotes || [];
-    
+
     const chips = selectedContainer.querySelectorAll('.selected-note-chip');
     return Array.from(chips).map(chip => chip.getAttribute('data-note-id'));
 }
@@ -1416,10 +1420,10 @@ function getAllNotesFromCache() {
 // Render linked notes list in view mode
 async function renderLinkedNotesList(linkedNoteIds) {
     const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
-    
+
     return linkedNoteIds.map((noteId, index) => {
         const linkedNote = allNotes.find(n => n.id === noteId);
-        
+
         return linkedNote ? `
             <div class="linked-note-content-item" data-note-id="${linkedNote.id}" data-index="${index}" oncontextmenu="showChildNoteContextMenu(event, ${index})">
                 <div class="linked-note-header-bar">
@@ -1433,10 +1437,10 @@ async function renderLinkedNotesList(linkedNoteIds) {
                         <button class="btn-open-linked-note" onclick="selectChildNote('${linkedNote.id}')" title="Open in editor">
                             Open
                         </button>
-                        ${linkedNote.isChildNote 
-                            ? `<button class="btn-delete-child-note" onclick="deleteChildNote('${linkedNote.id}')" title="Delete child note">×</button>`
-                            : `<button class="btn-unlink-note" onclick="unlinkNote('${linkedNote.id}')" title="Unlink note">⛓️‍💥</button>`
-                        }
+                        ${linkedNote.isChildNote
+                ? `<button class="btn-delete-child-note" onclick="deleteChildNote('${linkedNote.id}')" title="Delete child note">×</button>`
+                : `<button class="btn-unlink-note" onclick="unlinkNote('${linkedNote.id}')" title="Unlink note">⛓️‍💥</button>`
+            }
                     </div>
                 </div>
                 <div class="linked-note-content-preview" ondblclick="openLinkedNoteForEdit('${linkedNote.id}')">${cleanHtmlForPreview(linkedNote.content) || '<em style="color: var(--color-text-muted);">No content</em>'}</div>
@@ -1448,7 +1452,7 @@ async function renderLinkedNotesList(linkedNoteIds) {
 // Render selected linked notes in edit mode
 async function renderSelectedLinkedNotes(linkedNoteIds) {
     const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
-    
+
     return linkedNoteIds.map(noteId => {
         const linkedNote = allNotes.find(n => n.id === noteId);
         return linkedNote ? `
@@ -1465,13 +1469,13 @@ async function selectChildNote(id) {
     try {
         const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
         const note = allNotes.find(n => n.id === id);
-        
+
         if (note) {
             // Save parent context before switching to child note
             if (currentNote && !currentNote.isChildNote) {
                 parentNoteContext = currentNote;
             }
-            
+
             currentNote = note;
             StorageManager.saveCurrentNoteId(note.id);
             StorageManager.saveCachedNote(note);
@@ -1490,11 +1494,11 @@ async function createChildNote() {
         alert('Please save the parent note first before creating child notes.');
         return;
     }
-    
+
     const defaultTitle = generateChildNoteTitle(currentNote);
     const title = prompt('Enter title for the new child note:', defaultTitle);
     if (!title) return;
-    
+
     try {
         // Create new child note
         const childNoteData = {
@@ -1506,31 +1510,31 @@ async function createChildNote() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
-        
+
         const response = await fetch(API_NOTES, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(childNoteData)
         });
-        
+
         const newChildNote = await response.json();
-        
+
         // Add to parent's linkedNotes
         if (!currentNote.linkedNotes) {
             currentNote.linkedNotes = [];
         }
         currentNote.linkedNotes.push(newChildNote.id);
-        
+
         // Update parent note
         await fetch(`${API_NOTES}/${currentNote.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(currentNote)
         });
-        
+
         // Refresh edit mode to show new child note
         showEditMode(currentNote);
-        
+
         alert('Child note created! You can now edit it after saving this note.');
     } catch (error) {
         console.error('Error creating child note:', error);
@@ -1543,11 +1547,11 @@ async function createChildNote() {
 function toggleChildNotesSection() {
     const list = document.getElementById('childNotesList');
     const toggle = document.getElementById('childNotesToggle');
-    
+
     if (list && toggle) {
         const isCollapsed = list.classList.toggle('collapsed');
         toggle.textContent = isCollapsed ? '▲' : '▼';
-        
+
         // Save state to localStorage
         localStorage.setItem('childNotes_collapsed', isCollapsed ? 'true' : 'false');
     }
@@ -1557,7 +1561,7 @@ function toggleChildNotesSection() {
 async function quickCreateChildNote() {
     // Determine the actual parent note
     let actualParent = currentNote;
-    
+
     // If current note is a child note, find its parent
     if (currentNote && currentNote.isChildNote) {
         if (currentNote.parentNoteId) {
@@ -1575,16 +1579,16 @@ async function quickCreateChildNote() {
             return;
         }
     }
-    
+
     if (!actualParent || !actualParent.id) {
         alert('Please save the parent note first.');
         return;
     }
-    
+
     const defaultTitle = generateChildNoteTitle(actualParent);
     const title = prompt('Enter title for the new child note:', defaultTitle);
     if (!title) return;
-    
+
     try {
         // Create new child note with actual parent ID
         const childNoteData = {
@@ -1607,37 +1611,37 @@ async function quickCreateChildNote() {
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString()
         };
-        
+
         const response = await fetch(API_NOTES, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(childNoteData)
         });
-        
+
         const newChildNote = await response.json();
-        
+
         // Add to actual parent's linkedNotes
         if (!actualParent.linkedNotes) {
             actualParent.linkedNotes = [];
         }
         actualParent.linkedNotes.push(newChildNote.id);
-        
+
         // Update actual parent note in API
         await fetch(`${API_NOTES}/${actualParent.id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(actualParent)
         });
-        
+
         // Update cache with new child note
         allNotesCache.push(newChildNote);
-        
+
         // Update parent in cache
         const parentCacheIndex = allNotesCache.findIndex(n => n.id === actualParent.id);
         if (parentCacheIndex !== -1) {
             allNotesCache[parentCacheIndex] = actualParent;
         }
-        
+
         // Switch back to parent note to show new child
         currentNote = actualParent;
         parentNoteContext = null;
@@ -1657,40 +1661,40 @@ async function openLinkedNoteForEdit(noteId) {
         // Get note from memory cache (INSTANT - no API call)
         const allNotes = getAllNotesFromCache();
         const note = allNotes.find(n => n.id === noteId);
-        
+
         if (note) {
             // Set as current note temporarily for editing
             const tempCurrentNote = currentNote;
             currentNote = note;
-            
+
             // Create container for rich text editor
             const editorContainer = document.createElement('div');
             document.body.appendChild(editorContainer);
-            
+
             // Initialize rich text editor
             const editor = new RichTextEditor(
                 editorContainer,
                 note.content || '',
                 async (newContent, editorState) => {
                     // Save callback
-                    if (newContent !== note.content || 
+                    if (newContent !== note.content ||
                         (editorState && editorState.wordCountEnabled !== note.wordCountEnabled)) {
                         note.content = newContent;
                         if (editorState) {
                             note.wordCountEnabled = editorState.wordCountEnabled;
                         }
-                        
+
                         // Save to API
                         await fetch(`${API_NOTES}/${note.id}`, {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify(note)
                         });
-                        
+
                         // Update memory cache
                         const cacheIndex = allNotesCache.findIndex(n => n.id === note.id);
                         if (cacheIndex !== -1) allNotesCache[cacheIndex] = note;
-                        
+
                         // Restore original current note and refresh view
                         currentNote = tempCurrentNote;
                         await showViewMode();
@@ -1712,17 +1716,17 @@ async function openLinkedNoteForEdit(noteId) {
 // Delete child note
 async function deleteChildNote(childNoteId) {
     if (!confirm('Delete this child note? This action cannot be undone.')) return;
-    
+
     try {
         // Delete the child note from API
-        await fetch(`${API_NOTES}/${childNoteId}`, { 
-            method: 'DELETE' 
+        await fetch(`${API_NOTES}/${childNoteId}`, {
+            method: 'DELETE'
         });
-        
+
         // Remove from parent's linkedNotes array
         if (currentNote.linkedNotes) {
             currentNote.linkedNotes = currentNote.linkedNotes.filter(id => id !== childNoteId);
-            
+
             // Update parent note
             await fetch(`${API_NOTES}/${currentNote.id}`, {
                 method: 'PUT',
@@ -1730,10 +1734,10 @@ async function deleteChildNote(childNoteId) {
                 body: JSON.stringify(currentNote)
             });
         }
-        
+
         // Update cache - remove deleted note
         allNotesCache = allNotesCache.filter(n => n.id !== childNoteId);
-        
+
         // Refresh view
         await showViewMode();
     } catch (error) {
@@ -1745,26 +1749,26 @@ async function deleteChildNote(childNoteId) {
 // Unlink note (remove from linkedNotes but don't delete the note)
 async function unlinkNote(noteId) {
     if (!confirm('Unlink this note? The note will not be deleted, just removed from this list.')) return;
-    
+
     try {
         // Remove from parent's linkedNotes array
         if (currentNote.linkedNotes) {
             currentNote.linkedNotes = currentNote.linkedNotes.filter(id => id !== noteId);
-            
+
             // Update parent note
             await fetch(`${API_NOTES}/${currentNote.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(currentNote)
             });
-            
+
             // Update cache
             const noteIndex = allNotesCache.findIndex(n => n.id === currentNote.id);
             if (noteIndex !== -1) {
                 allNotesCache[noteIndex] = currentNote;
             }
         }
-        
+
         // Refresh view
         await showViewMode();
     } catch (error) {
@@ -1777,11 +1781,11 @@ async function unlinkNote(noteId) {
 // Render child notes in grid layout for edit mode
 async function renderEditChildNotesGrid(linkedNoteIds) {
     const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
-    
+
     // Separate child notes and linked notes
     const childNotes = [];
     const linkedNotes = [];
-    
+
     linkedNoteIds.forEach(noteId => {
         const note = allNotes.find(n => n.id === noteId);
         if (note) {
@@ -1792,9 +1796,9 @@ async function renderEditChildNotesGrid(linkedNoteIds) {
             }
         }
     });
-    
+
     let html = '';
-    
+
     // Render child notes
     if (childNotes.length > 0) {
         html += '<div class="notes-group-label">Child Notes</div>';
@@ -1803,7 +1807,7 @@ async function renderEditChildNotesGrid(linkedNoteIds) {
             const clickHandler = isTemp ? '' : `onclick="selectChildNote('${linkedNote.id}')"`;
             const clickTitle = isTemp ? 'Save parent note first to open this child note' : 'Click to open';
             const cardStyle = isTemp ? 'opacity: 0.6; cursor: not-allowed;' : 'cursor: pointer;';
-            
+
             return `
             <div class="child-note-card is-child" data-note-id="${linkedNote.id}" style="${cardStyle}">
                 <div class="child-note-card-header" style="display: flex; justify-content: space-between; align-items: center;">
@@ -1823,7 +1827,7 @@ async function renderEditChildNotesGrid(linkedNoteIds) {
         `;
         }).join('');
     }
-    
+
     // Render linked notes
     if (linkedNotes.length > 0) {
         html += '<div class="notes-group-label">Linked Notes</div>';
@@ -1844,7 +1848,7 @@ async function renderEditChildNotesGrid(linkedNoteIds) {
             </div>
         `).join('');
     }
-    
+
     return html || '<div class="no-child-notes-edit">No child notes yet. Click + New or Link to add.</div>';
 }
 
@@ -1857,16 +1861,16 @@ async function renderEditChildNotesList(linkedNoteIds) {
 async function removeLinkedNoteFromEdit(noteId) {
     const selectedContainer = document.getElementById('selectedLinkedNotes');
     const countElement = document.getElementById('linkedNotesCount');
-    
+
     // Re-render the list without this note
     const currentLinkedNotes = getSelectedLinkedNotes().filter(id => id !== noteId);
-    
+
     if (currentLinkedNotes.length > 0) {
         selectedContainer.innerHTML = await renderEditChildNotesGrid(currentLinkedNotes);
     } else {
         selectedContainer.innerHTML = '<div class="no-child-notes-edit">No child notes yet. Click + New or Link to add.</div>';
     }
-    
+
     // Update count
     countElement.textContent = currentLinkedNotes.length;
 }
@@ -1875,7 +1879,7 @@ async function removeLinkedNoteFromEdit(noteId) {
 function getSelectedLinkedNotes() {
     const selectedContainer = document.getElementById('selectedLinkedNotes');
     if (!selectedContainer) return currentNote?.linkedNotes || [];
-    
+
     const cards = selectedContainer.querySelectorAll('.child-note-card');
     return Array.from(cards).map(card => card.getAttribute('data-note-id')).filter(id => id !== null);
 }
@@ -1886,11 +1890,11 @@ async function createChildNoteFromEdit() {
         alert('Please save the parent note first before creating child notes.');
         return;
     }
-    
+
     const defaultTitle = generateChildNoteTitle(currentNote);
     const title = prompt('Enter title for the new child note:', defaultTitle);
     if (!title) return;
-    
+
     try {
         // Create TEMP child note (not saved to DB yet)
         const tempChildNote = {
@@ -1915,26 +1919,26 @@ async function createChildNoteFromEdit() {
             updatedAt: new Date().toISOString(),
             _isTemp: true // Flag to identify temp notes
         };
-        
+
         // Add to cache temporarily (will be replaced with real note on save)
         allNotesCache.push(tempChildNote);
-        
+
         // Add to UI
         const selectedContainer = document.getElementById('selectedLinkedNotes');
         const countElement = document.getElementById('linkedNotesCount');
-        
+
         // Remove "no child notes" message if exists
         const noNotesMsg = selectedContainer.querySelector('.no-child-notes-edit');
         if (noNotesMsg) noNotesMsg.remove();
-        
+
         // Get current linked notes and add new temp one
         const currentLinkedNotes = getSelectedLinkedNotes();
         currentLinkedNotes.push(tempChildNote.id);
-        
+
         // Re-render
         selectedContainer.innerHTML = await renderEditChildNotesGrid(currentLinkedNotes);
         countElement.textContent = currentLinkedNotes.length;
-        
+
         // No alert needed - will be saved when parent is saved
     } catch (error) {
         console.error('Error creating child note:', error);
@@ -1949,11 +1953,11 @@ async function openLinkedNotesModalFromView() {
         alert('Please save the note first.');
         return;
     }
-    
+
     // Get all notes from memory cache (instant - no API call)
     const allNotes = getAllNotesFromCache();
     const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret' && !n.isChildNote);
-    
+
     const modal = document.createElement('div');
     modal.className = 'linked-notes-modal';
     modal.innerHTML = `
@@ -1974,14 +1978,14 @@ async function openLinkedNotesModalFromView() {
             </div>
         </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Trigger animation
     requestAnimationFrame(() => {
         modal.style.opacity = '1';
     });
-    
+
     // Setup search with debounce
     const searchInput = document.getElementById('linkedNotesSearchView');
     let searchTimeout;
@@ -1992,22 +1996,22 @@ async function openLinkedNotesModalFromView() {
             const filteredNotes = availableNotes.filter(n => {
                 // Search in title
                 const matchTitle = n.title.toLowerCase().includes(query);
-                
+
                 // Search in content
                 const matchContent = n.content && n.content.toLowerCase().includes(query);
-                
+
                 // Search in type (e.g., "note", "code", "ielts", "course")
                 const matchType = n.type.toLowerCase().includes(query);
-                
+
                 return matchTitle || matchContent || matchType;
             });
             document.getElementById('linkedNotesModalBodyView').innerHTML = renderLinkedNotesOptionsFromListView(filteredNotes);
         }, 200);
     });
-    
+
     // Focus search
     setTimeout(() => searchInput.focus(), 100);
-    
+
     // Close on ESC key
     const handleEsc = (e) => {
         if (e.key === 'Escape') {
@@ -2021,11 +2025,11 @@ async function openLinkedNotesModalFromView() {
 // Render options for view mode modal
 function renderLinkedNotesOptionsFromListView(notesToRender) {
     const selectedIds = currentNote?.linkedNotes || [];
-    
+
     if (notesToRender.length === 0) {
         return '<div class="no-notes-available">No notes available</div>';
     }
-    
+
     return notesToRender.map(note => `
         <div class="linked-note-option ${selectedIds.includes(note.id) ? 'selected' : ''}" 
              onclick="toggleLinkedNoteView('${note.id}')">
@@ -2049,25 +2053,25 @@ function toggleLinkedNoteView(noteId) {
     if (!currentNote.linkedNotes) {
         currentNote.linkedNotes = [];
     }
-    
+
     const index = currentNote.linkedNotes.indexOf(noteId);
     if (index > -1) {
         currentNote.linkedNotes.splice(index, 1);
     } else {
         currentNote.linkedNotes.push(noteId);
     }
-    
+
     // Re-render modal body
     const modalBody = document.getElementById('linkedNotesModalBodyView');
     if (modalBody) {
         const searchInput = document.getElementById('linkedNotesSearchView');
         const query = searchInput ? searchInput.value.toLowerCase() : '';
-        
+
         const allNotes = getAllNotesFromCache(); // Use memory cache instead of API
         const availableNotes = allNotes.filter(n => n.id !== currentNote?.id && n.type !== 'source' && n.type !== 'secret');
-        const filteredNotes = query ? 
-            availableNotes.filter(n => 
-                n.title.toLowerCase().includes(query) || 
+        const filteredNotes = query ?
+            availableNotes.filter(n =>
+                n.title.toLowerCase().includes(query) ||
                 (n.content && n.content.toLowerCase().includes(query))
             ) : availableNotes;
         modalBody.innerHTML = renderLinkedNotesOptionsFromListView(filteredNotes);
@@ -2083,12 +2087,12 @@ async function saveLinkedNotesFromView() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(currentNote)
         });
-        
+
         // No need to update cache - linkedNotes is just an array of IDs
-        
+
         // Close modal
         closeLinkedNotesModalView();
-        
+
         // Refresh view
         await showViewMode();
     } catch (error) {
@@ -2113,13 +2117,13 @@ function closeLinkedNotesModalView() {
 function restoreChildNotesState() {
     const list = document.getElementById('childNotesList');
     const toggle = document.getElementById('childNotesToggle');
-    
+
     if (list && toggle) {
         const savedState = localStorage.getItem('childNotes_collapsed');
-        
+
         // Default is collapsed (true), unless user has opened it (false)
         const shouldBeCollapsed = savedState === null ? true : savedState === 'true';
-        
+
         if (shouldBeCollapsed) {
             list.classList.add('collapsed');
             toggle.textContent = '▲';
@@ -2144,14 +2148,14 @@ window.addEventListener('beforeunload', (e) => {
         e.returnValue = ''; // Chrome requires returnValue to be set
         return 'You have unsaved changes. Are you sure you want to leave?';
     }
-    
+
     // Check if rich text editor is open
     if (window.isRichTextEditorOpen) {
         e.preventDefault();
         e.returnValue = '';
         return 'You are currently editing. Are you sure you want to leave?';
     }
-    
+
     // Check if in edit mode
     if (isEditing) {
         e.preventDefault();
@@ -2163,14 +2167,14 @@ window.addEventListener('beforeunload', (e) => {
 function showChildNoteContextMenu(event, index) {
     event.preventDefault();
     event.stopPropagation();
-    
+
     // Remove existing context menu if any
     hideChildNoteContextMenu();
-    
+
     contextMenuIndex = index;
     const isFirst = index === 0;
     const isLast = index === currentNote.linkedNotes.length - 1;
-    
+
     // Create context menu
     const menu = document.createElement('div');
     menu.id = 'childNoteContextMenu';
@@ -2194,13 +2198,13 @@ function showChildNoteContextMenu(event, index) {
             <span class="context-menu-text">Delete</span>
         </div>
     `;
-    
+
     // Position menu at mouse
     menu.style.left = event.pageX + 'px';
     menu.style.top = event.pageY + 'px';
-    
+
     document.body.appendChild(menu);
-    
+
     // Close menu when clicking outside
     setTimeout(() => {
         document.addEventListener('click', hideChildNoteContextMenu);
@@ -2250,71 +2254,71 @@ function contextMenuDelete() {
 
 async function moveChildNoteUp(index) {
     if (!currentNote || !currentNote.linkedNotes || index === 0) return;
-    
+
     console.log('=== MOVE UP START ===');
-    
+
     // Get container and items BEFORE swap
     const container = document.getElementById('childNotesList');
     if (!container) {
         console.log('Container not found!');
         return;
     }
-    
+
     const items = Array.from(container.querySelectorAll('.linked-note-content-item'));
     console.log('Items before:', items.length);
-    
+
     // Save positions BEFORE swap
     const oldPositions = items.map(item => {
         const rect = item.getBoundingClientRect();
         return { top: rect.top, id: item.dataset.noteId };
     });
     console.log('Old positions:', oldPositions);
-    
+
     // Swap in data
     const linkedNotes = [...currentNote.linkedNotes];
     [linkedNotes[index - 1], linkedNotes[index]] = [linkedNotes[index], linkedNotes[index - 1]];
     currentNote.linkedNotes = linkedNotes;
-    
+
     // Re-render
     await showViewMode();
-    
+
     // Wait for next frame to ensure restoreChildNotesState() has run and items are visible
     await new Promise(resolve => requestAnimationFrame(resolve));
-    
+
     // Get NEW items and positions AFTER swap
     const newContainer = document.getElementById('childNotesList');
     const newItems = Array.from(newContainer.querySelectorAll('.linked-note-content-item'));
     console.log('Items after:', newItems.length);
-    
+
     const newPositions = newItems.map(item => {
         const rect = item.getBoundingClientRect();
         return { top: rect.top, id: item.dataset.noteId };
     });
     console.log('New positions:', newPositions);
-    
+
     // Match old and new positions by note ID
     newItems.forEach((newItem) => {
         const noteId = newItem.dataset.noteId;
         const oldPos = oldPositions.find(p => p.id === noteId);
         const newPos = newPositions.find(p => p.id === noteId);
-        
+
         if (oldPos && newPos) {
             const deltaY = oldPos.top - newPos.top;
             console.log(`Note ${noteId}: deltaY = ${deltaY}`);
-            
+
             if (Math.abs(deltaY) > 1) {
                 // Start from old position
                 newItem.style.transform = `translateY(${deltaY}px)`;
                 newItem.style.transition = 'none';
-                
+
                 // Force reflow
                 newItem.offsetHeight;
-                
+
                 // Animate to new position
                 requestAnimationFrame(() => {
                     newItem.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
                     newItem.style.transform = 'translateY(0)';
-                    
+
                     // Clean up
                     setTimeout(() => {
                         newItem.style.transition = '';
@@ -2324,80 +2328,80 @@ async function moveChildNoteUp(index) {
             }
         }
     });
-    
+
     console.log('=== MOVE UP END ===');
-    
+
     // Save to API in background
     saveChildNotesOrder();
 }
 
 async function moveChildNoteDown(index) {
     if (!currentNote || !currentNote.linkedNotes || index === currentNote.linkedNotes.length - 1) return;
-    
+
     console.log('=== MOVE DOWN START ===');
-    
+
     // Get container and items BEFORE swap
     const container = document.getElementById('childNotesList');
     if (!container) {
         console.log('Container not found!');
         return;
     }
-    
+
     const items = Array.from(container.querySelectorAll('.linked-note-content-item'));
     console.log('Items before:', items.length);
-    
+
     // Save positions BEFORE swap
     const oldPositions = items.map(item => {
         const rect = item.getBoundingClientRect();
         return { top: rect.top, id: item.dataset.noteId };
     });
     console.log('Old positions:', oldPositions);
-    
+
     // Swap in data
     const linkedNotes = [...currentNote.linkedNotes];
     [linkedNotes[index], linkedNotes[index + 1]] = [linkedNotes[index + 1], linkedNotes[index]];
     currentNote.linkedNotes = linkedNotes;
-    
+
     // Re-render
     await showViewMode();
-    
+
     // Wait for next frame to ensure restoreChildNotesState() has run and items are visible
     await new Promise(resolve => requestAnimationFrame(resolve));
-    
+
     // Get NEW items and positions AFTER swap
     const newContainer = document.getElementById('childNotesList');
     const newItems = Array.from(newContainer.querySelectorAll('.linked-note-content-item'));
     console.log('Items after:', newItems.length);
-    
+
     const newPositions = newItems.map(item => {
         const rect = item.getBoundingClientRect();
         return { top: rect.top, id: item.dataset.noteId };
     });
     console.log('New positions:', newPositions);
-    
+
     // Match old and new positions by note ID
     newItems.forEach((newItem) => {
         const noteId = newItem.dataset.noteId;
         const oldPos = oldPositions.find(p => p.id === noteId);
         const newPos = newPositions.find(p => p.id === noteId);
-        
+
         if (oldPos && newPos) {
             const deltaY = oldPos.top - newPos.top;
             console.log(`Note ${noteId}: deltaY = ${deltaY}`);
-            
+
             if (Math.abs(deltaY) > 1) {
                 // Start from old position
                 newItem.style.transform = `translateY(${deltaY}px)`;
                 newItem.style.transition = 'none';
-                
+
                 // Force reflow
                 newItem.offsetHeight;
-                
+
                 // Animate to new position
                 requestAnimationFrame(() => {
                     newItem.style.transition = 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)';
                     newItem.style.transform = 'translateY(0)';
-                    
+
                     // Clean up
                     setTimeout(() => {
                         newItem.style.transition = '';
@@ -2407,9 +2411,9 @@ async function moveChildNoteDown(index) {
             }
         }
     });
-    
+
     console.log('=== MOVE DOWN END ===');
-    
+
     // Save to API in background
     saveChildNotesOrder();
 }
@@ -2418,7 +2422,7 @@ function saveChildNotesOrder() {
     // Increment pending saves counter
     pendingSaves++;
     console.log('Pending saves:', pendingSaves);
-    
+
     // Save to API in background (fire and forget)
     fetch(`${API_NOTES}/${currentNote.id}`, {
         method: 'PUT',
@@ -2431,13 +2435,13 @@ function saveChildNotesOrder() {
             allNotesCache[cacheIndex] = currentNote;
         }
         StorageManager.saveCachedNote(currentNote);
-        
+
         // Decrement pending saves counter
         pendingSaves--;
         console.log('Save completed. Pending saves:', pendingSaves);
     }).catch(error => {
         console.error('Error saving child notes order:', error);
-        
+
         // Still decrement to avoid blocking user forever
         pendingSaves--;
         console.log('Save failed. Pending saves:', pendingSaves);
