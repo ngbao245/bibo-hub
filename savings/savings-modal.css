@@ -1,0 +1,704 @@
+/* Savings Modal Styles */
+/* Follows common modal pattern from calculator/backup modals */
+
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    width: 90%;
+    max-width: 600px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    animation: slideIn 0.2s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-20px) scale(0.95); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-header {
+    padding: 15px 20px;
+    background: var(--color-bg-secondary);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.modal-title {
+    font-size: var(--font-lg);
+    color: var(--color-text-secondary);
+    font-weight: 500;
+}
+
+.modal-close-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-text-secondary);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.modal-close-btn:hover {
+    background: var(--color-danger);
+    color: white;
+}
+
+.modal-body {
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ===== LOADING SKELETON ===== */
+.savings-skeleton {
+    padding: var(--spacing-sm) 0;
+}
+
+.skeleton-line {
+    background: var(--color-bg-input);
+    position: relative;
+    overflow: hidden;
+    margin-bottom: var(--spacing-md);
+}
+
+.skeleton-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.04) 50%, transparent 100%);
+    animation: skeleton-shimmer 1.2s infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+.skeleton-title  { height: 20px; width: 50%; }
+.skeleton-bar    { height: 28px; width: 100%; }
+.skeleton-row    { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--spacing-md); }
+.skeleton-stat   { height: 56px; margin-bottom: 0; }
+
+/* ===== CREATE FORM ===== */
+.savings-form-group {
+    margin-bottom: var(--spacing-lg);
+}
+
+.savings-form-group label {
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.savings-form-group input[type="text"],
+.savings-form-group input[type="number"] {
+    width: 100%;
+    padding: 8px var(--spacing-md);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+    font-family: inherit;
+    transition: border-color var(--transition-fast);
+}
+
+.savings-form-group input:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+}
+
+.savings-form-group input::placeholder {
+    color: var(--color-text-muted);
+}
+
+/* Hide native number spinners */
+.savings-form-group input[type="number"]::-webkit-inner-spin-button,
+.savings-form-group input[type="number"]::-webkit-outer-spin-button,
+.custom-amount input[type="number"]::-webkit-inner-spin-button,
+.custom-amount input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+.savings-form-group input[type="number"],
+.custom-amount input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* ===== FILE INPUT ===== */
+.file-input-wrap {
+    position: relative;
+}
+
+.file-input-wrap input[type="file"] {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.file-input-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    padding: 8px var(--spacing-md);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: var(--font-md);
+    font-family: inherit;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    user-select: none;
+}
+
+.file-input-label:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-accent-primary);
+    color: var(--color-text-primary);
+}
+
+.file-input-icon {
+    font-size: var(--font-lg);
+}
+
+.file-input-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#savingsQrPreview {
+    margin-top: var(--spacing-sm);
+}
+
+#savingsQrPreview img {
+    max-width: 160px;
+    border: 1px solid var(--color-border);
+}
+
+.savings-form-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    justify-content: flex-end;
+    margin-top: var(--spacing-xl);
+    padding-top: var(--spacing-lg);
+    border-top: 1px solid var(--color-border);
+}
+
+.savings-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    font-size: var(--font-md);
+    color: var(--color-text-secondary);
+    user-select: none;
+}
+
+.savings-toggle-label input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--color-accent-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* ===== GOAL HEADER ===== */
+.savings-goal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xl);
+    padding-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.savings-goal-header h3 {
+    margin: 0;
+    font-size: var(--font-xl);
+    color: var(--color-text-primary);
+    font-weight: 600;
+}
+
+.savings-header-actions {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-shrink: 0;
+}
+
+/* ===== HISTORY PANEL ===== */
+#savingsHistoryPanel {
+    margin-bottom: var(--spacing-xl);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+}
+
+#savingsHistoryList {
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+/* ===== AMOUNTS ===== */
+.savings-amounts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.savings-amount-box {
+    padding: var(--spacing-md);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    text-align: center;
+}
+
+.savings-amount-box .label {
+    display: block;
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--spacing-xs);
+}
+
+.savings-amount-box .value {
+    display: block;
+    font-size: var(--font-xxl);
+    font-weight: 700;
+    color: var(--color-accent-primary);
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar-container {
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    height: 28px;
+    position: relative;
+    margin-bottom: var(--spacing-lg);
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    background: var(--color-accent-blue);
+    transition: width 0.6s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+}
+
+.progress-text {
+    color: white;
+    font-weight: 600;
+    font-size: var(--font-sm);
+    white-space: nowrap;
+}
+
+/* ===== STATS ===== */
+.savings-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-xl);
+}
+
+.stat-item {
+    text-align: center;
+    padding: var(--spacing-md);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+}
+
+.stat-label {
+    display: block;
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--spacing-xs);
+}
+
+.stat-value {
+    display: block;
+    font-size: var(--font-lg);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+/* ===== SECTION TITLES ===== */
+.savings-section-title {
+    font-size: var(--font-md);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: var(--spacing-md);
+    font-weight: 500;
+}
+
+/* ===== MILESTONES ===== */
+.savings-milestones {
+    margin-bottom: var(--spacing-xl);
+}
+
+#savingsMilestones {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-sm);
+}
+
+.milestone {
+    text-align: center;
+    padding: var(--spacing-md) var(--spacing-sm);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    transition: border-color var(--transition-fast);
+}
+
+.milestone.reached {
+    border-color: var(--color-accent-primary);
+    background: var(--color-bg-active);
+}
+
+.milestone-icon {
+    font-size: 24px;
+    display: block;
+    margin-bottom: var(--spacing-xs);
+    opacity: 0.3;
+    filter: grayscale(1);
+    transition: all var(--transition-normal);
+}
+
+.milestone.reached .milestone-icon {
+    opacity: 1;
+    filter: grayscale(0);
+}
+
+.milestone-label {
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    font-weight: 500;
+}
+
+.milestone.reached .milestone-label {
+    color: var(--color-accent-primary);
+}
+
+/* ===== ADD MONEY ===== */
+.savings-add-money {
+    margin-bottom: var(--spacing-xl);
+}
+
+.quick-amounts {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.quick-amounts button {
+    padding: 10px var(--spacing-sm);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: var(--font-md);
+    font-weight: 500;
+    transition: all var(--transition-fast);
+}
+
+.quick-amounts button:hover {
+    background: #505050;
+    border-color: var(--color-accent-primary);
+    color: var(--color-accent-primary);
+}
+
+.quick-amounts button:active {
+    background: var(--color-bg-active);
+}
+
+.quick-amounts button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.quick-amounts button:disabled:hover {
+    background: var(--color-bg-input);
+    border-color: var(--color-border);
+    color: var(--color-text-muted);
+}
+
+.custom-amount {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.custom-amount input {
+    flex: 1;
+    padding: 8px var(--spacing-md);
+    background: var(--color-bg-input);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    font-size: var(--font-md);
+    font-family: inherit;
+    transition: border-color var(--transition-fast);
+}
+
+.custom-amount input:focus {
+    outline: none;
+    border-color: var(--color-border-focus);
+}
+
+.custom-amount input::placeholder {
+    color: var(--color-text-muted);
+}
+
+/* ===== QR SECTION ===== */
+.savings-qr-section {
+    margin-bottom: var(--spacing-xl);
+    text-align: center;
+}
+
+.qr-container {
+    background: white;
+    padding: var(--spacing-lg);
+    border: 1px solid var(--color-border);
+    display: inline-block;
+}
+
+.qr-container img {
+    max-width: 220px;
+    display: block;
+}
+
+/* ===== DAILY CHALLENGE ===== */
+
+.history-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-sm) var(--spacing-md);
+    border-bottom: 1px solid var(--color-border);
+    transition: background var(--transition-fast);
+}
+
+.history-item:last-child {
+    border-bottom: none;
+}
+
+.history-item:hover {
+    background: var(--color-bg-hover);
+}
+
+.history-amount {
+    font-weight: 600;
+    color: var(--color-success);
+    font-size: var(--font-md);
+}
+
+.history-date {
+    font-size: var(--font-xs);
+    color: var(--color-text-muted);
+}
+
+.history-empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: var(--font-sm);
+    padding: var(--spacing-xl);
+}
+
+/* ===== CELEBRATION MODAL ===== */
+.celebration-content {
+    max-width: 400px;
+    text-align: center;
+    padding: 40px var(--spacing-xl);
+}
+
+.confetti {
+    font-size: 48px;
+    margin-bottom: var(--spacing-lg);
+}
+
+#savingsCelebrationTitle {
+    color: var(--color-accent-primary);
+    margin-bottom: var(--spacing-md);
+    font-size: var(--font-xxl);
+    font-weight: 700;
+}
+
+#savingsCelebrationMessage {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--spacing-xl);
+    font-size: var(--font-md);
+    line-height: 1.6;
+}
+
+/* ===== DAILY CHALLENGE ===== */
+.challenge-summary {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--font-sm);
+    color: var(--color-text-muted);
+    margin-bottom: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+}
+
+.challenge-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+    max-height: 340px;
+    overflow-y: auto;
+}
+
+.challenge-cell {
+    padding: var(--spacing-sm) var(--spacing-xs);
+    background: var(--color-bg-primary);
+    border: 1px solid var(--color-border);
+    text-align: center;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    position: relative;
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.challenge-cell:hover:not(.checked):not(.future) {
+    border-color: var(--color-accent-primary);
+    background: var(--color-bg-hover);
+}
+
+.challenge-cell.today {
+    border-color: var(--color-accent-primary);
+    background: var(--color-bg-active);
+}
+
+.challenge-cell.checked {
+    background: var(--color-success-bg);
+    border-color: var(--color-success);
+    cursor: default;
+}
+
+.challenge-cell.missed {
+    opacity: 0.5;
+    border-style: dashed;
+}
+
+.challenge-cell.future {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.challenge-day {
+    font-size: 9px;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.challenge-cell.today .challenge-day {
+    color: var(--color-accent-primary);
+    font-weight: 600;
+}
+
+.challenge-amount {
+    font-size: var(--font-xs);
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.challenge-cell.checked .challenge-amount {
+    color: var(--color-success);
+}
+
+.challenge-cta {
+    font-size: 9px;
+    color: var(--color-accent-primary);
+}
+
+.challenge-check {
+    font-size: var(--font-md);
+    color: var(--color-success);
+    font-weight: 700;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 600px) {
+    .modal-body {
+        padding: var(--spacing-lg);
+    }
+
+    .savings-amounts {
+        grid-template-columns: 1fr;
+    }
+
+    .savings-stats {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-amounts {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    #savingsMilestones {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .challenge-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .savings-amount-box .value {
+        font-size: var(--font-xl);
+    }
+
+    .celebration-content {
+        padding: var(--spacing-xl) var(--spacing-lg);
+    }
+}
