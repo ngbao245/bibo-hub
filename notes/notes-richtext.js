@@ -78,6 +78,9 @@ class RichTextEditor {
         // Setup vocab block events for existing vocab blocks
         this.setupVocabBlockEvents();
         
+        // Cleanup orphaned code block wrappers (buttons left behind after backspace)
+        this.setupBlockCleanupObserver();
+        
         // Restore word count state if it was active
         if (this.wordCountActive) {
             this.startWordCount();
@@ -783,6 +786,19 @@ class RichTextEditor {
         };
         return deleteBtn;
     }
+
+    setupBlockCleanupObserver() {
+        const observer = new MutationObserver(() => {
+            // Remove code-block-wrappers that lost their code-block
+            this.editor.querySelectorAll('.code-block-wrapper').forEach(wrapper => {
+                if (!wrapper.querySelector('.code-block')) {
+                    wrapper.remove();
+                }
+            });
+        });
+        observer.observe(this.editor, { childList: true, subtree: true });
+        this.cleanupObserver = observer;
+    }
     
     updateToolbar() {
         // Update button states based on current selection
@@ -1116,6 +1132,10 @@ class RichTextEditor {
         // Stop word count when closing
         if (this.wordCountInterval) {
             clearInterval(this.wordCountInterval);
+        }
+        // Disconnect cleanup observer
+        if (this.cleanupObserver) {
+            this.cleanupObserver.disconnect();
         }
         this.container.innerHTML = '';
     }
