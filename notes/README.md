@@ -22,14 +22,15 @@ Notes app is a standalone note-taking application that supports rich text editin
   - Highlight (yellow background)
   - Bullet lists, Numbered lists
   - Code blocks with Copy/Paste/Clear buttons
+  - Vocab blocks (Definition/Example/Synonym/Antonym grid) — only for note/ielts/course types
   - Clear all content
   
 - **Writing Tools**:
-  - **Word Count**: Toggle-able real-time counter
+  - **Word Count**: Toggle-able real-time counter (only for note/ielts/course types)
     - Priority 1: Count selected text
     - Priority 2: Count text between `` markers
     - Priority 3: Count all text
-  - **Timer**: Session timer with start/stop
+  - **Timer**: Session timer with start/stop (only for note/ielts/course types)
     - Persists across sessions (saved to DB)
     - Right-click to reset
   
@@ -38,6 +39,18 @@ Notes app is a standalone note-taking application that supports rich text editin
   - Ctrl+A: Select all code in block
   - Ctrl+C: Copy as plain text (no HTML)
   - Smart button positioning (fixed width 68px each)
+  - Auto-cleanup: MutationObserver removes orphaned buttons when code block is deleted via backspace
+
+- **Vocab Block Features** (note/ielts/course types only):
+  - 2×2 grid layout: Definition, Example, Synonym, Antonym
+  - Cross divider with cell borders between 4 quadrants
+  - Delete button (−) at intersection of 4 cells, hover turns red
+  - Each cell has editable content area with placeholder
+  - CSS-only positioning (no JS delay) — button lives inside definition cell
+  - Enter key inserts `<br>` within cell (doesn't break layout)
+  - Word-break for long text (auto-wraps instead of pushing grid)
+  - Responsive: stacks to single column on mobile (≤480px)
+  - Persists as HTML in database, re-attaches events on load
   
 - **Window Controls**:
   - Fullscreen mode (F11 or ⛶ button)
@@ -194,8 +207,12 @@ class RichTextEditor {
 - `init(content)`: Initialize editor, restore state
 - `setupEventListeners()`: Attach toolbar and keyboard events
 - `setupCodeBlockButtons()`: Re-attach events to saved code blocks
+- `setupVocabBlockEvents()`: Re-attach contenteditable and delete button to saved vocab blocks
+- `setupBlockCleanupObserver()`: MutationObserver to remove orphaned code block buttons on backspace
+- `createVocabDeleteBtn()`: Create delete button element with click-to-remove handler
 - `execCommand(command)`: Execute formatting commands
 - `insertCodeBlock()`: Insert code block with buttons
+- `insertVocabBlock()`: Insert 2×2 vocab grid (Definition/Example/Synonym/Antonym)
 - `toggleHighlight()`: Toggle yellow highlight
 - `toggleTimer()`: Start/stop writing timer
 - `toggleWordCount()`: Activate/deactivate word counter
@@ -270,6 +287,60 @@ updateWordCount() {
     const count = words.length;
     this.container.querySelector('.word-count-display').textContent = `${count} words`;
 }
+```
+
+**Vocab Block Implementation:**
+
+Vocab block là 2×2 grid (Definition/Example/Synonym/Antonym) dùng CSS Grid.
+
+DOM structure:
+```html
+<div class="vocab-block-wrapper" contenteditable="false">
+    <div class="vocab-cell vocab-definition">  <!-- position: relative, overflow: visible -->
+        <div class="vocab-label" contenteditable="false">Definition</div>
+        <div class="vocab-content" contenteditable="true"></div>
+        <button class="vocab-delete-btn">−</button>  <!-- absolute, bottom: -12px, right: -12px -->
+    </div>
+    <div class="vocab-cell vocab-example">
+        <div class="vocab-label" contenteditable="false">Example</div>
+        <div class="vocab-content" contenteditable="true"></div>
+    </div>
+    <div class="vocab-cell vocab-synonym">...</div>
+    <div class="vocab-cell vocab-antonym">...</div>
+</div>
+```
+
+Bugs đã gặp và cách fix:
+
+1. **Delete button lệch khi 2 hàng không đều cao**: Ban đầu dùng CSS `top: 50%` trên wrapper → lệch vì 50% tính theo tổng height. Sau đó thử JS `positionVocabDeleteButtons()` dùng `defCell.offsetHeight` → bị delay (keydown đo trước khi DOM update, keyup đo sau nhưng vẫn lag). **Fix cuối**: đặt button vào trong `.vocab-definition` cell, dùng CSS `position: absolute; bottom: -12px; right: -12px` → luôn đúng giao điểm, zero delay.
+
+2. **Text dài đẩy grid thay vì xuống dòng**: Grid items có `min-width: auto` mặc định → text dài stretch cell. **Fix**: thêm `min-width: 0` + `overflow: hidden` trên `.vocab-cell`, và `overflow-wrap: break-word; word-break: break-word` trên `.vocab-content`. Riêng `.vocab-definition` cần `overflow: visible` để không clip delete button.
+
+3. **`contenteditable` bị strip khi load từ DB**: `sanitizeContent()` chỉ giữ `class` và `style` attributes. **Fix**: thêm `contenteditable` vào `safeAttributes` array.
+
+4. **Enter key phá layout**: Enter mặc định tạo `<div>` mới, thoát khỏi cell. **Fix**: detect nếu cursor trong `.vocab-content` thì `e.preventDefault()` + `document.execCommand('insertLineBreak')`.
+
+5. **Không có cách xóa vocab block**: Ban đầu dùng CSS pseudo `content: '+'` → không click được. **Fix**: chuyển thành `<button>` thật với text `−`, click thì `wrapper.remove()` kèm xóa `<br>` xung quanh.
+
+6. **Type-based visibility**: Nút Vocab, Word Count, Timer chỉ hiện cho type `note`, `ielts`, `course`. Check `this.noteData.type` trong `init()`, ẩn bằng `style.display = 'none'`.
+
+**Code Block Orphaned Buttons Cleanup:**
+```javascript
+// Problem: Backspace xóa <pre class="code-block"> nhưng để lại 3 buttons trong wrapper
+// Solution: MutationObserver detect wrapper mất code-block → remove wrapper
+
+setupBlockCleanupObserver() {
+    const observer = new MutationObserver(() => {
+        this.editor.querySelectorAll('.code-block-wrapper').forEach(wrapper => {
+            if (!wrapper.querySelector('.code-block')) {
+                wrapper.remove();
+            }
+        });
+    });
+    observer.observe(this.editor, { childList: true, subtree: true });
+    this.cleanupObserver = observer;
+}
+// Observer disconnected in close() to prevent memory leaks
 ```
 
 ### Storage (notes-storage.js)
@@ -388,6 +459,11 @@ toggleSidebar() {
 - `.view-mode`: View mode display
 - `.editor-content`: Edit form
 - `.richtext-modal`: Rich text editor modal
+- `.vocab-block-wrapper`: Vocab block 2×2 grid container
+- `.vocab-cell`: Individual vocab cell (definition/example/synonym/antonym)
+- `.vocab-label`: Cell label (uppercase, sticky)
+- `.vocab-content`: Editable cell content area
+- `.vocab-delete-btn`: Delete button at cell intersection
 - `.mobile-header`: Mobile header with hamburger
 - `.mobile-visible`: Sidebar visible on mobile
 
@@ -437,6 +513,14 @@ toggleSidebar() {
 4. Ctrl+A to select all code in block
 5. Ctrl+C to copy as plain text
 
+### Vocab Blocks (note/ielts/course types only)
+1. Click `Vocab` button in toolbar
+2. 4-cell grid appears: Definition, Example, Synonym, Antonym
+3. Click any cell to type content
+4. Enter key adds new line within cell
+5. Click `−` button at center intersection to delete entire block
+6. Block saves as HTML and restores on reload
+
 ### Mobile Usage
 1. Tap ☰ to open sidebar
 2. Select note from list
@@ -483,6 +567,21 @@ To add new type:
 - Verify event listeners are attached
 - Check Console for errors
 
+### Code block buttons left behind after backspace
+- `setupBlockCleanupObserver()` uses MutationObserver to auto-remove orphaned wrappers
+- If observer not working, check that it's initialized in `init()`
+- Verify `.code-block-wrapper` without `.code-block` child gets removed
+
+### Vocab block not showing
+- Verify note type is `note`, `ielts`, or `course`
+- Other types (code, secret, etc.) hide the Vocab button
+- Check `setupVocabBlockEvents()` is called after loading content
+
+### Vocab block delete button misaligned
+- Button uses CSS `position: absolute; bottom: -12px; right: -12px` inside definition cell
+- No JS positioning needed — purely CSS-based
+- Check `.vocab-definition` has `position: relative` and `overflow: visible`
+
 ### Timer not persisting
 - Verify `timerDuration` field exists in database
 - Check `noteData.timerDuration` is passed to editor
@@ -497,72 +596,6 @@ To add new type:
 - Check screen width ≤768px
 - Verify `notes-mobile.js` is loaded
 - Check `.mobile-visible` class is added
-
-### Rich text editor always shows "unsaved changes" warning
-**Problem**: After opening rich text editor and closing it without making any changes, the app still warns about unsaved changes when trying to refresh or navigate away.
-
-**Root Cause**: The global flag `window.isRichTextEditorOpen` is set to `true` when editor opens, but was not cleared to `false` when editor closes. The `beforeunload` event handler in `notes.js` checks this flag and always prevents navigation if it's `true`.
-
-**Solution**: Clear the flag in the `close()` method of RichTextEditor:
-```javascript
-close() {
-    // Clear global flag that editor is open
-    window.isRichTextEditorOpen = false;
-    
-    // ... rest of cleanup code
-}
-```
-
-**Technical explanation**:
-- `window.isRichTextEditorOpen = true` is set in constructor (line 11)
-- `beforeunload` event checks this flag (notes.js line 2154-2157)
-- If flag is `true`, it prevents navigation with warning
-- Must set flag to `false` in `close()` to allow normal navigation
-- This is separate from content change detection in `hasContentChanged()`
-
-**Related code locations**:
-- Flag set: `notes-richtext.js` constructor
-- Flag check: `notes.js` beforeunload event handler
-- Flag clear: `notes-richtext.js` close() method
-
-### Child notes showing extra whitespace
-**Problem**: Child note content displays with unwanted spaces/line breaks at the beginning, while parent note content displays correctly.
-
-**Root Cause**: HTML whitespace in template strings. When you write HTML with line breaks and indentation like this:
-```javascript
-<div class="linked-note-content-preview">
-    ${content}
-</div>
-```
-
-Browser creates **text nodes** containing the whitespace (line breaks + spaces), which get rendered as visible spaces on screen.
-
-**Solution**: Write HTML on a single line without line breaks between opening tag and content:
-```javascript
-// ❌ BAD - Creates whitespace nodes
-<div class="linked-note-content-preview">
-    ${content}
-</div>
-
-// ✅ GOOD - No whitespace nodes
-<div class="linked-note-content-preview">${content}</div>
-```
-
-**Where to check**: 
-- `renderLinkedNotesList()` function in `notes.js`
-- Any template string that renders user content
-- Look for line breaks between `>` and `${variable}`
-
-**Why parent notes don't have this issue**: Parent note content is rendered on a single line:
-```javascript
-<div class="content-text editable-content" ondblclick="editContent(this)">${currentNote.content || ''}</div>
-```
-
-**Technical explanation**: 
-- HTML spec says whitespace between tags is preserved as text nodes
-- Browser renders these text nodes as actual spaces
-- Single-line HTML eliminates these whitespace text nodes
-- This is standard HTML/browser behavior, not a bug
 
 ## 📝 Development Notes
 
@@ -579,6 +612,7 @@ Browser creates **text nodes** containing the whitespace (line breaks + spaces),
 2. Add command to `execCommand()` switch
 3. Add keyboard shortcut to `handleKeydown()`
 4. Add active state to `updateToolbar()`
+5. If type-restricted: add condition in `init()` (see vocab/wordcount/timer pattern)
 
 **New Type:**
 1. Add to types array
@@ -625,7 +659,7 @@ For issues or questions:
 
 ---
 
-**Version**: 2.10.2  
+**Version**: 2.11.0  
 **Last Updated**: February 2026  
 **Part of**: BiBo Project  
 **Tech Stack**: Vanilla JavaScript, MockAPI, CSS Variables
