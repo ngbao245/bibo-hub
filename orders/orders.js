@@ -4,7 +4,7 @@ const ORDER_TYPE = 'order';
 
 // allDays: array of day records { id, source, url3, content, ... }
 // Each day.content = "name\tqty\tspx\tstatus\toptions|name\t..." 
-//   status: pending|ordered|cancelled
+//   status: pending|ordered|shipped|cancelled
 //   options: "optName~qty;optName~qty" or ""
 let allDays = [];
 let currentTab = 'admin';
@@ -183,6 +183,7 @@ function renderAdmin() {
                 <span>Sản phẩm</span>
                 <span style="padding-right:8px;text-align:right;">SPX</span>
                 <span class="col-check">Đặt</span>
+                <span class="col-check">Giao</span>
                 <span class="col-check">Hủy</span>
                 <span class="col-edit"></span>
             </div>
@@ -201,9 +202,10 @@ function renderAdmin() {
 }
 
 function renderAdminRow(date, it, idx) {
-    const isOrdered = it.status === 'ordered';
+    const isOrdered = it.status === 'ordered' || it.status === 'shipped';
+    const isShipped = it.status === 'shipped';
     const isCancelled = it.status === 'cancelled';
-    const rowClass = isCancelled ? 'is-cancelled' : (!isOrdered ? 'is-pending' : '');
+    const rowClass = isCancelled ? 'is-cancelled' : (isShipped ? 'is-shipped' : (!isOrdered ? 'is-pending' : ''));
     const spxHtml = it.spx
         ? `<span class="spx-badge" onclick="openSpx('${esc(it.spx)}')">${esc(it.spx)}</span>`
         : `<span class="spx-empty-hint">+ SPX</span>`;
@@ -242,6 +244,11 @@ function renderAdminRow(date, it, idx) {
                     onchange="toggleStatus('${date}',${idx},'ordered',this.checked)"
                     ${isCancelled ? 'disabled' : ''}>
             </div>
+            <div class="item-check check-ship">
+                <input type="checkbox" ${isShipped ? 'checked' : ''}
+                    onchange="toggleStatus('${date}',${idx},'shipped',this.checked)"
+                    ${(isCancelled || !isOrdered) ? 'disabled' : ''}>
+            </div>
             <div class="item-check check-cancel">
                 <input type="checkbox" ${isCancelled ? 'checked' : ''}
                     onchange="toggleStatus('${date}',${idx},'cancelled',this.checked)">
@@ -265,10 +272,11 @@ function renderCustomer() {
         const items = parseItems(day.content);
         const itemsHtml = items.map(it => {
             const isCancelled = it.status === 'cancelled';
-            const isOrdered = it.status === 'ordered';
-            const dotClass = isCancelled ? 'dot-cancelled' : (isOrdered ? 'dot-ordered' : 'dot-pending');
-            const pillClass = isCancelled ? 'pill-cancelled' : (isOrdered ? 'pill-ordered' : 'pill-pending');
-            const statusLabel = isCancelled ? 'Đã hủy' : (isOrdered ? 'Đã đặt' : 'Chờ đặt');
+            const isShipped = it.status === 'shipped';
+            const isOrdered = it.status === 'ordered' || isShipped;
+            const dotClass = isCancelled ? 'dot-cancelled' : (isShipped ? 'dot-shipped' : (isOrdered ? 'dot-ordered' : 'dot-pending'));
+            const pillClass = isCancelled ? 'pill-cancelled' : (isShipped ? 'pill-shipped' : (isOrdered ? 'pill-ordered' : 'pill-pending'));
+            const statusLabel = isCancelled ? 'Đã hủy' : (isShipped ? 'Đã giao' : (isOrdered ? 'Đã đặt' : 'Chờ đặt'));
             const spxHtml = it.spx ? `<span class="spx-badge" onclick="openSpx('${esc(it.spx)}')">${esc(it.spx)}</span>` : '';
             const optsHtml = it.options.map(o => `<div class="customer-option">↳ ${esc(o.name)} x${esc(o.qty)}</div>`).join('');
             return `<div class="customer-item ${isCancelled ? 'is-cancelled' : ''}">
@@ -372,7 +380,16 @@ function inlineEditItem(el, date, idx, field) {
 
 function toggleStatus(date, idx, status, checked) {
     mutateDayItems(date, items => {
-        items[idx].status = checked ? status : 'pending';
+        const it = items[idx];
+        if (status === 'ordered') {
+            it.status = checked ? 'ordered' : 'pending';
+            // unship if unordering
+            if (!checked && it.status === 'shipped') it.status = 'pending';
+        } else if (status === 'shipped') {
+            it.status = checked ? 'shipped' : 'ordered';
+        } else if (status === 'cancelled') {
+            it.status = checked ? 'cancelled' : 'pending';
+        }
     });
 }
 
