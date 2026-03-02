@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="vi" style="background:#1e1e1e;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders</title>
+    <link rel="icon" type="image/png" href="../assets/icon.png">
+    <link rel="apple-touch-icon" href="../assets/icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="orders.css">
+</head>
+<body>
+    <div class="orders-app">
+
+        <!-- Top bar: tabs + add button -->
+        <div class="orders-topbar">
+            <div class="orders-tabs">
+                <button class="tab-btn active" data-tab="admin">📦 Quản lý</button>
+                <button class="tab-btn" data-tab="customer">👤 Khách hàng</button>
+            </div>
+            <button class="btn btn-primary" id="addDayBtn" style="display:none;">+ Ngày</button>
+        </div>
+
+        <!-- Admin Tab -->
+        <div class="tab-content active" id="tab-admin">
+            <div id="adminDaysList"></div>
+        </div>
+
+        <!-- Customer Tab -->
+        <div class="tab-content" id="tab-customer">
+            <div id="customerDaysList"></div>
+        </div>
+
+    </div>
+
+    <!-- Add Day Modal -->
+    <div class="modal-overlay" id="dayModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span class="modal-title">Thêm ngày đặt hàng</span>
+                <button class="modal-close" id="dayModalClose">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Ngày</label>
+                    <input type="date" id="dayDate">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" id="dayModalCancel">Huỷ</button>
+                <button class="btn btn-primary" id="dayModalSave">Tạo</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SPX Tracking Modal -->
+    <div class="modal-overlay" id="spxModal">
+        <div class="modal-box modal-box-large">
+            <div class="modal-header">
+                <span class="modal-title" id="spxModalTitle">Tracking SPX</span>
+                <button class="modal-close" id="spxModalClose">&times;</button>
+            </div>
+            <div class="modal-body modal-body-iframe">
+                <iframe id="spxIframe" src="" frameborder="0"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="../config.js"></script>
+    <script src="orders.js"></script>
+</body>
+</html>
