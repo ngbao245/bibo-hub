@@ -828,7 +828,7 @@ body {
     /* Input bar pinned to bottom, respects iOS safe area */
     .input-bar {
         padding: 12px 12px;
-        padding-bottom: max(36px, env(safe-area-inset-bottom, 24px));
+        padding-bottom: max(24px, env(safe-area-inset-bottom, 24px));
         background: var(--color-bg-secondary);
         border-top: 1px solid var(--color-border);
         flex-shrink: 0;
