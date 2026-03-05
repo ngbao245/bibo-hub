@@ -794,6 +794,7 @@ body {
         -webkit-overflow-scrolling: touch;
         padding: 12px 12px 8px;
         scroll-behavior: smooth;
+        gap: 10px;
     }
 
     /* Bigger bubbles, easier to read */
@@ -802,6 +803,8 @@ body {
         font-size: 15px;
         padding: 10px 14px;
         border-radius: 18px 18px 4px 18px;
+        word-break: break-word;
+        white-space: pre-wrap;
     }
 
     .ai-bubble {
@@ -813,6 +816,8 @@ body {
         padding: 10px 14px;
         border-radius: 4px 18px 18px 18px;
         line-height: 1.55;
+        word-break: break-word;
+        white-space: pre-wrap;
     }
 
     .ai-avatar {
@@ -822,8 +827,8 @@ body {
 
     /* Input bar pinned to bottom, respects iOS safe area */
     .input-bar {
-        padding: 8px 12px;
-        padding-bottom: max(10px, env(safe-area-inset-bottom));
+        padding: 12px 12px;
+        padding-bottom: max(36px, env(safe-area-inset-bottom, 24px));
         background: var(--color-bg-secondary);
         border-top: 1px solid var(--color-border);
         flex-shrink: 0;
@@ -831,7 +836,7 @@ body {
 
     .input-wrap {
         border-radius: 24px;
-        padding: 6px 6px 6px 14px;
+        padding: 10px 8px 10px 16px;
         align-items: center;
     }
 
@@ -839,11 +844,12 @@ body {
     .chat-input {
         font-size: 16px;
         line-height: 1.4;
+        min-height: 24px;
     }
 
     .btn-send {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         font-size: 18px;
         border-radius: 50%;
         flex-shrink: 0;
