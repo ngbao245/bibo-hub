@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="vi" style="background:#1e1e1e;">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Chi tiêu</title>
+    <link rel="icon" type="image/png" href="../assets/icon.png">
+    <link rel="apple-touch-icon" href="../assets/icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="expense.css">
+</head>
+<body>
+    <div class="expense-app">
+
+        <!-- Top bar -->
+        <div class="expense-topbar">
+            <div class="topbar-left">
+                <a href="../hub.html" class="btn-back">←</a>
+                <span class="topbar-title">💸 Chi tiêu</span>
+            </div>
+            <div class="topbar-tabs">
+                <button class="tab-btn active" data-tab="feed">Chi tiêu</button>
+                <button class="tab-btn" data-tab="report">Báo cáo</button>
+            </div>
+            <div class="topbar-right">
+                <span class="mood-indicator" id="moodIndicator" title="Mood hôm nay"></span>
+            </div>
+        </div>
+
+        <!-- Tab: Chi tiêu — split layout -->
+        <div class="tab-content active" id="tab-feed">
+
+            <!-- Left: expense list + filter -->
+            <div class="feed-list-col">
+                <div class="feed-list-header">
+                    <div class="feed-period-tabs">
+                        <button class="fp-tab active" data-fp="today">Hôm nay</button>
+                        <button class="fp-tab" data-fp="week">Tuần</button>
+                        <button class="fp-tab" data-fp="month">Tháng</button>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <div id="feedSummaryLine"></div>
+                        <button class="btn-swap-chat" id="btnSwapChat" onclick="toggleChatSide()" title="Đổi vị trí chat">⇄</button>
+                    </div>
+                </div>
+                <div class="feed-list-body" id="expenseList"></div>
+            </div>
+
+            <!-- Right: chat -->
+            <div class="feed-chat-col">
+                <div class="chat-feed" id="chatFeed">
+                    <div class="chat-welcome">
+                        <div class="welcome-icon">💬</div>
+                        <div class="welcome-text">Nhập chi tiêu tự nhiên<br><span class="welcome-hint">vd: "keycap 555k" hoặc "đi ăn gà 120"</span></div>
+                    </div>
+                </div>
+                <div class="input-bar">
+                    <div class="input-wrap">
+                        <textarea class="chat-input" id="chatInput"
+                            placeholder="Nhập chi tiêu... (vd: cà phê 35k, xăng 50)"
+                            rows="1"
+                            onkeydown="handleInputKey(event)"></textarea>
+                        <button class="btn-send" id="sendBtn" onclick="submitExpense()">
+                            <span id="sendIcon">↑</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Tab: Báo cáo -->
+        <div class="tab-content" id="tab-report">
+            <div class="report-toolbar">
+                <div class="report-period-tabs">
+                    <button class="rp-tab active" data-rp="today">Hôm nay</button>
+                    <button class="rp-tab" data-rp="week">Tuần</button>
+                    <button class="rp-tab" data-rp="month">Tháng</button>
+                    <button class="rp-tab" data-rp="all">Tất cả</button>
+                </div>
+                <div id="reportSummaryLine"></div>
+            </div>
+            <div class="report-body" id="reportBody">
+                <div class="report-main" id="reportStatsPanel"></div>
+                <div class="report-ai-col">
+                    <div class="report-ai-header">🤖 Hỏi AI</div>
+                    <div class="report-ai-feed" id="reportChatFeed">
+                        <div class="report-chat-welcome">Hỏi tôi về chi tiêu của bạn nhé 💬</div>
+                    </div>
+                    <div class="report-ai-input">
+                        <textarea id="reportChatInput" class="chat-input" rows="1"
+                            placeholder="Phân tích chi tiêu..."
+                            onkeydown="handleReportChatKey(event)"></textarea>
+                        <button class="btn-send" id="reportSendBtn" onclick="submitReportChat()">
+                            <span id="reportSendIcon">↑</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="../config.js"></script>
+    <script src="expenseHelper.js"></script>
+    <script src="expenseReplies.js"></script>
+    <script src="expense.js"></script>
+</body>
+</html>
