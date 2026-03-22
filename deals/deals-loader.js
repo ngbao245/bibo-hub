@@ -20,8 +20,14 @@ function loadDealsModal() {
     // Load file reader first
     const readerScript = document.createElement('script');
     readerScript.src = 'deals/deals-file-reader.js';
+    readerScript.onload = () => {
+        // Load modal JS after reader is ready
+        loadModalScript();
+    };
     document.head.appendChild(readerScript);
+}
 
+function loadModalScript() {
     // Load HTML structure
     const modalHTML = `
         <div id="dealsModal" class="deals-modal">
