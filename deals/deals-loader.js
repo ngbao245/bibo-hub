@@ -17,6 +17,11 @@ function loadDealsModal() {
     cssLink.href = 'deals/deals-modal.css';
     document.head.appendChild(cssLink);
 
+    // Load file reader first
+    const readerScript = document.createElement('script');
+    readerScript.src = 'deals/deals-file-reader.js';
+    document.head.appendChild(readerScript);
+
     // Load HTML structure
     const modalHTML = `
         <div id="dealsModal" class="deals-modal">
