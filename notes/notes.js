@@ -55,8 +55,14 @@ async function loadNotes() {
         // Store ALL notes in memory cache (including child notes)
         allNotesCache = allNotes;
 
-        // Filter out sources, secret notes, and child notes (only show regular notes)
-        notes = allNotes.filter(n => n.type !== 'source' && n.type !== 'secret' && !n.isChildNote);
+        // Filter out sources, secret notes, child notes, AND only show configured types
+        notes = allNotes.filter(n => {
+            const allowedTypes = ['note', 'ielts', 'course', 'code', 'interview'];
+            return n.type !== 'source' &&
+                n.type !== 'secret' &&
+                !n.isChildNote &&
+                allowedTypes.includes(n.type);
+        });
         notes.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         updateTypeCounts();
         restoreTypeFilter(); // Restore filter state
@@ -987,6 +993,7 @@ function updateTypeCounts() {
         interview: notes.filter(n => n.type === 'interview').length
     };
 
+    // Update counts
     document.getElementById('countAll').textContent = counts.all;
     document.getElementById('countNote').textContent = counts.note;
     document.getElementById('countIelts').textContent = counts.ielts;

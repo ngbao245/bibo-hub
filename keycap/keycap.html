@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="vi" style="background:#1e1e1e;">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Keycap Inventory</title>
+    <link rel="icon" type="image/png" href="../assets/icon.png">
+    <link rel="apple-touch-icon" href="../assets/icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="../common.css">
+    <link rel="stylesheet" href="./keycap.css">
+</head>
+
+<body>
+    <div class="kc-app">
+
+        <!-- Topbar -->
+        <div class="kc-topbar">
+            <div class="topbar-left">
+                <a href="../hub.html" class="btn-back">←</a>
+                <span class="topbar-title">⌨️ Keycap Inventory</span>
+            </div>
+            <div class="topbar-center">
+                <button class="kc-tab active" data-tab="inventory">Kho</button>
+                <button class="kc-tab" data-tab="sold">Đã bán</button>
+                <button class="kc-tab" data-tab="stats">Thống kê</button>
+                <button class="kc-tab" data-tab="groups">Groups</button>
+            </div>
+            <div class="topbar-right">
+                <span class="save-status" id="saveStatus"></span>
+                <button class="btn-add" id="btnAdd" onclick="openAddModal()">+ Thêm</button>
+            </div>
+        </div>
+
+        <!-- Summary bar -->
+        <div class="kc-summary" id="summaryBar"></div>
+
+        <!-- Filter bar -->
+        <div class="kc-filterbar" id="filterBar">
+            <input type="text" class="kc-search" id="searchInput" placeholder="Tìm tên..." oninput="renderAll()">
+            <select class="kc-select" id="catFilter" onchange="renderAll()">
+                <option value="">Tất cả loại</option>
+                <option value="keycap">Keycap</option>
+                <option value="keyboard">Bàn phím</option>
+                <option value="switch">Switch</option>
+                <option value="other">Khác</option>
+                <option value="combo">Combo</option>
+            </select>
+            <select class="kc-select" id="sortSelect" onchange="renderAll()">
+                <option value="newest">Mới nhất</option>
+                <option value="profit_desc">Lời nhiều nhất</option>
+                <option value="buy_desc">Giá mua cao nhất</option>
+                <option value="name">Tên A-Z</option>
+            </select>
+        </div>
+
+        <div class="kc-body" id="kcBody"></div>
+    </div>
+
+    <!-- Add/Edit Modal -->
+    <div class="modal-overlay" id="itemModal" onclick="closeModalOutside(event)">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="modalTitle">Thêm món</span>
+                <button class="modal-close" onclick="closeItemModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Danh sách tên — có thể thêm nhiều -->
+                <div class="form-row">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+                        <label>Tên món</label>
+                        <button class="btn-add-name" id="btnAddName" onclick="addNameRow()" title="Thêm tên">+</button>
+                    </div>
+                    <div id="nameRows" style="display:flex;flex-direction:column;gap:5px"></div>
+                </div>
+
+                <div class="form-row-2">
+                    <div class="form-row">
+                        <label>Loại</label>
+                        <select id="fCat" class="form-input">
+                            <option value="keycap">Keycap</option>
+                            <option value="keyboard">Bàn phím</option>
+                            <option value="switch">Switch</option>
+                            <option value="other">Khác</option>
+                            <option value="combo">Combo</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label>Trạng thái</label>
+                        <select id="fStatus" class="form-input">
+                            <option value="incoming">Đang về</option>
+                            <option value="available">Còn hàng</option>
+                            <option value="sold">Đã bán</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row-2">
+                    <div class="form-row">
+                        <label>Giá mua (đ)</label>
+                        <input type="text" id="fBuyPrice" placeholder="vd: 150k" class="form-input"
+                            oninput="updateProfit()">
+                    </div>
+                    <div class="form-row">
+                        <label>Giá bán ra (đ)</label>
+                        <input type="text" id="fSellPrice" placeholder="vd: 200k" class="form-input"
+                            oninput="updateProfit()">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Tháng mua</label>
+                    <div style="display:flex;gap:6px">
+                        <select id="fMonthSel" class="form-input" style="flex:1"></select>
+                        <select id="fYearSel" class="form-input" style="width:90px"></select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <label>Ghi chú</label>
+                    <input type="text" id="fNote" placeholder="Condition, nguồn gốc..." class="form-input">
+                </div>
+                <div class="profit-preview" id="profitPreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" id="btnDelete" onclick="deleteItem()" style="display:none">Xóa</button>
+                <div style="flex:1"></div>
+                <button class="btn-secondary" onclick="closeItemModal()">Hủy</button>
+                <button class="btn-primary" onclick="saveItem()">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Group Modal -->
+    <div class="modal-overlay" id="groupModal" onclick="closeGroupModalOutside(event)">
+        <div class="modal-box" style="width:380px">
+            <div class="modal-header">
+                <span id="groupModalTitle">Thêm group</span>
+                <button class="modal-close" onclick="closeGroupModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <label>Tên group *</label>
+                    <input type="text" id="gName" placeholder="vd: GMK Vietnam, Keycap VN..." class="form-input">
+                </div>
+                <div class="form-row">
+                    <label>URL (link group)</label>
+                    <input type="text" id="gUrl" placeholder="https://facebook.com/groups/..." class="form-input">
+                </div>
+                <div class="form-row">
+                    <label>Số thành viên</label>
+                    <input type="text" id="gMembers" placeholder="vd: 12.000" class="form-input">
+                </div>
+                <div class="form-row">
+                    <label>Ghi chú</label>
+                    <input type="text" id="gNote" placeholder="Loại hàng chủ yếu, uy tín..." class="form-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-danger" id="btnDeleteGroup" onclick="deleteGroup()" style="display:none">Xóa</button>
+                <div style="flex:1"></div>
+                <button class="btn-secondary" onclick="closeGroupModal()">Hủy</button>
+                <button class="btn-primary" onclick="saveGroup()">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context menu -->
+    <div id="ctxMenu" class="ctx-menu">
+        <div id="ctxSell" class="ctx-item ctx-sell" onclick="ctxMarkSold()">✓ Đánh dấu đã bán</div>
+        <div id="ctxUnsell" class="ctx-item" onclick="ctxMarkUnsold()" style="display:none">↩ Hoàn về còn hàng</div>
+        <div class="ctx-divider"></div>
+        <div class="ctx-item ctx-delete" onclick="ctxDelete()">✕ Xóa</div>
+    </div>
+
+    <script src="../config.js"></script>
+    <script src="keycap.js"></script>
+
+    <!-- Context menu -->
+    <div id="ctxMenu" class="ctx-menu">
+        <div id="ctxSell" class="ctx-item ctx-sell" onclick="ctxMarkSold()">✓ Đánh dấu đã bán</div>
+        <div id="ctxUnsell" class="ctx-item" onclick="ctxMarkUnsold()">↩ Hoàn về còn hàng</div>
+        <div class="ctx-divider"></div>
+        <div class="ctx-item ctx-delete" onclick="ctxDelete()">✕ Xóa</div>
+    </div>
+</body>
+
+</html>
