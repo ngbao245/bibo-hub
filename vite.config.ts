@@ -4,7 +4,7 @@ import path from 'node:path';
 
 // Cấu hình Vite cho React + TS + Tailwind.
 // Dùng alias `@` để import từ src/ cho gọn: import X from '@/components/X'
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   base: '/',  // Root base, Vercel rewrite sẽ handle routing
   plugins: [react()],
   resolve: {
