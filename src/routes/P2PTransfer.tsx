@@ -405,7 +405,9 @@ export default function P2PTransfer() {
   }
 
   function copyShareLink() {
-    const url = `${window.location.origin}/p2p?connect=${myId}`;
+    // Lấy path hiện tại để support cả /p2p và /hubibo/p2p
+    const currentPath = window.location.pathname;
+    const url = `${window.location.origin}${currentPath}?connect=${myId}`;
     navigator.clipboard.writeText(url);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 1500);
@@ -518,7 +520,7 @@ export default function P2PTransfer() {
 
                 {showQr && (
                   <QrDisplay
-                    value={`${window.location.origin}/p2p?connect=${myId}`}
+                    value={`${window.location.origin}${window.location.pathname}?connect=${myId}`}
                   />
                 )}
               </>
