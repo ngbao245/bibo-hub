@@ -19,11 +19,20 @@ const queryClient = new QueryClient({
   },
 });
 
+// Auto-detect base path từ URL hiện tại
+const getBasename = () => {
+  const { pathname } = window.location;
+  // Nếu URL chứa /hubibo thì dùng basename đó
+  if (pathname.startsWith('/hubibo')) return '/hubibo';
+  // Nếu không thì root
+  return '';
+};
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
-        <BrowserRouter basename="">
+        <BrowserRouter basename={getBasename()}>
           <App />
         </BrowserRouter>
         <Toaster />
