@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Package, Loader2, RotateCcw, FolderOpen, ChevronRight, ChevronDown, File as FileIcon, Archive, Download } from 'lucide-react';
+import { Package, RotateCcw, FolderOpen, ChevronRight, ChevronDown, File as FileIcon, Archive, Download } from 'lucide-react';
+import { PackerLoadingSpinner } from './PackerLoadingSpinner';
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -421,7 +422,7 @@ export default function PackPanel() {
       {busyMessage && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="flex items-center gap-3 border border-border bg-card px-6 py-4 shadow-lg">
-            <Loader2 className="h-5 w-5 animate-spin text-primary" />
+            <PackerLoadingSpinner />
             <span className="text-sm font-medium text-foreground">{busyMessage}</span>
           </div>
         </div>
@@ -577,7 +578,7 @@ export default function PackPanel() {
                 className="gap-1.5"
               >
                 {isPacking ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <PackerLoadingSpinner size="sm" />
                 ) : (
                   <Package className="h-3 w-3" />
                 )}

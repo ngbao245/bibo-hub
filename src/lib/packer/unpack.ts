@@ -20,13 +20,15 @@ export function unpackText(text: string): {
   files: PackedFile[];
   partsDetected: number;
 } {
-  const partsDetected = (text.match(new RegExp(MARKERS.PACK_START, 'g')) ?? [])
+  // Đếm số FILE_START thay vì PACK_START (vì PACK markers đã bỏ)
+  const partsDetected = (text.match(new RegExp(MARKERS.FILE_START, 'g')) ?? [])
     .length;
 
-  // Strip tất cả PACK_START/PACK_END (giữa parts), giữ FILE markers
+  // Strip PACK_START/PACK_END nếu có (backward compat với v1 cũ có markers)
+  // Nếu PACK markers rỗng thì không ảnh hưởng
   const cleaned = text
-    .replace(new RegExp(MARKERS.PACK_START + '\\n?', 'g'), '')
-    .replace(new RegExp('\\n?' + MARKERS.PACK_END, 'g'), '');
+    .replace(new RegExp(MARKERS.PACK_START, 'g'), '')
+    .replace(new RegExp(MARKERS.PACK_END, 'g'), '');
 
   const files = parsePackedContent(cleaned);
   return { files, partsDetected };

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { FileDown, Loader2, RotateCcw, Upload, Archive } from 'lucide-react';
+import { FileDown, RotateCcw, Upload, Archive } from 'lucide-react';
+import { PackerLoadingSpinner } from './PackerLoadingSpinner';
 
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
@@ -243,7 +244,7 @@ export default function UnpackPanel() {
               className="h-7 gap-1.5 px-2 text-xs"
             >
               {isProcessing ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <PackerLoadingSpinner size="sm" />
               ) : (
                 <FileDown className="h-3 w-3" />
               )}

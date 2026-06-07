@@ -9,6 +9,7 @@ import {
   X,
   SplitSquareHorizontal,
   FileText,
+  LayoutGrid,
 } from 'lucide-react';
 
 import { useNotes, useCreateNote } from '@/api/notes';
@@ -114,7 +115,7 @@ export default function Notes() {
   // 📚 Sync panes với data: gỡ tabs đã bị xoá; auto-mở note đầu khi rỗng.
   useEffect(() => {
     if (!notesQuery.data) return;
-    const validIds = new Set(notesQuery.data.map((n) => n.id));
+    const validIds = new Set(notesQuery.data.map((n: any) => n.id));
 
     let dirty = false;
     const cleanedPanes = panes.map((p) => {
@@ -131,7 +132,7 @@ export default function Notes() {
     // Pane đầu tiên rỗng → auto-mở note mới nhất
     if (cleanedPanes[0].tabs.length === 0) {
       const regular = notesQuery.data.filter(
-        (n) =>
+        (n: any) =>
           ['note', 'ielts', 'course', 'code'].includes(n.type) && !n.isChildNote,
       );
       if (regular.length > 0) {
@@ -226,7 +227,7 @@ export default function Notes() {
   // Active note của pane đang focus (cho mobile header hiển thị)
   const focusedPane = panes[safeFocusedIdx];
   const focusedActiveNote =
-    notesQuery.data?.find((n) => n.id === focusedPane?.activeId) ?? null;
+    notesQuery.data?.find((n: any) => n.id === focusedPane?.activeId) ?? null;
 
   // Ctrl+B: cycle layout. Ctrl+W: đóng tab focused. Ctrl+Tab: switch tab focused.
   // Ctrl+\: split pane.
@@ -292,7 +293,7 @@ export default function Notes() {
         className={cn(
           'flex w-[60px] shrink-0 flex-col border-r border-border bg-card max-md:hidden',
           layoutMode === 'zen' &&
-            'fixed inset-y-0 left-0 z-[1101] shadow-2xl transition-transform duration-200',
+          'fixed inset-y-0 left-0 z-[1101] shadow-2xl transition-transform duration-200',
           layoutMode === 'zen' && !edgeHovered && '-translate-x-full',
         )}
       >
@@ -301,7 +302,7 @@ export default function Notes() {
           className="flex h-12 items-center justify-center border-b border-border text-muted-foreground transition-colors hover:bg-popover hover:text-foreground"
           title="Hub"
         >
-          <img src="/apps.png" alt="Hub" className="h-5 w-5 opacity-70" />
+          <LayoutGrid className="h-5 w-5 opacity-70" />
         </Link>
         <Link
           to="/notes"
@@ -353,7 +354,7 @@ export default function Notes() {
           'flex w-[280px] shrink-0 flex-col border-r border-border bg-card max-md:hidden',
           // Compact + Zen: fixed, sang phải sidebar 60px
           layoutMode !== 'pinned' &&
-            'fixed inset-y-0 left-[60px] z-[1101] shadow-2xl transition-transform duration-200',
+          'fixed inset-y-0 left-[60px] z-[1101] shadow-2xl transition-transform duration-200',
           layoutMode !== 'pinned' && !edgeHovered && '-translate-x-[calc(100%+60px)]',
           // Mobile fixed overlay
           'max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[1000] max-md:flex max-md:transition-transform',
@@ -395,7 +396,7 @@ export default function Notes() {
           <div className="flex gap-1">
             <Button variant="ghost" size="icon" asChild className="h-8 w-8">
               <Link to="/">
-                <img src="/apps.png" alt="Hub" className="h-4 w-4 opacity-70" />
+                <LayoutGrid className="h-4 w-4 opacity-70" />
               </Link>
             </Button>
           </div>
@@ -406,10 +407,10 @@ export default function Notes() {
           {panes.map((pane, idx) => {
             const isFocused = idx === safeFocusedIdx;
             const tabsResolved: Note[] = pane.tabs
-              .map((id) => notesQuery.data?.find((n) => n.id === id))
-              .filter((n): n is Note => !!n);
+              .map((id) => notesQuery.data?.find((n: any) => n.id === id))
+              .filter((n: any): n is Note => !!n);
             const activeNote =
-              notesQuery.data?.find((n) => n.id === pane.activeId) ?? null;
+              notesQuery.data?.find((n: any) => n.id === pane.activeId) ?? null;
 
             return (
               <section

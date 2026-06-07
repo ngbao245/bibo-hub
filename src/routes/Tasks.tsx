@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Menu, Sparkles, Keyboard } from 'lucide-react';
+import { Menu, Sparkles, Keyboard, LayoutGrid } from 'lucide-react';
 
 import { useTasks, useCreateList, useDeleteList } from '@/api/tasks';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
@@ -47,7 +47,7 @@ export default function Tasks() {
   if (BUILTIN_LABELS[filter]) {
     title = BUILTIN_LABELS[filter];
   } else if (isCustomListId(filter)) {
-    const list = lists.find((l) => l.id === filter);
+    const list = lists.find((l: any) => l.id === filter);
     title = list?.title || 'Danh sách';
   } else {
     title = 'Tasks';
@@ -87,7 +87,7 @@ export default function Tasks() {
           className="flex h-12 items-center justify-center border-b border-border text-muted-foreground transition-colors hover:bg-popover hover:text-foreground"
           title="Hub"
         >
-          <img src="/apps.png" alt="Hub" className="h-5 w-5 opacity-70" />
+          <LayoutGrid className="h-5 w-5 opacity-70" />
         </Link>
         <Link
           to="/notes"
@@ -144,7 +144,7 @@ export default function Tasks() {
           <h2 className="truncate text-sm font-medium">{title}</h2>
           <Button variant="ghost" size="icon" asChild className="h-8 w-8">
             <Link to="/">
-              <img src="/apps.png" alt="Hub" className="h-4 w-4 opacity-70" />
+              <LayoutGrid className="h-4 w-4 opacity-70" />
             </Link>
           </Button>
         </header>
