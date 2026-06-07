@@ -1,41 +1,18 @@
-​<!DOCTYPE html>
+<!doctype html>
 <html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/icon.png" />
+    <link rel="apple-touch-icon" href="/icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="BiBo Tools" />
     <title>BiBo Tools</title>
-    <link rel="icon" type="image/png" href="./assets/icon.png">
-    <link rel="shortcut icon" type="image/png" href="assets/icon.png">
-    
-    <!-- iOS Home Screen Icon -->
-    <link rel="apple-touch-icon" href="assets/icon.png">
-    
-    <!-- iOS Web App Settings -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="BiBo Tools">
-    
-    <!-- Common Styles -->
-    <link rel="stylesheet" href="common.css">
-</head>
-<body>
-    <!-- Config -->
-    <script src="config.js"></script>
-    
-    <!-- Daily Reminder Loader -->
-    <script src="daily-reminder/daily-reminder-loader.js"></script>
-    
-    <script>
-        // Redirect to last visited page or hub
-        const lastPage = localStorage.getItem('app_currentPage');
-        
-        if (lastPage === 'notes') {
-            window.location.href = 'notes/notes.html';
-        } else if (lastPage === 'tasks') {
-            window.location.href = 'tasks/tasks.html';
-        } else {
-            window.location.href = 'hub.html';
-        }
-    </script>
-</body>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>

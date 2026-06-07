@@ -1,0 +1,94 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ============================================================
+   Theme tokens (HSL) - shadcn/ui style
+   Dark mode bật mặc định cho cả app.
+   Color giữ tinh thần VSCode dark hiện tại.
+   ============================================================ */
+@layer base {
+  :root {
+    /* Default = dark theme (project luôn dùng dark) */
+    --background: 0 0% 12%;          /* #1e1e1e */
+    --foreground: 0 0% 83%;          /* #d4d4d4 */
+
+    --card: 240 1% 15%;              /* #252526 */
+    --card-foreground: 0 0% 83%;
+
+    --popover: 240 2% 18%;           /* #2d2d30 */
+    --popover-foreground: 0 0% 83%;
+
+    --primary: 204 100% 40%;         /* #007acc - VSCode blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 1% 15%;
+    --secondary-foreground: 0 0% 80%;
+
+    --muted: 240 2% 20%;             /* hover bg */
+    --muted-foreground: 0 0% 52%;    /* #858585 */
+
+    --accent: 204 100% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 358 64% 51%;      /* #d13438 */
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 240 4% 25%;            /* #3e3e42 */
+    --input: 240 4% 25%;
+    --ring: 204 100% 40%;
+
+    --radius: 0;                      /* vuông vức */
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html,
+  body,
+  #root {
+    @apply h-full;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Disable text selection trên UI elements */
+  button,
+  .no-select {
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  input,
+  textarea,
+  [contenteditable='true'] {
+    user-select: text;
+    -webkit-user-select: text;
+  }
+
+  /* Ẩn scrollbar nhưng vẫn cuộn được */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center border border-border bg-card px-4 py-2 text-foreground transition-colors;
+  }
+  .btn:hover {
+    @apply border-primary bg-popover;
+  }
+}

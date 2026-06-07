@@ -1,0 +1,271 @@
+/* ============================================================
+   Tiptap rich text editor styles
+   ============================================================ */
+
+.tiptap {
+  outline: none;
+  min-height: 400px;
+  padding: 1rem;
+  line-height: 1.6;
+  color: hsl(var(--foreground));
+}
+
+.tiptap p {
+  margin: 0.5em 0;
+}
+
+.tiptap h1,
+.tiptap h2,
+.tiptap h3 {
+  font-weight: 600;
+  margin: 1em 0 0.4em;
+  color: hsl(var(--foreground));
+}
+
+.tiptap h1 { font-size: 1.5rem; }
+.tiptap h2 { font-size: 1.25rem; }
+.tiptap h3 { font-size: 1.1rem; }
+
+.tiptap ul,
+.tiptap ol {
+  padding-left: 1.5rem;
+  margin: 0.5em 0;
+}
+
+.tiptap ul {
+  list-style: disc;
+}
+.tiptap ol {
+  list-style: decimal;
+}
+
+.tiptap li > p {
+  margin: 0.2em 0;
+}
+
+.tiptap strong {
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.tiptap em {
+  font-style: italic;
+}
+
+.tiptap s {
+  text-decoration: line-through;
+  color: hsl(var(--muted-foreground));
+}
+
+.tiptap u {
+  text-decoration: underline;
+}
+
+/* Highlight (mark) — vàng */
+.tiptap mark {
+  background: rgba(255, 235, 59, 0.4);
+  color: inherit;
+  padding: 0 2px;
+}
+
+/* Code inline */
+.tiptap code {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  padding: 1px 4px;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.9em;
+  color: hsl(var(--primary));
+}
+
+/* Code block */
+.tiptap pre {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem 1rem;
+  margin: 0.5em 0;
+  overflow-x: auto;
+  font-family: 'Consolas', 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+.tiptap pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--foreground));
+}
+
+/* Placeholder khi rỗng */
+.tiptap p.is-editor-empty:first-child::before {
+  color: hsl(var(--muted-foreground));
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* ============================================================
+   Vocab Block (custom node)
+   ============================================================ */
+
+.tiptap .vocab-block-wrapper {
+  position: relative;
+  border: 1px solid hsl(var(--border));
+  margin: 1em 0;
+}
+
+/* Grid phải apply trên node-view-content (wrapper Tiptap thêm) */
+.tiptap .vocab-block-wrapper > [data-node-view-content] {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: hsl(var(--border));
+}
+
+.tiptap .vocab-cell {
+  background: hsl(var(--card));
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-height: 80px;
+}
+
+.tiptap .vocab-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: hsl(var(--primary));
+  user-select: none;
+  pointer-events: none;
+}
+
+.tiptap .vocab-content {
+  flex: 1;
+  min-height: 1.5rem;
+  outline: none;
+  font-size: 0.875rem;
+  color: hsl(var(--foreground));
+}
+
+.tiptap .vocab-content p {
+  margin: 0;
+}
+
+.tiptap .vocab-delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--muted-foreground));
+  cursor: pointer;
+  z-index: 1;
+  transition: all 150ms;
+}
+
+.tiptap .vocab-delete-btn:hover {
+  background: hsl(var(--destructive));
+  border-color: hsl(var(--destructive));
+  color: white;
+}
+
+@media (max-width: 640px) {
+  .tiptap .vocab-block-wrapper > [data-node-view-content] {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ============================================================
+   View mode - rendered HTML content (không trong Tiptap)
+   ============================================================ */
+
+.prose-custom {
+  color: hsl(var(--foreground));
+  line-height: 1.7;
+  font-size: 0.875rem;
+}
+
+.prose-custom p { margin: 0.5em 0; }
+.prose-custom h1, .prose-custom h2, .prose-custom h3 {
+  font-weight: 600;
+  margin: 1em 0 0.4em;
+}
+.prose-custom h1 { font-size: 1.5rem; }
+.prose-custom h2 { font-size: 1.25rem; }
+.prose-custom h3 { font-size: 1.1rem; }
+
+.prose-custom ul, .prose-custom ol { padding-left: 1.5rem; margin: 0.5em 0; }
+.prose-custom ul { list-style: disc; }
+.prose-custom ol { list-style: decimal; }
+
+.prose-custom strong { font-weight: 600; }
+.prose-custom em { font-style: italic; }
+.prose-custom s { text-decoration: line-through; color: hsl(var(--muted-foreground)); }
+.prose-custom u { text-decoration: underline; }
+
+.prose-custom mark {
+  background: rgba(255, 235, 59, 0.4);
+  padding: 0 2px;
+}
+
+.prose-custom code {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  padding: 1px 4px;
+  font-family: 'Consolas', monospace;
+  font-size: 0.9em;
+  color: hsl(var(--primary));
+}
+
+.prose-custom pre {
+  background: hsl(var(--popover));
+  border: 1px solid hsl(var(--border));
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+  font-family: 'Consolas', monospace;
+  font-size: 0.875rem;
+}
+.prose-custom pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: hsl(var(--foreground));
+}
+
+/* Vocab blocks trong view mode */
+.prose-custom .vocab-block-wrapper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: hsl(var(--border));
+  border: 1px solid hsl(var(--border));
+  margin: 1em 0;
+}
+.prose-custom .vocab-cell {
+  background: hsl(var(--card));
+  padding: 0.75rem;
+}
+.prose-custom .vocab-label {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: hsl(var(--primary));
+  margin-bottom: 0.25rem;
+}
+.prose-custom .vocab-content {
+  font-size: 0.875rem;
+}
+.prose-custom .vocab-delete-btn { display: none; }
+
+@media (max-width: 640px) {
+  .prose-custom .vocab-block-wrapper { grid-template-columns: 1fr; }
+}
