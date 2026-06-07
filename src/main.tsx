@@ -23,7 +23,7 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider delayDuration={300}>
-        <BrowserRouter basename={import.meta.env.PROD ? '/hubibo' : ''}>
+        <BrowserRouter basename="">
           <App />
         </BrowserRouter>
         <Toaster />
