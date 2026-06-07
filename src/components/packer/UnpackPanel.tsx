@@ -165,7 +165,7 @@ export default function UnpackPanel() {
 
   const charCount = text.length;
   const partsHint =
-    text.match(//g)?.length ?? 0;
+    text.match(/===FILE_START===/g)?.length ?? 0;
 
   return (
     <div className="space-y-3">

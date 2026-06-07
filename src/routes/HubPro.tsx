@@ -4,7 +4,6 @@ import { Keyboard, ChevronDown, Pin, PinOff } from 'lucide-react';
 import { TOOLS, type Tool, type ToolGroup, groupTools } from '@/lib/tools';
 import { useToolAction } from '@/hooks/useToolAction';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useFlipAnimation } from '@/hooks/useFlipAnimation';
 import { cn } from '@/lib/cn';
 import FocusLayer from '@/components/FocusLayer';
 
@@ -72,55 +71,44 @@ export default function HubPro() {
   // của nó. Khi dragEnd chỉ cần clear state.
   // ============================================================
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [insertIndex, setInsertIndex] = useState<number | null>(null);
 
   function handleDragStart(id: string) {
     setDraggedId(id);
+    setInsertIndex(null);
   }
 
-  function handleDragOver(id: string, e: React.DragEvent<HTMLButtonElement>) {
+  function handleDragOver(id: string, e: React.DragEvent<HTMLDivElement>) {
     if (!draggedId || draggedId === id) return;
-
-    // Tính drop trước/sau dựa vào vị trí chuột vs center cell
+    e.preventDefault();
     const rect = e.currentTarget.getBoundingClientRect();
-    const midX = rect.left + rect.width / 2;
-    const dropAfter = e.clientX >= midX;
+    const dropAfter = e.clientX >= rect.left + rect.width / 2;
+    const overIdx = favoriteIds.indexOf(id);
+    setInsertIndex(dropAfter ? overIdx + 1 : overIdx);
+  }
 
-    // Tính index mới của draggedId ngay
-    const next = [...favoriteIds];
-    const fromIdx = next.indexOf(draggedId);
-    const overIdx = next.indexOf(id);
-    if (fromIdx === -1 || overIdx === -1) return;
-
-    next.splice(fromIdx, 1);
-    let toIdx: number;
-    if (dropAfter) {
-      toIdx = fromIdx < overIdx ? overIdx : overIdx + 1;
-    } else {
-      toIdx = fromIdx < overIdx ? overIdx - 1 : overIdx;
+  function handleDrop() {
+    if (draggedId === null || insertIndex === null) {
+      setDraggedId(null);
+      setInsertIndex(null);
+      return;
     }
-
-    // Tránh setState trùng để khỏi spam render
-    if (next[toIdx] === draggedId) return;
-    next.splice(toIdx, 0, draggedId);
-
-    // So sánh tránh setState lặp khi vẫn cùng order
-    let changed = false;
-    for (let i = 0; i < next.length; i++) {
-      if (next[i] !== favoriteIds[i]) {
-        changed = true;
-        break;
-      }
-    }
-    if (changed) setFavoriteIds(next);
+    const next = favoriteIds.filter((id) => id !== draggedId);
+    const fromIdx = favoriteIds.indexOf(draggedId);
+    // Adjust index sau khi remove
+    const adjusted = insertIndex > fromIdx ? insertIndex - 1 : insertIndex;
+    next.splice(adjusted, 0, draggedId);
+    setFavoriteIds(next);
+    setDraggedId(null);
+    setInsertIndex(null);
   }
 
   function handleDragEnd() {
     setDraggedId(null);
+    setInsertIndex(null);
   }
 
-  // FLIP animation cho favorites khi reorder
-  const favoritesGridRef = useRef<HTMLDivElement>(null);
-  useFlipAnimation(favoritesGridRef, favoriteIds.join(','));
+  // FLIP animation cho favorites khi reorder — đã bỏ, dùng insert indicator thay thế
 
   // ============================================================
   // Smooth section transition (JS-driven, easeOutCubic ~450ms).
@@ -231,28 +219,33 @@ export default function HubPro() {
             <section className="min-h-0 flex-1 overflow-y-auto">
               {favorites.length > 0 ? (
                 <div
-                  ref={favoritesGridRef}
                   className="grid content-start gap-px bg-border"
                   style={{
                     gridTemplateColumns:
                       'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))',
                   }}
                 >
-                  {favorites.map((tool) => (
-                    <ToolCell
-                      key={tool.id}
-                      tool={tool}
-                      flipId={tool.id}
-                      isFavorite
-                      draggable
-                      isDragging={draggedId === tool.id}
-                      onClick={() => handleClick(tool)}
-                      onToggleFavorite={() => toggleFavorite(tool.id)}
-                      onDragStart={() => handleDragStart(tool.id)}
-                      onDragOver={(e) => handleDragOver(tool.id, e)}
-                      onDragEnd={handleDragEnd}
-                    />
-                  ))}
+                  {favorites.map((tool, idx) => {
+                    const showInsertBefore = insertIndex === idx;
+                    const showInsertAfter = insertIndex === idx + 1 && idx === favorites.length - 1;
+                    return (
+                      <ToolCell
+                        key={tool.id}
+                        tool={tool}
+                        isFavorite
+                        draggable
+                        isDragging={draggedId === tool.id}
+                        showInsertBefore={showInsertBefore}
+                        showInsertAfter={showInsertAfter}
+                        onClick={() => handleClick(tool)}
+                        onToggleFavorite={() => toggleFavorite(tool.id)}
+                        onDragStart={() => handleDragStart(tool.id)}
+                        onDragOver={(e) => handleDragOver(tool.id, e)}
+                        onDrop={handleDrop}
+                        onDragEnd={handleDragEnd}
+                      />
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="border border-dashed border-border bg-card p-8 text-center text-xs text-muted-foreground">
@@ -361,34 +354,40 @@ function Footer({ total, favorites }: { total: number; favorites: number }) {
 // ============================================================
 function ToolCell({
   tool,
-  flipId,
   isFavorite,
   onClick,
   onToggleFavorite,
   draggable,
   isDragging,
+  showInsertBefore,
+  showInsertAfter,
   onDragStart,
   onDragOver,
+  onDrop,
   onDragEnd,
 }: {
   tool: Tool;
-  flipId?: string;
   isFavorite: boolean;
   onClick: () => void;
   onToggleFavorite: () => void;
   draggable?: boolean;
   isDragging?: boolean;
+  showInsertBefore?: boolean;
+  showInsertAfter?: boolean;
   onDragStart?: () => void;
-  onDragOver?: (e: React.DragEvent<HTMLButtonElement>) => void;
+  onDragOver?: (e: React.DragEvent<HTMLDivElement>) => void;
+  onDrop?: () => void;
   onDragEnd?: () => void;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <button
+        <div
+          role="button"
+          tabIndex={0}
           onClick={onClick}
+          onKeyDown={(e) => e.key === 'Enter' && onClick()}
           draggable={draggable}
-          data-flip-id={flipId}
           onDragStart={(e) => {
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/plain', tool.id);
@@ -398,13 +397,16 @@ function ToolCell({
             e.preventDefault();
             onDragOver?.(e);
           }}
+          onDrop={(e) => { e.preventDefault(); onDrop?.(); }}
           onDragEnd={onDragEnd}
           className={cn(
             'group relative flex aspect-square flex-col items-center justify-center bg-background p-3',
-            'transition-all duration-150',
+            'transition-all duration-200',
             'hover:bg-card focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
             draggable && 'cursor-grab active:cursor-grabbing',
-            isDragging && 'opacity-30 scale-95',
+            isDragging && 'opacity-40',
+            showInsertBefore && 'border-l-4 border-l-primary',
+            showInsertAfter && 'border-r-4 border-r-primary',
           )}
         >
           {/* Pin/unpin button */}
@@ -436,7 +438,7 @@ function ToolCell({
           <span className="text-center text-xs leading-tight text-foreground transition-colors">
             {tool.label}
           </span>
-        </button>
+        </div>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="flex items-center gap-2">
         <span>{tool.label}</span>

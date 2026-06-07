@@ -18,6 +18,12 @@ interface DropzoneProps {
 export default function Dropzone({ onFiles, disabled }: DropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  function setDragOverDebounced(value: boolean) {
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    debounceTimer.current = setTimeout(() => setDragOver(value), 50);
+  }
 
   // Folders to skip entirely — không hiển thị trong tree
   const SKIP_FOLDERS = ['node_modules', '.git', 'dist', 'build', '.next', '.vite', '.turbo', 'coverage'];
@@ -38,6 +44,7 @@ export default function Dropzone({ onFiles, disabled }: DropzoneProps) {
 
   async function handleDrop(e: DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
     setDragOver(false);
     if (disabled) return;
 
@@ -58,22 +65,20 @@ export default function Dropzone({ onFiles, disabled }: DropzoneProps) {
 
   return (
     <div
-      onDragOver={(e) => {
-        e.preventDefault();
-        if (!disabled) setDragOver(true);
-      }}
-      onDragLeave={() => setDragOver(false)}
+      onDragEnter={(e) => { e.preventDefault(); if (!disabled) setDragOverDebounced(true); }}
+      onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragOverDebounced(true); }}
+      onDragLeave={() => setDragOverDebounced(false)}
       onDrop={handleDrop}
       onClick={() => !disabled && inputRef.current?.click()}
       className={cn(
-        'flex cursor-pointer flex-col items-center justify-center border-2 border-dashed border-border bg-card py-10 text-center transition-colors',
-        dragOver && 'border-primary bg-popover',
+        'flex cursor-pointer flex-col items-center justify-center border-2 border-dashed border-border bg-card py-10 text-center',
+        dragOver && 'border-primary bg-popover transition-colors duration-150',
         disabled && 'cursor-not-allowed opacity-50',
       )}
     >
-      <FolderUp className="mb-2 h-8 w-8 text-primary" />
-      <p className="text-sm font-medium text-foreground">Kéo thả thư mục project vào đây</p>
-      <p className="mt-1 text-xs text-muted-foreground">hoặc click để chọn</p>
+      <FolderUp className="mb-2 h-8 w-8 text-primary pointer-events-none" />
+      <p className="text-sm font-medium text-foreground pointer-events-none">Kéo thả thư mục project vào đây</p>
+      <p className="mt-1 text-xs text-muted-foreground pointer-events-none">hoặc click để chọn</p>
 
       <input
         ref={inputRef}
