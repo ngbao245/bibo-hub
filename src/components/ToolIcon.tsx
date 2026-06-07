@@ -13,6 +13,7 @@ import {
   Package,
   Briefcase,
   ShoppingCart,
+  Send,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -38,6 +39,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   encoder: KeyRound,
   backup: Package,
   'project-packer': Briefcase,
+  'p2p-transfer': Send,
   keycap: ShoppingCart,
 };
 

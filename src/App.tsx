@@ -16,6 +16,7 @@ const Movies = lazy(() => import('./routes/Movies'));
 const Expense = lazy(() => import('./routes/Expense'));
 const Keycap = lazy(() => import('./routes/Keycap'));
 const ProjectPacker = lazy(() => import('./routes/ProjectPacker'));
+const P2PTransfer = lazy(() => import('./routes/P2PTransfer'));
 
 // Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
 import Calculator from './modals/Calculator';
@@ -33,7 +34,7 @@ import CacheInspector from './modals/CacheInspector';
 function PageLoader() {
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="h-5 w-5 animate-spin border-2 border-primary border-t-transparent" />
+      <div className="h-5 w-5 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30" />
     </div>
   );
 }
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/expense" element={<Expense />} />
           <Route path="/keycap" element={<Keycap />} />
           <Route path="/project-packer" element={<ProjectPacker />} />
+          <Route path="/p2p" element={<P2PTransfer />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>

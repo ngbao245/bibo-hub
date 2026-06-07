@@ -146,6 +146,13 @@ export const TOOLS: Tool[] = [
     description: 'Đóng gói project source code',
   },
   {
+    id: 'p2p-transfer',
+    label: 'P2P Transfer',
+    group: 'Developer',
+    action: { kind: 'route', path: '/p2p' },
+    description: 'Truyền file ngang hàng qua WebRTC',
+  },
+  {
     id: 'keycap',
     label: 'Retailing',
     group: 'Developer',

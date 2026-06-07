@@ -1,69 +1,85 @@
-# BiBo Tools v2
+# HubiBo Tools
 
-Refactor toàn bộ project từ vanilla JS sang React + TypeScript.
+All-in-one productivity toolkit với notes, tasks, calculator, file transfer và nhiều tools khác.
 
-## Stack
+## Tech Stack
 
-- **Vite** — build tool, dev server siêu nhanh
-- **React 18** + **TypeScript** strict mode
-- **Tailwind CSS v3** — styling, design system vuông vức (no border-radius)
-- **React Router v6** — SPA routing
-- **Zustand** — state toàn cục (modal đang mở, theme...)
-- **TanStack Query v5** — fetch + cache MockAPI
-- **Zod** — validate schema runtime
+- **Vite** + **React 18** + **TypeScript**
+- **Tailwind CSS** - Design system với shadcn/ui
+- **React Router v6** - SPA routing
+- **TanStack Query v5** - Data fetching & caching
+- **Zustand** - Global state management
+- **Zod** - Runtime type validation
 
-## Lệnh
+## Quick Start
 
 ```bash
-npm install        # cài deps lần đầu
-npm run dev        # chạy dev server (http://localhost:5173)
-npm run build      # build production ra dist/
-npm run preview    # preview bản build
-npm run format     # format code bằng Prettier
+# Install dependencies
+npm install
+
+# Start dev server (http://localhost:5173)
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
 ```
 
-## Cấu trúc
+## Features
+
+### Core Tools
+- 📝 **Notes** - Rich text editor với linking và search
+- ✅ **Tasks** - Task management với filters và priority
+- 🎬 **Movies** - Movie tracking với rating
+- 💰 **Expense** - Expense tracking với categories
+- 📦 **Project Packer** - Serialize project sang plain text để share qua chat
+
+### Utilities
+- 🧮 **Calculator** - Quick calculator modal
+- 🌐 **Translator** - Multi-language translation
+- 🔐 **Secret** - Encrypt/decrypt messages
+- 💾 **Backup** - Export/import data
+- 📊 **Savings** - Savings goal tracker
+- 🔑 **Encoder** - Base64, URL encoding tools
+
+## Project Structure
 
 ```
 src/
-├── main.tsx              # Entry, setup React Query + Router
-├── App.tsx               # Root + định nghĩa routes
-├── routes/               # Mỗi file = 1 page
-├── components/           # UI dùng chung (Modal, Sidebar...)
-├── modals/               # Nội dung từng tool modal
-├── stores/               # Zustand stores
-├── api/                  # TanStack Query hooks
-├── schemas/              # Zod schemas + types
-├── hooks/                # Custom React hooks
-├── lib/                  # Utility thuần (encoder, config...)
-└── styles/index.css      # Tailwind + CSS variables
+├── routes/          # Pages (Notes, Tasks, Movies, Expense...)
+├── components/      # Reusable UI components
+├── modals/          # Tool modals (Calculator, Translate...)
+├── api/             # TanStack Query hooks
+├── lib/             # Utilities (packer, crypto, parsers...)
+├── hooks/           # Custom React hooks
+├── stores/          # Zustand stores
+└── styles/          # Global CSS & Tailwind config
 ```
 
-## Design system
+## Documentation
 
-- **Vuông vức**: tailwind config override `borderRadius` chỉ cho `0`. Không dùng `rounded-*`.
-- **Theme**: VSCode dark, kế thừa từ `common.css` cũ.
-- **Token màu**: `bg-bg-primary`, `text-text-muted`, `border-border`...
+- [Project Packer Format](./docs/project-packer.md) - Spec cho serialization format
+- [Architecture](./docs/architecture.md) - System design overview
+- [Migration Log](./docs/migration-log.md) - History từ vanilla JS sang React
 
-## Hub có 2 bản
+## Deployment
 
-- `/` — bản original (giữ nguyên UI cũ)
-- `/pro` — bản redesigned chuyên nghiệp
+Project được deploy trên Vercel:
+- **Standalone**: https://note-silk-gamma.vercel.app
+- **Via proxy**: https://vudecor.vn/hubibo (ăn ké domain)
 
-## Migration progress
+Config cho proxy deployment:
+```json
+{
+  "rewrites": [
+    {"source": "/hubibo", "destination": "https://note-silk-gamma.vercel.app/"},
+    {"source": "/hubibo/:match*", "destination": "https://note-silk-gamma.vercel.app/:match*"}
+  ]
+}
+```
 
-- [x] Bước 1: Setup Vite + React + TS + Tailwind
-- [ ] Bước 2: Theme + design tokens
-- [ ] Bước 3: Core components (Modal, Sidebar, MobileHeader, ToolButton)
-- [ ] Bước 4: Providers + global shortcuts + modal store
-- [ ] Bước 5: API client + Zod schemas
-- [ ] Bước 6: Hub (original + pro)
-- [ ] Bước 7: Calculator modal
-- [ ] Bước 8: Translate, Encoder, Backup modals
-- [ ] Bước 9: Notes
-- [ ] Bước 10: Tasks
-- [ ] Bước 11: Secret, Savings, SpxTracking, DailyReminder, Shortcuts modals
-- [ ] Bước 12: Sources, Movies, Expense, Keycap, ProjectPacker, Orders pages
-- [ ] Bước 13: Mobile responsive
-- [ ] Bước 14: Xoá file cũ
-- [ ] Bước 15: Deploy Vercel
+## License
+
+MIT

@@ -329,27 +329,50 @@ export default function PackPanel() {
       progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
-    // Lấy file từ ref, lọc theo selectedPaths + filter
+    // Lấy file từ ref, lọc theo selectedPaths + filter.
+    // Detect root prefix (nếu có): tất cả path cùng share segment đầu thì đó là root.
+    const sample = filesRef.current[0]?.path ?? '';
+    const firstSegment = sample.split('/')[0];
+    const hasRootPrefix =
+      filesRef.current.length > 1 &&
+      firstSegment.length > 0 &&
+      filesRef.current.every((f) => f.path.startsWith(firstSegment + '/'));
+    const stripRoot = (path: string): string =>
+      hasRootPrefix ? path.split('/').slice(1).join('/') : path;
+
+    // Log chi tiết file bị filter để user biết tại sao bị loại.
+    const filteredOut: { path: string; reason: string }[] = [];
     const toRead = filesRef.current.filter((f) => {
       if (!selectedPaths.has(f.path)) return false;
-      // Bỏ root prefix khi check filter
-      const parts = f.path.split('/');
-      const relativePath = parts.length > 1 ? parts.slice(1).join('/') : f.path;
-      return (
-        !isExcluded(relativePath, options.excludePatterns) &&
-        isExtensionAllowed(relativePath, options.includeExtensions)
-      );
+      const relativePath = stripRoot(f.path);
+
+      if (isExcluded(relativePath, options.excludePatterns)) {
+        filteredOut.push({ path: f.path, reason: 'exclude pattern' });
+        return false;
+      }
+      if (!isExtensionAllowed(relativePath, options.includeExtensions)) {
+        filteredOut.push({ path: f.path, reason: 'extension không trong include list' });
+        return false;
+      }
+      return true;
     });
+
+    // Log file bị filter (giới hạn 30 dòng để không spam)
+    if (filteredOut.length > 0) {
+      log(`Filter: ${filteredOut.length} file bị loại (xem chi tiết bên dưới)`, 'warning');
+      for (const f of filteredOut.slice(0, 30)) {
+        log(`  ✗ ${f.path} — ${f.reason}`, 'warning');
+      }
+      if (filteredOut.length > 30) {
+        log(`  ... và ${filteredOut.length - 30} file khác`, 'warning');
+      }
+    }
 
     setProgress({ current: 0, total: toRead.length, path: '' });
     log(`Bắt đầu đọc ${toRead.length} file...`);
 
     const { files: packedFiles, failed } = await readFiles(
-      toRead.map((f) => {
-        const parts = f.path.split('/');
-        const relativePath = parts.length > 1 ? parts.slice(1).join('/') : f.path;
-        return { file: f.file, path: relativePath };
-      }),
+      toRead.map((f) => ({ file: f.file, path: stripRoot(f.path) })),
       (p) => {
         setProgress({ current: p.current, total: p.total, path: p.currentPath });
         if (p.current % 50 === 0 || p.current === p.total) {
