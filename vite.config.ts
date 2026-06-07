@@ -4,8 +4,8 @@ import path from 'node:path';
 
 // Cấu hình Vite cho React + TS + Tailwind.
 // Dùng alias `@` để import từ src/ cho gọn: import X from '@/components/X'
-export default defineConfig({
-  base: '/hubibo/',  // Base path khi deploy dưới subdirectory
+export default defineConfig(({ mode }) => ({
+  base: mode === 'production' ? '/hubibo/' : '/',  // Chỉ dùng /hubibo/ khi build
   plugins: [react()],
   resolve: {
     alias: {
@@ -33,4 +33,4 @@ export default defineConfig({
     port: 5173,
     open: true,
   },
-});
+}));
