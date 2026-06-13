@@ -1,3 +1,4 @@
+
 import type { Task } from '@/schemas/task';
 import type { Note } from '@/schemas/note';
 
@@ -91,13 +92,6 @@ export function getFocusTasks(tasks: Task[], limit = 5): Task[] {
   // Đơn giản: lấy tất cả task pending (chưa completed), sort theo score
   const pending = tasks.filter((t) => t.status !== 'completed');
 
-  // DEBUG
-  console.log('[getFocusTasks] Total tasks:', tasks.length, 'Pending:', pending.length);
-  pending.forEach((t) => {
-    const s = scoreTask(t, now);
-    console.log(`  [${t.id}] "${t.title}" status=${t.status} dueDate=${t.dueDate} createdAt=${t.createdAt} → score=${s}`);
-  });
-
   const scored = pending
     .map((task) => ({ task, score: scoreTask(task, now) }))
     .filter(({ score }) => score > 0)
@@ -106,7 +100,6 @@ export function getFocusTasks(tasks: Task[], limit = 5): Task[] {
 
   // Fallback: nếu score-based không có gì, lấy N task pending mới nhất
   if (scored.length === 0 && pending.length > 0) {
-    console.log('[getFocusTasks] FALLBACK: no scored tasks, returning newest pending');
     return pending
       .sort((a, b) => {
         const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -156,4 +149,4 @@ export function formatDueDate(dueDate: string): { label: string; tone: 'overdue'
   // Format dd/MM
   const d = new Date(dueDate);
   return { label: `${d.getDate()}/${d.getMonth() + 1}`, tone: 'normal' };
-}
+}

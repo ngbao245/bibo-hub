@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Menu, Sparkles, Keyboard, LayoutGrid } from 'lucide-react';
@@ -47,7 +48,7 @@ export default function Tasks() {
   if (BUILTIN_LABELS[filter]) {
     title = BUILTIN_LABELS[filter];
   } else if (isCustomListId(filter)) {
-    const list = lists.find((l: any) => l.id === filter);
+    const list = lists.find((l) => l.id === filter);
     title = list?.title || 'Danh sách';
   } else {
     title = 'Tasks';
@@ -176,4 +177,4 @@ export default function Tasks() {
       </main>
     </div>
   );
-}
+}

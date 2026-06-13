@@ -1,8 +1,7 @@
-import { useCallback, useState } from 'react';
+
+import { useState } from 'react';
 import { Search, ExternalLink, ArrowLeft, Trash2, Truck } from 'lucide-react';
 
-import { useShortcut } from '@/hooks/useShortcut';
-import { useModalStore } from '@/stores/modalStore';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 import ToolModal from '@/components/ToolModal';
@@ -19,16 +18,6 @@ interface HistoryItem {
 }
 
 export default function Spx() {
-  const toggle = useModalStore((s) => s.toggle);
-  const handleShortcut = useCallback(() => toggle('spxTracking'), [toggle]);
-
-  useShortcut({
-    key: 'alt+shift+p',
-    label: 'SPX Tracking',
-    group: 'Tools',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal id="spxTracking" title="SPX Tracking" className="max-w-3xl">
       <Content />
@@ -193,4 +182,4 @@ function timeAgo(date: Date): string {
   if (hours < 24) return `${hours} giờ trước`;
   if (days < 7) return `${days} ngày trước`;
   return date.toLocaleDateString('vi-VN');
-}
+}

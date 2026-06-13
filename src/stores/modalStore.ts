@@ -1,3 +1,4 @@
+
 import { create } from 'zustand';
 
 // ============================================================
@@ -36,6 +37,7 @@ export const MODAL_IDS = [
   'spxTracking',
   'dailyReminder',
   'cacheInspector',
+  'crypto',
 ] as const;
 
 export type ModalId = (typeof MODAL_IDS)[number];
@@ -59,4 +61,4 @@ export const useModalStore = create<ModalState>((set, get) => ({
   open: (id) => set({ current: id }),
   close: () => set({ current: null }),
   toggle: (id) => set({ current: get().current === id ? null : id }),
-}));
+}));

@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ChevronDown, Pin, PinOff } from 'lucide-react';
 
-import { TOOLS, type Tool, type ToolGroup, groupTools } from '@/lib/tools';
+import { TOOLS, type Tool, type ToolGroup } from '@/lib/tools';
 import { useToolAction } from '@/hooks/useToolAction';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useHubFavorites, useSaveHubFavorites } from '@/api/hubFavorites';
+import { useToolCategories } from '@/api/toolCategories';
 import { cn } from '@/lib/cn';
 import FocusLayer from '@/components/FocusLayer';
 
@@ -25,7 +28,7 @@ import { toast } from '@/components/ui/sonner';
 // Tối đa 24 favorite slots.
 // ============================================================
 
-const GROUP_ORDER: ToolGroup[] = [
+const DEFAULT_GROUP_ORDER: ToolGroup[] = [
   'Productivity',
   'Finance',
   'Tracking',
@@ -38,9 +41,64 @@ const MAX_FAVORITES = 24;
 export default function HubPro() {
   const handleClick = useToolAction();
   const [focusVisible, setFocusVisible] = useLocalStorage('hubpro_focusVisible', true);
-  const [favoriteIds, setFavoriteIds] = useLocalStorage<string[]>(
-    'hubpro_favorites',
-    TOOLS.slice(0, MAX_FAVORITES).map((t) => t.id),
+
+  // Favorites — lưu /Config (group __system), trống nếu chưa có record
+  const favQuery = useHubFavorites();
+  const saveMut = useSaveHubFavorites();
+  const [favoriteIds, setFavoriteIdsLocal] = useState<string[]>([]);
+  const dirtyRef = useRef(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync từ API → state local khi query load xong
+  useEffect(() => {
+    if (favQuery.data) {
+      setFavoriteIdsLocal(favQuery.data.ids);
+    }
+  }, [favQuery.data]);
+
+  // Flush dirty state lên API
+  const flushSave = useCallback(() => {
+    if (!dirtyRef.current) return;
+    dirtyRef.current = false;
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+      debounceRef.current = null;
+    }
+    saveMut.mutate({
+      ids: favoriteIds,
+      recordId: favQuery.data?.recordId ?? null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoriteIds, favQuery.data?.recordId]);
+
+  // Save trước khi rời trang hoặc tab blur
+  useEffect(() => {
+    const handleBeforeUnload = () => flushSave();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') flushSave();
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [flushSave]);
+
+  const setFavoriteIds = useCallback(
+    (ids: string[]) => {
+      setFavoriteIdsLocal(ids);
+      dirtyRef.current = true;
+      // Debounce 2s — gom nhiều thao tác thành 1 request
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        dirtyRef.current = false;
+        debounceRef.current = null;
+        saveMut.mutate({ ids, recordId: favQuery.data?.recordId ?? null });
+      }, 2000);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [favQuery.data?.recordId],
   );
 
   const favoriteSet = new Set(favoriteIds);
@@ -49,7 +107,31 @@ export default function HubPro() {
     .filter((t): t is Tool => !!t)
     .slice(0, MAX_FAVORITES); // hard limit khi render
 
-  const byGroup = groupTools(TOOLS);
+  // Categories — lưu /Config, fallback hardcode
+  const catQuery = useToolCategories();
+  const { categoryOrder, toolsByCategory } = useMemo(() => {
+    const catData = catQuery.data?.data;
+    const hasCustom = catData && catData.categories.length > 0;
+
+    // Thứ tự category
+    const order: string[] = hasCustom
+      ? catData.categories
+      : DEFAULT_GROUP_ORDER;
+
+    // Mapping tool → category
+    const grouped: Record<string, Tool[]> = {};
+    for (const cat of order) grouped[cat] = [];
+
+    for (const tool of TOOLS) {
+      const cat = hasCustom
+        ? (catData.mapping[tool.id] ?? '')
+        : tool.group;
+      if (!cat || !grouped[cat]) continue;
+      grouped[cat].push(tool);
+    }
+
+    return { categoryOrder: order, toolsByCategory: grouped };
+  }, [catQuery.data]);
 
   function toggleFavorite(id: string) {
     if (favoriteSet.has(id)) {
@@ -224,6 +306,14 @@ export default function HubPro() {
                     gridTemplateColumns:
                       'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))',
                   }}
+                  onDragOver={(e) => {
+                    // Chỉ fire khi kéo vào vùng trống của grid (không phải child cell)
+                    if (!draggedId) return;
+                    if (e.target !== e.currentTarget) return;
+                    e.preventDefault();
+                    setInsertIndex(favoriteIds.length);
+                  }}
+                  onDrop={handleDrop}
                 >
                   {favorites.map((tool, idx) => {
                     const showInsertBefore = insertIndex === idx;
@@ -259,8 +349,8 @@ export default function HubPro() {
 
           {/* Section 2: content height tự nhiên */}
           <div className="shrink-0 space-y-6 border-t border-border py-6">
-            {GROUP_ORDER.map((group) => {
-              const tools = byGroup[group];
+            {categoryOrder.map((group) => {
+              const tools = toolsByCategory[group] ?? [];
               if (tools.length === 0) return null;
               return (
                 <section key={group}>
@@ -341,7 +431,7 @@ function Footer({ total, favorites }: { total: number; favorites: number }) {
   return (
     <footer className="flex items-center justify-between border-t border-border bg-card px-[clamp(1rem,4vw,4rem)] py-2 text-xs text-muted-foreground">
       <span>
-        {favorites}/{MAX_FAVORITES} đã pin · {total} công cụ
+        {favorites}/{total} đã pin
       </span>
       <span className="font-mono max-md:hidden">v2.0.0</span>
     </footer>
@@ -450,4 +540,4 @@ function ToolCell({
       </TooltipContent>
     </Tooltip>
   );
-}
+}

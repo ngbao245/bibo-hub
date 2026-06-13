@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { Package, RotateCcw, FolderOpen, ChevronRight, ChevronDown, File as FileIcon, Archive, Download } from 'lucide-react';
 import { PackerLoadingSpinner } from './PackerLoadingSpinner';
 
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/cn';
 import { toast } from '@/components/ui/sonner';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 import TerminalLog from './TerminalLog';
 import PartOutput from './PartOutput';
@@ -25,6 +27,11 @@ import type { LogEntry, PackOptions, PackPart } from '@/lib/packer/types';
 // 1. File[] lưu trong useRef (KHÔNG vào React state) → không trigger re-render khổng lồ
 // 2. Tree state chỉ chứa metadata (path, type) → nhẹ
 // 3. Lazy render: folder collapsed → không render children
+//
+// Persist (cứu khi crash):
+// - Options: localStorage 'packer.options'
+// - Selection paths: localStorage 'packer.selectedPaths'
+//   → user mở folder lại, app tự restore tick từ paths cũ.
 // ============================================================
 
 const REACT_PRESET = PRESETS[0];
@@ -33,6 +40,9 @@ const DEFAULT_OPTIONS: PackOptions = {
   excludePatterns: REACT_PRESET.excludePatterns,
   includeExtensions: REACT_PRESET.includeExtensions,
 };
+
+const LS_OPTIONS = 'packer.options';
+const LS_SELECTED_PATHS = 'packer.selectedPaths';
 
 const HIDDEN_FOLDERS = new Set([
   'node_modules', '.git', 'dist', 'build', '.next', '.vite',
@@ -88,6 +98,144 @@ interface TreeNode {
   children: TreeNode[];  // chỉ folder mới có children
   fileCount: number;     // tổng số file con (folder), 1 (file)
   descendantPaths: string[]; // cache: tất cả path con (cho toggle nhanh)
+}
+
+/**
+ * Selection store — Set<string> + per-path subscriptions.
+ *
+ * Lý do KHÔNG dùng React state cho selectedPaths:
+ *   - Mỗi tick → setState → re-render TOÀN BỘ tree (5000 row).
+ *   - Mỗi folder phải re-compute count = O(descendants) × O(folders) = O(n²).
+ *
+ * Cách dùng: row subscribe vào path của mình, chỉ row đó re-render.
+ * Folder count vẫn là O(descendants) NHƯNG chỉ chạy khi count đổi
+ * (không phải mỗi setState).
+ */
+class SelectionStore {
+  private set: Set<string>;
+  private listeners = new Map<string, Set<() => void>>();
+  private allListeners = new Set<() => void>();
+
+  constructor(initial: Iterable<string>) {
+    this.set = new Set(initial);
+  }
+
+  has(path: string): boolean {
+    return this.set.has(path);
+  }
+
+  /** Snapshot toàn bộ — dùng để persist localStorage hoặc count. */
+  getAll(): string[] {
+    return [...this.set];
+  }
+
+  size(): number {
+    return this.set.size;
+  }
+
+  /** Toggle nhiều path 1 lần, fire chỉ những path đổi. */
+  toggle(paths: string[], checked: boolean) {
+    const changed: string[] = [];
+    for (const p of paths) {
+      const has = this.set.has(p);
+      if (checked && !has) {
+        this.set.add(p);
+        changed.push(p);
+      } else if (!checked && has) {
+        this.set.delete(p);
+        changed.push(p);
+      }
+    }
+    if (changed.length === 0) return;
+    // Notify per-path listeners
+    for (const p of changed) {
+      this.listeners.get(p)?.forEach((cb) => cb());
+    }
+    // Notify all listeners (cho folder count, panel summary)
+    this.allListeners.forEach((cb) => cb());
+  }
+
+  clear() {
+    if (this.set.size === 0) return;
+    const old = [...this.set];
+    this.set.clear();
+    for (const p of old) {
+      this.listeners.get(p)?.forEach((cb) => cb());
+    }
+    this.allListeners.forEach((cb) => cb());
+  }
+
+  replace(paths: Iterable<string>) {
+    const next = new Set(paths);
+    const all = new Set([...this.set, ...next]);
+    this.set = next;
+    for (const p of all) {
+      this.listeners.get(p)?.forEach((cb) => cb());
+    }
+    this.allListeners.forEach((cb) => cb());
+  }
+
+  /** Subscribe vào 1 path — return unsubscribe */
+  subscribePath(path: string, cb: () => void): () => void {
+    let s = this.listeners.get(path);
+    if (!s) {
+      s = new Set();
+      this.listeners.set(path, s);
+    }
+    s.add(cb);
+    return () => {
+      s?.delete(cb);
+      if (s?.size === 0) this.listeners.delete(path);
+    };
+  }
+
+  /** Subscribe mọi thay đổi (cho folder count, summary) */
+  subscribeAll(cb: () => void): () => void {
+    this.allListeners.add(cb);
+    return () => this.allListeners.delete(cb);
+  }
+}
+
+const SelectionContext = createContext<SelectionStore | null>(null);
+
+/** Hook: subscribe checked status của 1 path — chỉ row đó re-render khi đổi */
+function useIsSelected(path: string): boolean {
+  const store = useContext(SelectionContext);
+  if (!store) throw new Error('SelectionContext missing');
+  return useSyncExternalStore(
+    (cb) => store.subscribePath(path, cb),
+    () => store.has(path),
+  );
+}
+
+/** Hook: count selected trong descendants — chỉ folder render khi store đổi */
+function useFolderCount(allDescendants: string[]): { checked: number; total: number } {
+  const store = useContext(SelectionContext);
+  if (!store) throw new Error('SelectionContext missing');
+  const subscribe = useCallback(
+    (cb: () => void) => store.subscribeAll(cb),
+    [store],
+  );
+  const getSnapshot = useCallback(() => {
+    let count = 0;
+    for (const p of allDescendants) if (store.has(p)) count++;
+    return count;
+  }, [allDescendants, store]);
+  const checked = useSyncExternalStore(subscribe, getSnapshot);
+  return { checked, total: allDescendants.length };
+}
+
+/**
+ * Restore selection từ paths cũ:
+ *   - Có overlap với paths mới → giữ overlap
+ *   - Không overlap → select all (lần đầu hoặc folder khác hoàn toàn)
+ */
+function restoreSelection(currentPaths: string[], previousPaths: string[]): string[] {
+  if (previousPaths.length === 0) return currentPaths;
+  const prev = new Set(previousPaths);
+  const intersect = currentPaths.filter((p) => prev.has(p));
+  if (intersect.length === 0) return currentPaths;
+  return intersect;
 }
 
 async function buildTree(paths: string[]): Promise<TreeNode> {
@@ -162,8 +310,45 @@ export default function PackPanel() {
 
   // State chỉ chứa data nhẹ
   const [tree, setTree] = useState<TreeNode | null>(null);
-  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
-  const [options, setOptions] = useState<PackOptions>(DEFAULT_OPTIONS);
+
+  // Selection store — không qua React state để tránh re-render toàn cây.
+  // Persist qua localStorage: load 1 lần lúc mount, save khi store đổi.
+  const selectionStore = useMemo(() => {
+    let initial: string[] = [];
+    try {
+      const raw = localStorage.getItem(LS_SELECTED_PATHS);
+      if (raw) initial = JSON.parse(raw);
+    } catch { /* ignore */ }
+    return new SelectionStore(Array.isArray(initial) ? initial : []);
+  }, []);
+
+  // Persist khi store đổi (debounce 200ms để không spam localStorage khi tick nhanh)
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    return selectionStore.subscribeAll(() => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        try {
+          localStorage.setItem(
+            LS_SELECTED_PATHS,
+            JSON.stringify(selectionStore.getAll()),
+          );
+        } catch { /* ignore */ }
+      }, 200);
+    });
+  }, [selectionStore]);
+
+  // Subscribe summary count cho footer
+  const totalSelected = useSyncExternalStore(
+    useCallback((cb) => selectionStore.subscribeAll(cb), [selectionStore]),
+    useCallback(() => selectionStore.size(), [selectionStore]),
+  );
+
+  // Options persist sang localStorage
+  const [options, setOptions] = useLocalStorage<PackOptions>(
+    LS_OPTIONS,
+    DEFAULT_OPTIONS,
+  );
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [isPacking, setIsPacking] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number; path: string } | null>(null);
@@ -208,7 +393,7 @@ export default function PackPanel() {
   function reset() {
     filesRef.current = [];
     setTree(null);
-    setSelectedPaths(new Set());
+    selectionStore.clear();
     setLogs([]);
     setParts([]);
     setIsPacking(false);
@@ -305,11 +490,17 @@ export default function PackPanel() {
     // Auto-select tất cả paths. Tách 2 setState bằng yield để React render mượt.
     setTree(newTree);
     await new Promise((r) => setTimeout(r, 0));
-    setSelectedPaths(new Set(paths));
+    // Restore selection từ localStorage nếu có overlap, không thì select all
+    const previousPaths = selectionStore.getAll();
+    const restored = restoreSelection(paths, previousPaths);
+    selectionStore.replace(restored);
     setParts([]);
     setLogs([{
       id: ++logIdRef.current,
-      message: `Đã quét ${filtered.length} file`,
+      message:
+        restored.length === paths.length
+          ? `Đã quét ${filtered.length} file (chọn tất cả)`
+          : `Đã quét ${filtered.length} file (restore ${restored.length}/${paths.length} file đã chọn trước)`,
       type: 'info',
       timestamp: new Date(),
     }]);
@@ -330,7 +521,7 @@ export default function PackPanel() {
       progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
-    // Lấy file từ ref, lọc theo selectedPaths + filter.
+    // Lấy file từ ref, lọc theo selection + filter.
     // Detect root prefix (nếu có): tất cả path cùng share segment đầu thì đó là root.
     const sample = filesRef.current[0]?.path ?? '';
     const firstSegment = sample.split('/')[0];
@@ -344,7 +535,7 @@ export default function PackPanel() {
     // Log chi tiết file bị filter để user biết tại sao bị loại.
     const filteredOut: { path: string; reason: string }[] = [];
     const toRead = filesRef.current.filter((f) => {
-      if (!selectedPaths.has(f.path)) return false;
+      if (!selectionStore.has(f.path)) return false;
       const relativePath = stripRoot(f.path);
 
       if (isExcluded(relativePath, options.excludePatterns)) {
@@ -408,13 +599,14 @@ export default function PackPanel() {
   const selectedFileCount = useMemo(() => {
     if (!tree) return 0;
     let count = 0;
-    for (const path of selectedPaths) {
-      // Kiểm tra path có phải là file không (không có path nào khác bắt đầu bằng path/)
-      const isFile = filesRef.current.some((f) => f.path === path);
-      if (isFile) count++;
+    const filePaths = new Set(filesRef.current.map((f) => f.path));
+    const selected = selectionStore.getAll();
+    for (const p of selected) {
+      if (filePaths.has(p)) count++;
     }
     return count;
-  }, [tree, selectedPaths]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tree, totalSelected]);
 
   return (
     <div className="space-y-3">
@@ -464,11 +656,16 @@ export default function PackPanel() {
               const built = await buildTree(paths);
               setTree(built);
               await new Promise((r) => setTimeout(r, 0));
-              setSelectedPaths(new Set(paths));
+              const previousPaths = selectionStore.getAll();
+              const restored = restoreSelection(paths, previousPaths);
+              selectionStore.replace(restored);
               setParts([]);
               setLogs([{
                 id: ++logIdRef.current,
-                message: `Đã quét ${collected.length} file (drag-drop)`,
+                message:
+                  restored.length === paths.length
+                    ? `Đã quét ${collected.length} file (drag-drop, chọn tất cả)`
+                    : `Đã quét ${collected.length} file (restore ${restored.length}/${paths.length})`,
                 type: 'info',
                 timestamp: new Date(),
               }]);
@@ -513,13 +710,13 @@ export default function PackPanel() {
                   onClick={async () => {
                     setBusyMessage('Đang chọn tất cả...');
                     await new Promise((r) => setTimeout(r, 0));
-                    const all = new Set<string>();
+                    const all: string[] = [];
                     function collect(node: TreeNode) {
-                      all.add(node.path);
+                      all.push(node.path);
                       for (const c of node.children) collect(c);
                     }
                     for (const c of tree.children) collect(c);
-                    setSelectedPaths(all);
+                    selectionStore.replace(all);
                     setBusyMessage(null);
                   }}
                   className="text-xs text-primary hover:underline"
@@ -530,7 +727,7 @@ export default function PackPanel() {
                   onClick={async () => {
                     setBusyMessage('Đang bỏ chọn...');
                     await new Promise((r) => setTimeout(r, 0));
-                    setSelectedPaths(new Set());
+                    selectionStore.clear();
                     setBusyMessage(null);
                   }}
                   className="text-xs text-muted-foreground hover:underline"
@@ -540,26 +737,18 @@ export default function PackPanel() {
               </div>
             </div>
 
-            <div className="max-h-80 overflow-y-auto p-1 text-xs">
-              {tree.children.map((node) => (
-                <TreeNodeView
-                  key={node.path}
-                  node={node}
-                  depth={0}
-                  selectedPaths={selectedPaths}
-                  onToggle={(paths, checked) => {
-                    setSelectedPaths((prev) => {
-                      const next = new Set(prev);
-                      for (const p of paths) {
-                        if (checked) next.add(p);
-                        else next.delete(p);
-                      }
-                      return next;
-                    });
-                  }}
-                />
-              ))}
-            </div>
+            <SelectionContext.Provider value={selectionStore}>
+              <div className="max-h-80 overflow-y-auto p-1 text-xs">
+                {tree.children.map((node) => (
+                  <TreeNodeView
+                    key={node.path}
+                    node={node}
+                    depth={0}
+                    onToggle={(paths, checked) => selectionStore.toggle(paths, checked)}
+                  />
+                ))}
+              </div>
+            </SelectionContext.Provider>
           </div>
 
           <div className="flex items-center justify-between border border-border bg-card px-3 py-2 text-xs">
@@ -662,52 +851,92 @@ export default function PackPanel() {
 function TreeNodeView({
   node,
   depth,
-  selectedPaths,
   onToggle,
 }: {
   node: TreeNode;
   depth: number;
-  selectedPaths: Set<string>;
   onToggle: (paths: string[], checked: boolean) => void;
 }) {
   // Folder lớn (>30 children) collapsed mặc định
   const [collapsed, setCollapsed] = useState(node.children.length > 30);
 
   if (!node.isFolder) {
-    // File row
-    return (
-      <label
-        className={cn(
-          'flex cursor-pointer items-center gap-1.5 py-0.5 hover:bg-popover/50',
-          !selectedPaths.has(node.path) && 'opacity-50',
-        )}
-        style={{ paddingLeft: `${depth * 16 + 8}px` }}
-      >
-        <Checkbox
-          checked={selectedPaths.has(node.path)}
-          onCheckedChange={(checked) => onToggle([node.path], !!checked)}
-          className="h-3 w-3"
-        />
-        <FileIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
-        <span className="truncate text-foreground">{node.name}</span>
-      </label>
-    );
+    return <FileRow node={node} depth={depth} onToggle={onToggle} />;
   }
 
-  // Folder row — dùng cache descendantPaths đã compute lúc buildTree
+  return (
+    <FolderRow
+      node={node}
+      depth={depth}
+      collapsed={collapsed}
+      onToggleCollapse={() => setCollapsed((v) => !v)}
+      onToggle={onToggle}
+    />
+  );
+}
+
+/** File row — subscribe path mình → chỉ re-render khi tick state đổi */
+function FileRow({
+  node,
+  depth,
+  onToggle,
+}: {
+  node: TreeNode;
+  depth: number;
+  onToggle: (paths: string[], checked: boolean) => void;
+}) {
+  const checked = useIsSelected(node.path);
+  return (
+    <label
+      className={cn(
+        'flex cursor-pointer items-center gap-1.5 py-1 transition-colors hover:bg-popover',
+        !checked && 'opacity-50',
+      )}
+      style={{ paddingLeft: `${depth * 16 + 8}px` }}
+    >
+      <Checkbox
+        checked={checked}
+        onCheckedChange={(c) => onToggle([node.path], !!c)}
+        className="h-4 w-4 cursor-pointer"
+      />
+      <FileIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+      <span className="truncate text-foreground">{node.name}</span>
+    </label>
+  );
+}
+
+/** Folder row — subscribe all để re-count khi descendants đổi */
+function FolderRow({
+  node,
+  depth,
+  collapsed,
+  onToggleCollapse,
+  onToggle,
+}: {
+  node: TreeNode;
+  depth: number;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
+  onToggle: (paths: string[], checked: boolean) => void;
+}) {
   const allDescendants = node.descendantPaths;
-  const checkedCount = allDescendants.filter((p) => selectedPaths.has(p)).length;
-  const isAllChecked = checkedCount === allDescendants.length;
+  const { checked: checkedCount, total } = useFolderCount(allDescendants);
+  const isAllChecked = checkedCount === total;
   const isPartial = checkedCount > 0 && !isAllChecked;
 
   return (
     <div>
       <div
-        className="flex items-center gap-1 py-0.5 hover:bg-popover/50"
+        onClick={onToggleCollapse}
+        className="flex cursor-pointer items-center gap-1 py-1 transition-colors hover:bg-popover"
         style={{ paddingLeft: `${depth * 16}px` }}
       >
         <button
-          onClick={() => setCollapsed((v) => !v)}
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleCollapse();
+          }}
           className="text-muted-foreground hover:text-foreground"
         >
           {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
@@ -715,23 +944,26 @@ function TreeNodeView({
         <Checkbox
           checked={isAllChecked}
           ref={(el) => {
-            // Indeterminate state cho partial select
             if (el) {
               const input = el as HTMLButtonElement & { indeterminate?: boolean };
               input.indeterminate = isPartial;
             }
           }}
-          onCheckedChange={(checked) => onToggle(allDescendants, !!checked)}
-          className="h-3 w-3"
+          onClick={(e) => e.stopPropagation()}
+          onCheckedChange={(c) => onToggle(allDescendants, !!c)}
+          className="h-4 w-4 cursor-pointer"
         />
-        <button
-          onClick={() => setCollapsed((v) => !v)}
-          className="flex items-center gap-1"
+        <label
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle(allDescendants, !isAllChecked);
+          }}
+          className="flex cursor-pointer items-center gap-1"
         >
           <FolderOpen className="h-3 w-3 text-primary" />
           <span className="font-medium text-foreground">{node.name}/</span>
           <span className="text-muted-foreground">({node.fileCount})</span>
-        </button>
+        </label>
       </div>
 
       {!collapsed && (
@@ -741,7 +973,6 @@ function TreeNodeView({
               key={child.path}
               node={child}
               depth={depth + 1}
-              selectedPaths={selectedPaths}
               onToggle={onToggle}
             />
           ))}
@@ -749,4 +980,4 @@ function TreeNodeView({
       )}
     </div>
   );
-}
+}

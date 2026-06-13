@@ -1,3 +1,4 @@
+
 import { useEffect } from 'react';
 import { useShortcutStore } from '@/stores/shortcutStore';
 
@@ -38,12 +39,14 @@ function normalizeKey(e: KeyboardEvent): string {
 }
 
 export function useGlobalShortcuts() {
-  // Lấy Map shortcuts từ store. Khi store đổi (có shortcut mới đăng ký),
-  // component gọi hook này sẽ re-render → useEffect chạy lại với danh sách mới.
   const shortcuts = useShortcutStore((s) => s.shortcuts);
+  const capturing = useShortcutStore((s) => s.capturing);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
+      // User đang capture phím tắt trong Setting → skip
+      if (capturing) return;
+
       // Bỏ qua nếu user đang gõ trong input/textarea (trừ Escape)
       const target = e.target as HTMLElement;
       const isTyping =
@@ -52,7 +55,6 @@ export function useGlobalShortcuts() {
         target.isContentEditable;
 
       const key = normalizeKey(e);
-
       if (isTyping && key !== 'escape') return;
 
       const shortcut = shortcuts.get(key);
@@ -63,11 +65,8 @@ export function useGlobalShortcuts() {
     };
 
     window.addEventListener('keydown', handler);
-
-    // CLEANUP: gỡ listener khi shortcuts đổi hoặc component unmount.
-    // Thiếu cleanup → mỗi lần re-render gắn thêm 1 listener → memory leak + xử lý phím nhiều lần.
     return () => {
       window.removeEventListener('keydown', handler);
     };
-  }, [shortcuts]);
-}
+  }, [shortcuts, capturing]);
+}

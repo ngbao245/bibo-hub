@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { fetchJson } from './client';
 import { API } from '@/lib/config';
@@ -124,8 +125,8 @@ export function useDeleteNote() {
       for (const childId of childNoteIds) {
         try {
           await fetchJson(`${API.NOTES}/${childId}`, { method: 'DELETE' });
-        } catch (e) {
-          console.warn('Cascade delete child note failed', childId, e);
+        } catch {
+          /* ignore — continue cascade */
         }
       }
 
@@ -147,8 +148,8 @@ export function useDeleteNote() {
             method: 'PUT',
             body: JSON.stringify(next),
           });
-        } catch (e) {
-          console.warn('Update referencing note failed', ref.id, e);
+        } catch {
+          /* ignore */
         }
       }
 
@@ -166,8 +167,8 @@ export function useDeleteNote() {
               method: 'PUT',
               body: JSON.stringify(next),
             });
-          } catch (e) {
-            console.warn('Update parent note failed', parent.id, e);
+          } catch {
+            /* ignore */
           }
         }
       }
@@ -199,4 +200,4 @@ export function useDeleteNote() {
         );
     }),
   });
-}
+}

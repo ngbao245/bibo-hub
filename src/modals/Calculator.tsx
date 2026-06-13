@@ -1,6 +1,5 @@
-import { useState, useCallback } from 'react';
-import { useShortcut } from '@/hooks/useShortcut';
-import { useModalStore } from '@/stores/modalStore';
+
+import { useState } from 'react';
 import ToolModal from '@/components/ToolModal';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
@@ -14,19 +13,6 @@ import { cn } from '@/lib/cn';
 // ============================================================
 
 export default function Calculator() {
-  // Toggle modal qua store khi bấm Alt+C
-  const toggle = useModalStore((s) => s.toggle);
-
-  // useCallback giữ reference ổn định để useShortcut không re-register liên tục
-  const handleShortcut = useCallback(() => toggle('calculator'), [toggle]);
-
-  useShortcut({
-    key: 'alt+c',
-    label: 'Calculator',
-    group: 'Tools',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal id="calculator" title="Máy tính" className="max-w-xs">
       <CalculatorContent />
@@ -161,4 +147,4 @@ function CalculatorContent() {
       </div>
     </div>
   );
-}
+}

@@ -1,25 +1,22 @@
+
 // ============================================================
-// P2P File Transfer - protocol qua DataChannel
+// P2P File Transfer - WebRTC DataChannel protocol
 // ============================================================
 //
-// Mỗi file được truyền qua sequence message:
-//   1. { type: 'meta', id, name, size, mime }
+// Mỗi file truyền qua sequence message:
+//   1. { type: 'meta', id, name, size, mime, totalChunks }
 //   2. N x { type: 'chunk', id, index, data: ArrayBuffer }
 //   3. { type: 'done', id }
 //
-// Receiver assemble chunks lại theo index, reconstruct File.
+// Chunk size 64KB — safe cho mọi browser WebRTC DataChannel.
 //
-// Chunk size 64KB — match max của WebRTC DataChannel (16KB-256KB tuỳ
-// browser). 64KB an toàn ở mọi browser.
-//
-// Backpressure: kiểm tra `bufferedAmount` của DataChannel, dừng send
-// khi buffer > HIGH_WATER, đợi rớt xuống LOW_WATER mới gửi tiếp. Tránh
-// drop chunk hoặc treo browser khi gửi file lớn.
+// Backpressure: check bufferedAmount trên DataChannel, pause khi
+// buffer > HIGH_WATER, resume khi < LOW_WATER.
 // ============================================================
 
 export const CHUNK_SIZE = 64 * 1024; // 64KB
-export const BUFFER_HIGH_WATER = 8 * 1024 * 1024; // 8MB — pause khi buffer > đây
-export const BUFFER_LOW_WATER = 1 * 1024 * 1024;  // 1MB — resume khi buffer < đây
+export const BUFFER_HIGH_WATER = 8 * 1024 * 1024; // 8MB
+export const BUFFER_LOW_WATER = 1 * 1024 * 1024;  // 1MB
 
 export type TransferMessage =
   | { type: 'meta'; id: string; name: string; size: number; mime: string; totalChunks: number }
@@ -27,7 +24,6 @@ export type TransferMessage =
   | { type: 'done'; id: string }
   | { type: 'cancel'; id: string };
 
-/** Quá trình gửi 1 file: callback progress(sent, total) */
 export interface SendProgress {
   fileId: string;
   fileName: string;
@@ -36,10 +32,9 @@ export interface SendProgress {
 }
 
 /**
- * Chia file thành chunks, gửi qua send function.
- * `send` thường là `connection.send` của PeerJS.
- * `getBufferedAmount` trả về `dataChannel.bufferedAmount` để backpressure.
- * Nếu undefined → bỏ qua check (vẫn chạy nhưng dễ tắc với file lớn).
+ * Gửi 1 file qua DataChannel.
+ * `send` gọi dc.send() — serialize tùy caller.
+ * `getBufferedAmount` để backpressure.
  */
 export async function sendFile(
   file: File,
@@ -51,7 +46,7 @@ export async function sendFile(
 ): Promise<void> {
   const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
 
-  // Step 1: meta
+  // Meta
   send({
     type: 'meta',
     id: fileId,
@@ -61,10 +56,9 @@ export async function sendFile(
     totalChunks,
   });
 
-  // Yield để meta đến trước chunk 0
   await new Promise((r) => setTimeout(r, 50));
 
-  // Step 2: chunks
+  // Chunks
   let sent = 0;
   for (let i = 0; i < totalChunks; i++) {
     if (signal?.aborted) {
@@ -72,7 +66,7 @@ export async function sendFile(
       throw new Error('Aborted');
     }
 
-    // Backpressure: nếu buffer cao, đợi xuống thấp mới gửi tiếp
+    // Backpressure
     if (getBufferedAmount) {
       while (getBufferedAmount() > BUFFER_HIGH_WATER) {
         if (signal?.aborted) throw new Error('Aborted');
@@ -82,29 +76,25 @@ export async function sendFile(
 
     const start = i * CHUNK_SIZE;
     const end = Math.min(start + CHUNK_SIZE, file.size);
-    const slice = file.slice(start, end);
-    const buf = await slice.arrayBuffer();
+    const buf = await file.slice(start, end).arrayBuffer();
 
     send({ type: 'chunk', id: fileId, index: i, data: buf });
     sent += buf.byteLength;
 
-    // Progress mỗi chunk 5 hoặc cuối
     if (i % 5 === 0 || i === totalChunks - 1) {
       onProgress?.({ fileId, fileName: file.name, sent, total: file.size });
     }
 
-    // Yield mỗi 10 chunks tránh chiếm CPU
     if (i % 10 === 9) {
       await new Promise((r) => setTimeout(r, 0));
     }
   }
 
-  // Step 3: done
   send({ type: 'done', id: fileId });
 }
 
 // ============================================================
-// Receiver assembler
+// Receiver
 // ============================================================
 
 export interface ReceivingFile {
@@ -121,7 +111,6 @@ export interface ReceivingFile {
 export class FileReceiver {
   private files = new Map<string, ReceivingFile>();
 
-  /** Handle 1 message từ peer. Gọi callbacks khi thấy meta/chunk/done. */
   handle(
     msg: TransferMessage,
     callbacks: {
@@ -150,7 +139,7 @@ export class FileReceiver {
     if (msg.type === 'chunk') {
       const file = this.files.get(msg.id);
       if (!file || file.done) return;
-      if (file.receivedChunks[msg.index]) return; // dup
+      if (file.receivedChunks[msg.index]) return;
       file.receivedChunks[msg.index] = msg.data;
       file.receivedBytes += msg.data.byteLength;
       callbacks.onProgress?.(file);
@@ -170,7 +159,6 @@ export class FileReceiver {
     if (msg.type === 'cancel') {
       this.files.delete(msg.id);
       callbacks.onCancel?.(msg.id);
-      return;
     }
   }
 
@@ -179,7 +167,38 @@ export class FileReceiver {
   }
 }
 
-/** Format bytes thành "1.2 MB", "456 KB"... */
+// ============================================================
+// ICE Servers config — Metered TURN
+// ============================================================
+//
+// Credential (username/credential) được nạp động từ Setting tool
+// (group "P2P", type "TURN Server Metered"). URL hardcode 2 dòng
+// vì chỉ dùng path turn:tcp/443 + turns:tcp/443.
+// ============================================================
+
+import { loadP2PConfig } from './loadP2PConfig';
+
+/** ICE servers — chỉ TURN over TLS:443 để bypass UDP block */
+export async function getIceServers(): Promise<RTCIceServer[]> {
+  const { turn } = await loadP2PConfig();
+  return [
+    {
+      urls: 'turns:global.relay.metered.ca:443?transport=tcp',
+      username: turn.username,
+      credential: turn.credential,
+    },
+    {
+      urls: 'turn:global.relay.metered.ca:443?transport=tcp',
+      username: turn.username,
+      credential: turn.credential,
+    },
+  ];
+}
+
+// ============================================================
+// Utilities
+// ============================================================
+
 export function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -187,12 +206,10 @@ export function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-/** Format speed bytes/s → "1.2 MB/s" */
 export function formatSpeed(bytesPerSec: number): string {
   return `${formatBytes(bytesPerSec)}/s`;
 }
 
-/** Format giây → "1m 23s" hoặc "45s" */
 export function formatDuration(seconds: number): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
   if (seconds < 1) return '< 1s';
@@ -202,7 +219,6 @@ export function formatDuration(seconds: number): string {
   return `${m}m ${s}s`;
 }
 
-/** Sinh ID 6 chars dễ đọc (bỏ ký tự dễ nhầm: 0/O, 1/I/l) */
 export function generatePeerId(): string {
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
   let id = '';
@@ -210,4 +226,4 @@ export function generatePeerId(): string {
     id += chars[Math.floor(Math.random() * chars.length)];
   }
   return id;
-}
+}

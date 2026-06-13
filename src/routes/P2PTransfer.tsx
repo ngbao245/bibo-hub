@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -15,7 +16,6 @@ import {
   QrCode,
   Link2,
 } from 'lucide-react';
-import type { DataConnection, Peer as PeerType } from 'peerjs';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,25 +28,39 @@ import {
   formatSpeed,
   formatDuration,
   generatePeerId,
+  getIceServers,
   type TransferMessage,
 } from '@/lib/p2p/transfer';
+import {
+  setOffer,
+  setAnswer,
+  getOfferSdp,
+  listenAnswer,
+  pushCandidate,
+  listenCandidates,
+  deleteRoom,
+  roomExists,
+} from '@/lib/p2p/firebase';
 
 // ============================================================
-// P2P File Transfer Page
+// P2P File Transfer — WebRTC + Firebase Signaling
 // ============================================================
 //
-// Flow:
-// 1. Trang load → tạo PeerJS instance, broker server gán/giữ ID 6 chars.
-// 2. UI hiển thị "ID của bạn: ABC123".
-// 3. Để gửi: nhập ID đối phương → connect → drop file → gửi.
-// 4. Để nhận: cho đối phương ID của mình → đợi connection → đối phương gửi → tự download.
-//
-// Dùng PeerJS broker public (peerjs.com:443) — không tự host.
-// Nếu peer ở khác mạng + có symmetric NAT, có thể fallback TURN
-// (PeerJS public không có TURN — sẽ fail với một số NAT, OK cho LAN/đa số case).
+// Flow giống PeerJS cũ nhưng dùng Firebase Realtime DB thay broker:
+// 1. Trang load → sinh ID 6 chars
+// 2. Bên A: bấm "Đợi kết nối" → tạo offer, ghi lên Firebase room
+// 3. Bên B: nhập ID bên A → đọc offer, tạo answer, ghi lên Firebase
+// 4. Bên A: listen answer → nhận → WebRTC nối → xoá room
+// 5. Truyền file qua DataChannel
 // ============================================================
 
-type ConnectionStatus = 'connecting' | 'open' | 'closed' | 'error';
+type PeerStatus = 'idle' | 'waiting' | 'connecting' | 'connected' | 'error';
+
+interface ErrorInfo {
+  title: string;
+  detail: string;
+  hint?: string;
+}
 
 interface SendingItem {
   id: string;
@@ -55,8 +69,8 @@ interface SendingItem {
   total: number;
   done: boolean;
   startedAt: number;
-  speed: number;     // bytes/s (đo trên cửa sổ ~1s)
-  eta: number;       // giây còn lại
+  speed: number;
+  eta: number;
   error?: string;
 }
 
@@ -74,9 +88,8 @@ interface ReceivedItem {
 
 export default function P2PTransfer() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [myId, setMyId] = useState<string>('');
-  const [peerStatus, setPeerStatus] = useState<'init' | 'open' | 'error'>('init');
-  const [connStatus, setConnStatus] = useState<ConnectionStatus>('closed');
+  const [myId] = useState(() => generatePeerId());
+  const [peerStatus, setPeerStatus] = useState<PeerStatus>('idle');
   const [remoteId, setRemoteId] = useState('');
   const [connectedTo, setConnectedTo] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
@@ -84,41 +97,25 @@ export default function P2PTransfer() {
   const [showQr, setShowQr] = useState(false);
   const [sendingFiles, setSendingFiles] = useState<SendingItem[]>([]);
   const [receivingFiles, setReceivingFiles] = useState<ReceivedItem[]>([]);
+  const [errorInfo, setErrorInfo] = useState<ErrorInfo | null>(null);
 
-  const peerRef = useRef<PeerType | null>(null);
-  const connRef = useRef<DataConnection | null>(null);
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const dcRef = useRef<RTCDataChannel | null>(null);
   const receiverRef = useRef<FileReceiver>(new FileReceiver());
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Speed tracking — sample window cuối cùng cho từng file
-  const speedSamplesRef = useRef<
-    Map<string, { time: number; bytes: number }[]>
-  >(new Map());
+  const unsubRef = useRef<(() => void) | null>(null);
+  const speedSamplesRef = useRef<Map<string, { time: number; bytes: number }[]>>(new Map());
+  // Diagnostics
+  const iceErrorsRef = useRef<Array<{ url?: string; code?: number; text?: string }>>([]);
+  const localCandidateCountRef = useRef(0);
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Auto-connect nếu URL có ?connect=ABC234
   const autoConnectId = searchParams.get('connect')?.toUpperCase() ?? '';
 
   // ============================================================
-  // Auto-connect khi URL có ?connect=ABC
+  // Speed/ETA
   // ============================================================
-  useEffect(() => {
-    if (!autoConnectId || peerStatus !== 'open' || connStatus !== 'closed') return;
-    if (autoConnectId === myId) return; // không tự nối
-    setRemoteId(autoConnectId);
-    // Delay 1 tick để input UI cập nhật trước khi connect
-    const t = setTimeout(() => {
-      const peer = peerRef.current;
-      if (!peer) return;
-      const conn = peer.connect(autoConnectId, { reliable: true });
-      attachConnection(conn);
-    }, 100);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoConnectId, peerStatus, myId]);
-
-  // ============================================================
-  // Speed/ETA computation — sample window 2s cuối
-  // ============================================================
-  function recordSample(fileId: string, bytes: number): { speed: number; eta: number; total?: number } {
+  function recordSample(fileId: string, bytes: number): { speed: number; eta: number } {
     const now = performance.now();
     let samples = speedSamplesRef.current.get(fileId);
     if (!samples) {
@@ -126,10 +123,8 @@ export default function P2PTransfer() {
       speedSamplesRef.current.set(fileId, samples);
     }
     samples.push({ time: now, bytes });
-    // Giữ samples trong window 2s
     const cutoff = now - 2000;
     while (samples.length > 1 && samples[0].time < cutoff) samples.shift();
-
     if (samples.length < 2) return { speed: 0, eta: Infinity };
     const first = samples[0];
     const last = samples[samples.length - 1];
@@ -144,125 +139,364 @@ export default function P2PTransfer() {
   }
 
   // ============================================================
-  // Init PeerJS
+  // Setup DataChannel
   // ============================================================
-  useEffect(() => {
-    let cancelled = false;
-    let p: PeerType | null = null;
+  const setupDC = useCallback((dc: RTCDataChannel) => {
+    dcRef.current = dc;
+    dc.binaryType = 'arraybuffer';
 
-    (async () => {
-      const { default: Peer } = await import('peerjs');
-      if (cancelled) return;
+    dc.onopen = () => {
+      setPeerStatus('connected');
+      toast.success('Sẵn sàng truyền file!');
+    };
 
-      const id = generatePeerId();
-      // Public broker server peerjs.com (default config)
-      p = new Peer(id, {
-        debug: 1,
-      });
-      peerRef.current = p;
+    dc.onclose = () => {
+      setPeerStatus('idle');
+      setConnectedTo(null);
+      toast.info('Đã ngắt kết nối');
+    };
 
-      p.on('open', (assignedId: string) => {
-        if (cancelled) return;
-        setMyId(assignedId);
-        setPeerStatus('open');
-      });
-
-      p.on('error', (err: Error) => {
-        console.error('Peer error:', err);
-        if (cancelled) return;
-        setPeerStatus('error');
-        toast.error(`Lỗi kết nối broker: ${err.message}`);
-      });
-
-      // Khi có ai đó connect TỚI mình
-      p.on('connection', (conn: DataConnection) => {
-        attachConnection(conn);
-      });
-    })();
-
-    return () => {
-      cancelled = true;
+    dc.onmessage = (event) => {
+      let msg: TransferMessage;
       try {
-        p?.destroy();
+        msg = JSON.parse(event.data);
       } catch {
-        // ignore
+        return;
       }
+      if (msg.type === 'chunk' && typeof (msg as unknown as { b64: string }).b64 === 'string') {
+        const b64 = (msg as unknown as { b64: string }).b64;
+        const binary = atob(b64);
+        const buf = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) buf[i] = binary.charCodeAt(i);
+        msg = { ...msg, data: buf.buffer };
+      }
+      handleIncomingData(msg);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ============================================================
-  // Attach connection handlers
+  // Phân tích lỗi kết nối → message dễ hiểu
   // ============================================================
-  function attachConnection(conn: DataConnection) {
-    connRef.current = conn;
-    setConnStatus('connecting');
+  function analyzeFailure(): ErrorInfo {
+    const errors = iceErrorsRef.current;
+    const noLocal = localCandidateCountRef.current === 0;
 
-    conn.on('open', () => {
-      setConnStatus('open');
-      setConnectedTo(conn.peer);
-      toast.success(`Đã kết nối với ${conn.peer}`);
-      // Bỏ ?connect= khỏi URL để reload không tự reconnect
+    // Tất cả TURN/STUN đều fail DNS lookup
+    const allDnsFailed = errors.length > 0 && errors.every((e) => e.code === 701);
+    if (allDnsFailed) {
+      return {
+        title: 'Mạng đang chặn STUN/TURN servers',
+        detail: 'Tất cả STUN/TURN domain đều không lookup được. Mạng (firewall/ISP) đang block.',
+        hint: 'Thử: đổi DNS sang 1.1.1.1, dùng VPN, hoặc chuyển sang 4G hotspot.',
+      };
+    }
+
+    // Có lookup được nhưng không gather được candidate nào
+    if (noLocal) {
+      return {
+        title: 'Không thu thập được ICE candidate',
+        detail: 'Browser không sinh ra candidate nào — mạng có thể block UDP outbound.',
+        hint: 'Thử dùng mạng khác (4G hotspot, mạng nhà). WebRTC cần UDP để hoạt động.',
+      };
+    }
+
+    // Có candidate nhưng vẫn fail
+    const turnErrors = errors.filter((e) => e.url?.startsWith('turn'));
+    if (turnErrors.length > 0) {
+      return {
+        title: 'TURN server không hoạt động',
+        detail: `TURN auth/connect fail: ${turnErrors[0].text ?? 'unknown'}`,
+        hint: 'TURN credentials có thể đã hết hạn. Liên hệ admin để cập nhật.',
+      };
+    }
+
+    return {
+      title: 'Kết nối WebRTC thất bại',
+      detail: 'Không thể thiết lập kết nối P2P giữa 2 thiết bị.',
+      hint: 'Thử reload và kết nối lại. Nếu vẫn fail, kiểm tra mạng.',
+    };
+  }
+
+  // ============================================================
+  // Create PeerConnection
+  // ============================================================
+  async function createPC(): Promise<RTCPeerConnection> {
+    iceErrorsRef.current = [];
+    localCandidateCountRef.current = 0;
+
+    const iceServers = await getIceServers();
+    const pc = new RTCPeerConnection({
+      iceServers,
+      iceTransportPolicy: 'relay', // ép qua TURN, bypass UDP block
+    });
+    pcRef.current = pc;
+
+    pc.onconnectionstatechange = () => {
+      if (pc.connectionState === 'connected') {
+        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+        setPeerStatus('connected');
+        setErrorInfo(null);
+      } else if (pc.connectionState === 'failed') {
+        if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+        const info = analyzeFailure();
+        setErrorInfo(info);
+        setPeerStatus('error');
+        toast.error(info.title);
+      } else if (pc.connectionState === 'disconnected') {
+        setPeerStatus('error');
+        setErrorInfo({
+          title: 'Mất kết nối',
+          detail: 'Đối phương ngắt kết nối hoặc mạng gián đoạn.',
+        });
+      }
+    };
+
+    return pc;
+  }
+
+  // ============================================================
+  // Host: Tạo room, đợi peer kết nối (trickle ICE)
+  // ============================================================
+  async function startHosting() {
+    setPeerStatus('waiting');
+
+    try {
+      const pc = await createPC();
+      const dc = pc.createDataChannel('file-transfer', { ordered: true });
+      setupDC(dc);
+
+      // Logging chi tiết
+      pc.oniceconnectionstatechange = () => {
+        // ICE state changed
+      };
+      pc.onicegatheringstatechange = () => {
+        // gathering state changed
+      };
+
+      pc.addEventListener('icecandidateerror', (e: Event) => {
+        const err = e as RTCPeerConnectionIceErrorEvent;
+        iceErrorsRef.current.push({
+          url: err.url,
+          code: err.errorCode,
+          text: err.errorText,
+        });
+      });
+
+      // Trickle ICE: push candidate lên Firebase ngay khi sinh ra
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          localCandidateCountRef.current++;
+          pushCandidate(myId, 'offer', e.candidate.toJSON()).catch(() => {
+            /* ignore push errors */
+          });
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      await setOffer(myId, pc.localDescription!.toJSON());
+
+      // Queue candidates đến trước khi có remoteDescription
+      const pendingCandidates: RTCIceCandidateInit[] = [];
+      let remoteSet = false;
+
+      const unsubCand = listenCandidates(myId, 'answer', async (cand) => {
+        if (!remoteSet) {
+          pendingCandidates.push(cand);
+          return;
+        }
+        try {
+          await pc.addIceCandidate(cand);
+        } catch {
+          /* ignore */
+        }
+      });
+
+      const unsubAns = listenAnswer(myId, async (sdp) => {
+        if (pc.currentRemoteDescription) return;
+        try {
+          await pc.setRemoteDescription(sdp);
+          remoteSet = true;
+          for (const cand of pendingCandidates) {
+            try {
+              await pc.addIceCandidate(cand);
+            } catch {
+              /* ignore */
+            }
+          }
+          pendingCandidates.length = 0;
+        } catch {
+          setPeerStatus('error');
+        }
+      });
+
+      unsubRef.current = () => {
+        unsubCand();
+        unsubAns();
+      };
+
+      // Timeout 30s — nếu không connect được thì báo lỗi
+      connectTimeoutRef.current = setTimeout(() => {
+        if (peerStatus !== 'connected' && pc.connectionState !== 'connected') {
+          const info = analyzeFailure();
+          setErrorInfo(info);
+          setPeerStatus('error');
+          toast.error(info.title);
+        }
+      }, 30000);
+
+      toast.success('Đang đợi kết nối...');
+    } catch (e) {
+      setPeerStatus('error');
+      toast.error(`Lỗi: ${String(e)}`);
+    }
+  }
+
+  // ============================================================
+  // Join: Kết nối tới room của host (trickle ICE)
+  // ============================================================
+  async function joinRoom(targetId: string) {
+    const id = targetId.trim().toUpperCase();
+    if (!id || id.length < 6) {
+      toast.error('Nhập ID 6 ký tự');
+      return;
+    }
+    if (id === myId) {
+      toast.error('Không thể kết nối với chính mình');
+      return;
+    }
+
+    setPeerStatus('connecting');
+
+    try {
+      const exists = await roomExists(id);
+      if (!exists) {
+        toast.error('Không tìm thấy phòng. Đối phương chưa bấm "Đợi kết nối".');
+        setPeerStatus('idle');
+        return;
+      }
+
+      const offerSdp = await getOfferSdp(id);
+      if (!offerSdp) {
+        toast.error('Không đọc được offer');
+        setPeerStatus('idle');
+        return;
+      }
+
+      const pc = await createPC();
+      pc.ondatachannel = (event) => {
+        setupDC(event.channel);
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        // ICE state changed
+      };
+      pc.onicegatheringstatechange = () => {
+        // gathering state changed
+      };
+
+      pc.addEventListener('icecandidateerror', (e: Event) => {
+        const err = e as RTCPeerConnectionIceErrorEvent;
+        iceErrorsRef.current.push({
+          url: err.url,
+          code: err.errorCode,
+          text: err.errorText,
+        });
+      });
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          localCandidateCountRef.current++;
+          pushCandidate(id, 'answer', e.candidate.toJSON()).catch(() => {
+            /* ignore */
+          });
+        }
+      };
+
+      // setRemoteDescription FIRST → sau đó mới subscribe candidates
+      await pc.setRemoteDescription(offerSdp);
+
+      const unsubCand = listenCandidates(id, 'offer', async (cand) => {
+        try {
+          await pc.addIceCandidate(cand);
+        } catch {
+          /* ignore */
+        }
+      });
+      unsubRef.current = unsubCand;
+
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      await setAnswer(id, pc.localDescription!.toJSON());
+      setConnectedTo(id);
+      toast.info('Đang kết nối...');
+
+      // Timeout 30s
+      connectTimeoutRef.current = setTimeout(() => {
+        if (pc.connectionState !== 'connected') {
+          const info = analyzeFailure();
+          setErrorInfo(info);
+          setPeerStatus('error');
+          toast.error(info.title);
+        }
+      }, 30000);
+
       if (searchParams.get('connect')) {
         searchParams.delete('connect');
         setSearchParams(searchParams, { replace: true });
       }
-    });
-
-    conn.on('data', (data) => {
-      handleIncomingData(data as TransferMessage);
-    });
-
-    conn.on('close', () => {
-      setConnStatus('closed');
-      setConnectedTo(null);
-      connRef.current = null;
-      toast.info('Đã ngắt kết nối');
-    });
-
-    conn.on('error', (err) => {
-      console.error('Conn error', err);
-      setConnStatus('error');
-      toast.error(`Lỗi: ${err.message ?? String(err)}`);
-    });
+    } catch (e) {
+      setPeerStatus('error');
+      toast.error(`Lỗi kết nối: ${String(e)}`);
+    }
   }
 
   // ============================================================
-  // Connect to remote ID
+  // Auto-connect from URL
   // ============================================================
-  function connectToRemote() {
-    const peer = peerRef.current;
-    if (!peer || peerStatus !== 'open') {
-      toast.error('Chưa kết nối với broker');
-      return;
-    }
-    const id = remoteId.trim().toUpperCase();
-    if (!id) {
-      toast.error('Nhập ID đối phương');
-      return;
-    }
-    if (id === myId) {
-      toast.error('Không thể tự kết nối với chính mình');
-      return;
-    }
+  useEffect(() => {
+    if (!autoConnectId || peerStatus !== 'idle') return;
+    if (autoConnectId === myId) return;
+    setRemoteId(autoConnectId);
+    const t = setTimeout(() => joinRoom(autoConnectId), 500);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoConnectId]);
 
-    const conn = peer.connect(id, {
-      reliable: true, // dùng SCTP reliable mode cho file transfer
-    });
-    attachConnection(conn);
-  }
-
+  // ============================================================
+  // Disconnect
+  // ============================================================
   function disconnect() {
-    try {
-      connRef.current?.close();
-    } catch {
-      // ignore
-    }
-    connRef.current = null;
-    setConnStatus('closed');
+    if (connectTimeoutRef.current) clearTimeout(connectTimeoutRef.current);
+    unsubRef.current?.();
+    unsubRef.current = null;
+    try { dcRef.current?.close(); } catch { /* */ }
+    try { pcRef.current?.close(); } catch { /* */ }
+    dcRef.current = null;
+    pcRef.current = null;
+    setPeerStatus('idle');
     setConnectedTo(null);
+    setErrorInfo(null);
+    setSendingFiles([]);
+    setReceivingFiles([]);
     receiverRef.current.reset();
+    speedSamplesRef.current.clear();
+    deleteRoom(myId).catch(() => {});
   }
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      unsubRef.current?.();
+      try { dcRef.current?.close(); } catch { /* */ }
+      try { pcRef.current?.close(); } catch { /* */ }
+      deleteRoom(myId).catch(() => {});
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ============================================================
   // Handle incoming data
@@ -272,16 +506,7 @@ export default function P2PTransfer() {
       onStart: (f) => {
         setReceivingFiles((prev) => [
           ...prev,
-          {
-            id: f.id,
-            name: f.name,
-            size: f.size,
-            receivedBytes: 0,
-            startedAt: performance.now(),
-            speed: 0,
-            eta: Infinity,
-            done: false,
-          },
+          { id: f.id, name: f.name, size: f.size, receivedBytes: 0, startedAt: performance.now(), speed: 0, eta: Infinity, done: false },
         ]);
         toast.info(`Nhận file: ${f.name} (${formatBytes(f.size)})`);
       },
@@ -289,32 +514,17 @@ export default function P2PTransfer() {
         const { speed } = recordSample(f.id, f.receivedBytes);
         const remaining = f.size - f.receivedBytes;
         const eta = speed > 0 ? remaining / speed : Infinity;
-        setReceivingFiles((prev) =>
-          prev.map((x) =>
-            x.id === f.id
-              ? { ...x, receivedBytes: f.receivedBytes, speed, eta }
-              : x,
-          ),
-        );
+        setReceivingFiles((prev) => prev.map((x) => x.id === f.id ? { ...x, receivedBytes: f.receivedBytes, speed, eta } : x));
       },
       onComplete: (f, blob) => {
         clearSamples(f.id);
-        setReceivingFiles((prev) =>
-          prev.map((x) =>
-            x.id === f.id
-              ? { ...x, done: true, receivedBytes: f.size, blob, eta: 0 }
-              : x,
-          ),
-        );
+        setReceivingFiles((prev) => prev.map((x) => x.id === f.id ? { ...x, done: true, receivedBytes: f.size, blob, eta: 0 } : x));
         toast.success(`Đã nhận xong: ${f.name}`);
-        // Auto download
         downloadBlob(blob, f.name);
       },
       onCancel: (id) => {
         clearSamples(id);
-        setReceivingFiles((prev) =>
-          prev.map((x) => (x.id === id ? { ...x, done: true } : x)),
-        );
+        setReceivingFiles((prev) => prev.map((x) => x.id === id ? { ...x, done: true } : x));
       },
     });
   }
@@ -323,9 +533,9 @@ export default function P2PTransfer() {
   // Send files
   // ============================================================
   async function handleSendFiles(files: FileList | File[]) {
-    const conn = connRef.current;
-    if (!conn || connStatus !== 'open') {
-      toast.error('Chưa kết nối với peer');
+    const dc = dcRef.current;
+    if (!dc || dc.readyState !== 'open') {
+      toast.error('Chưa kết nối');
       return;
     }
 
@@ -334,16 +544,7 @@ export default function P2PTransfer() {
       const fileId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
       setSendingFiles((prev) => [
         ...prev,
-        {
-          id: fileId,
-          file,
-          sent: 0,
-          total: file.size,
-          done: false,
-          startedAt: performance.now(),
-          speed: 0,
-          eta: Infinity,
-        },
+        { id: fileId, file, sent: 0, total: file.size, done: false, startedAt: performance.now(), speed: 0, eta: Infinity },
       ]);
 
       try {
@@ -351,53 +552,38 @@ export default function P2PTransfer() {
           file,
           fileId,
           (msg) => {
-            try {
-              conn.send(msg);
-            } catch (e) {
-              console.error('Send failed', e);
+            if (msg.type === 'chunk') {
+              const bytes = new Uint8Array(msg.data);
+              let binary = '';
+              for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+              dc.send(JSON.stringify({ type: 'chunk', id: msg.id, index: msg.index, b64: btoa(binary) }));
+            } else {
+              dc.send(JSON.stringify(msg));
             }
           },
           (p) => {
             const { speed } = recordSample(p.fileId, p.sent);
             const remaining = p.total - p.sent;
             const eta = speed > 0 ? remaining / speed : Infinity;
-            setSendingFiles((prev) =>
-              prev.map((x) =>
-                x.id === p.fileId
-                  ? { ...x, sent: p.sent, speed, eta }
-                  : x,
-              ),
-            );
+            setSendingFiles((prev) => prev.map((x) => x.id === p.fileId ? { ...x, sent: p.sent, speed, eta } : x));
           },
           undefined,
-          // Backpressure: PeerJS expose dataChannel ngoài conn._dataChannel.
-          () => {
-            const dc = (conn as unknown as { dataChannel?: RTCDataChannel })
-              .dataChannel;
-            return dc?.bufferedAmount ?? 0;
-          },
+          () => dc.bufferedAmount,
         );
         clearSamples(fileId);
-        setSendingFiles((prev) =>
-          prev.map((x) =>
-            x.id === fileId
-              ? { ...x, sent: file.size, done: true, eta: 0 }
-              : x,
-          ),
-        );
+        setSendingFiles((prev) => prev.map((x) => x.id === fileId ? { ...x, sent: file.size, done: true, eta: 0 } : x));
         toast.success(`Đã gửi: ${file.name}`);
       } catch (e) {
         clearSamples(fileId);
-        setSendingFiles((prev) =>
-          prev.map((x) =>
-            x.id === fileId ? { ...x, error: String(e) } : x,
-          ),
-        );
+        setSendingFiles((prev) => prev.map((x) => x.id === fileId ? { ...x, error: String(e) } : x));
         toast.error(`Lỗi gửi: ${file.name}`);
       }
     }
   }
 
+  // ============================================================
+  // Helpers
+  // ============================================================
   function copyId() {
     navigator.clipboard.writeText(myId);
     setCopied(true);
@@ -405,7 +591,6 @@ export default function P2PTransfer() {
   }
 
   function copyShareLink() {
-    // Lấy path hiện tại để support cả /p2p và /hubibo/p2p
     const currentPath = window.location.pathname;
     const url = `${window.location.origin}${currentPath}?connect=${myId}`;
     navigator.clipboard.writeText(url);
@@ -414,24 +599,9 @@ export default function P2PTransfer() {
     toast.success('Đã copy link chia sẻ');
   }
 
-  function regenerateId() {
-    if (peerRef.current) {
-      try {
-        peerRef.current.destroy();
-      } catch {
-        // ignore
-      }
-    }
-    setMyId('');
-    setPeerStatus('init');
-    setConnStatus('closed');
-    setConnectedTo(null);
-    setSendingFiles([]);
-    setReceivingFiles([]);
-    // Trigger lại useEffect bằng cách reload — đơn giản nhất
-    window.location.reload();
-  }
-
+  // ============================================================
+  // Render
+  // ============================================================
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       <header className="flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-3">
@@ -450,7 +620,7 @@ export default function P2PTransfer() {
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="mx-auto max-w-3xl space-y-4">
-          {/* My ID + Peer status */}
+          {/* My ID + Status */}
           <section className="border border-border bg-card p-4">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -459,85 +629,52 @@ export default function P2PTransfer() {
               <PeerStatusBadge status={peerStatus} />
             </div>
 
-            {peerStatus === 'init' && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Đang kết nối broker...
-              </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 border border-border bg-background px-3 py-2 text-2xl font-mono font-bold tracking-widest text-primary">
+                {myId}
+              </code>
+              <Button variant="outline" size="icon" onClick={copyId} className="h-10 w-10" title="Copy ID">
+                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              </Button>
+              <Button variant="outline" size="icon" onClick={copyShareLink} className="h-10 w-10" title="Copy share link">
+                {linkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Link2 className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowQr((v) => !v)}
+                className={cn('h-10 w-10', showQr && 'bg-popover')}
+                title="QR code"
+              >
+                <QrCode className="h-4 w-4" />
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => window.location.reload()} className="h-10 w-10" title="Đổi ID mới">
+                <RefreshCw className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {showQr && (
+              <QrDisplay value={`${window.location.origin}${window.location.pathname}?connect=${myId}`} />
             )}
 
-            {peerStatus === 'open' && (
-              <>
-                <div className="flex items-center gap-2">
-                  <code className="flex-1 border border-border bg-background px-3 py-2 text-2xl font-mono font-bold tracking-widest text-primary">
-                    {myId}
-                  </code>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={copyId}
-                    className="h-10 w-10"
-                    title="Copy ID"
-                  >
-                    {copied ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={copyShareLink}
-                    className="h-10 w-10"
-                    title="Copy share link"
-                  >
-                    {linkCopied ? (
-                      <Check className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Link2 className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowQr((v) => !v)}
-                    className={cn('h-10 w-10', showQr && 'bg-popover')}
-                    title="QR code"
-                  >
-                    <QrCode className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={regenerateId}
-                    className="h-10 w-10"
-                    title="Đổi ID mới"
-                  >
-                    <RefreshCw className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                {showQr && (
-                  <QrDisplay
-                    value={`${window.location.origin}${window.location.pathname}?connect=${myId}`}
-                  />
-                )}
-              </>
-            )}
-
-            {peerStatus === 'error' && (
-              <div className="flex items-center justify-between gap-2 border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                <span>Không kết nối được broker. Thử reload.</span>
-                <Button variant="outline" size="sm" onClick={regenerateId}>
-                  Thử lại
+            {peerStatus === 'idle' && (
+              <div className="mt-3">
+                <Button onClick={startHosting} className="gap-2">
+                  <Wifi className="h-4 w-4" />
+                  Đợi kết nối
                 </Button>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Bấm để mở phòng. Đưa ID, share link, hoặc QR cho đối phương.
+                </p>
               </div>
             )}
 
-            <p className="mt-3 text-xs text-muted-foreground">
-              Đưa ID, share link, hoặc QR cho đối phương để họ kết nối với bạn.
-            </p>
+            {peerStatus === 'waiting' && (
+              <div className="mt-3 flex items-center gap-2 text-sm text-yellow-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Đang đợi đối phương kết nối...
+              </div>
+            )}
           </section>
 
           {/* Connect to peer */}
@@ -546,32 +683,30 @@ export default function P2PTransfer() {
               <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 Kết nối tới đối phương
               </h2>
-              <ConnStatusBadge status={connStatus} connectedTo={connectedTo} />
+              {connectedTo && peerStatus === 'connected' && (
+                <span className="border border-green-500/30 bg-green-500/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-green-500">
+                  Đã nối
+                </span>
+              )}
             </div>
 
-            {connStatus !== 'open' ? (
+            {peerStatus !== 'connected' ? (
               <div className="flex gap-2">
                 <Input
                   value={remoteId}
                   onChange={(e) => setRemoteId(e.target.value.toUpperCase())}
                   placeholder="Nhập ID 6 ký tự"
                   maxLength={6}
-                  disabled={peerStatus !== 'open' || connStatus === 'connecting'}
+                  disabled={peerStatus === 'connecting'}
                   className="h-10 font-mono text-lg tracking-widest"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') connectToRemote();
-                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') joinRoom(remoteId); }}
                 />
                 <Button
-                  onClick={connectToRemote}
-                  disabled={
-                    peerStatus !== 'open' ||
-                    connStatus === 'connecting' ||
-                    remoteId.trim().length < 6
-                  }
+                  onClick={() => joinRoom(remoteId)}
+                  disabled={peerStatus === 'connecting' || remoteId.trim().length < 6}
                   className="h-10 gap-1.5"
                 >
-                  {connStatus === 'connecting' ? (
+                  {peerStatus === 'connecting' ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <Wifi className="h-4 w-4" />
@@ -583,7 +718,7 @@ export default function P2PTransfer() {
               <div className="flex items-center justify-between gap-2 border border-green-500/30 bg-green-500/5 px-3 py-2 text-sm text-green-500">
                 <span className="inline-flex items-center gap-2">
                   <Wifi className="h-4 w-4" />
-                  Đã kết nối với <code className="font-mono font-bold">{connectedTo}</code>
+                  Đã kết nối
                 </span>
                 <Button variant="outline" size="sm" onClick={disconnect} className="gap-1.5">
                   <WifiOff className="h-3 w-3" />
@@ -593,8 +728,32 @@ export default function P2PTransfer() {
             )}
           </section>
 
+          {/* Error details */}
+          {errorInfo && peerStatus === 'error' && (
+            <section className="border border-destructive/40 bg-destructive/5 p-4">
+              <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
+                <WifiOff className="h-4 w-4" />
+                {errorInfo.title}
+              </h3>
+              <p className="mt-2 text-xs text-foreground">{errorInfo.detail}</p>
+              {errorInfo.hint && (
+                <div className="mt-2 border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-600 dark:text-yellow-400">
+                  💡 {errorInfo.hint}
+                </div>
+              )}
+              <div className="mt-3 flex gap-2">
+                <Button variant="outline" size="sm" onClick={disconnect}>
+                  Reset
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => window.open('https://test.webrtc.org/', '_blank')}>
+                  Test mạng
+                </Button>
+              </div>
+            </section>
+          )}
+
           {/* File transfer area */}
-          {connStatus === 'open' && (
+          {peerStatus === 'connected' && (
             <section className="space-y-3">
               <FileDropzone
                 onFiles={handleSendFiles}
@@ -606,9 +765,7 @@ export default function P2PTransfer() {
                 multiple
                 className="hidden"
                 onChange={(e) => {
-                  if (e.target.files && e.target.files.length > 0) {
-                    handleSendFiles(e.target.files);
-                  }
+                  if (e.target.files && e.target.files.length > 0) handleSendFiles(e.target.files);
                   e.target.value = '';
                 }}
               />
@@ -620,13 +777,7 @@ export default function P2PTransfer() {
                   </div>
                   <ul>
                     {sendingFiles.map((f) => (
-                      <SendingRow
-                        key={f.id}
-                        item={f}
-                        onRemove={() =>
-                          setSendingFiles((prev) => prev.filter((x) => x.id !== f.id))
-                        }
-                      />
+                      <SendingRow key={f.id} item={f} onRemove={() => setSendingFiles((prev) => prev.filter((x) => x.id !== f.id))} />
                     ))}
                   </ul>
                 </div>
@@ -639,13 +790,7 @@ export default function P2PTransfer() {
                   </div>
                   <ul>
                     {receivingFiles.map((f) => (
-                      <ReceivingRow
-                        key={f.id}
-                        item={f}
-                        onRemove={() =>
-                          setReceivingFiles((prev) => prev.filter((x) => x.id !== f.id))
-                        }
-                      />
+                      <ReceivingRow key={f.id} item={f} onRemove={() => setReceivingFiles((prev) => prev.filter((x) => x.id !== f.id))} />
                     ))}
                   </ul>
                 </div>
@@ -659,23 +804,15 @@ export default function P2PTransfer() {
               Cách dùng
             </summary>
             <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>2 thiết bị mở cùng trang này.</li>
-              <li>
-                Bên A đưa <strong>ID</strong> cho bên B (qua chat, miệng, QR...).
-              </li>
-              <li>
-                Bên B nhập ID đó vào ô <em>Kết nối tới đối phương</em> rồi bấm{' '}
-                <em>Kết nối</em>.
-              </li>
+              <li>Bên A bấm <strong>Đợi kết nối</strong> để mở phòng.</li>
+              <li>Đưa <strong>ID</strong> cho bên B (qua chat, miệng, QR, share link...).</li>
+              <li>Bên B nhập ID đó vào ô <em>Kết nối tới đối phương</em> rồi bấm <em>Kết nối</em>.</li>
               <li>Sau khi nối, kéo-thả file vào hoặc click chọn để gửi.</li>
-              <li>
-                Bên nhận sẽ tự động download file khi nhận xong (browser có thể hỏi
-                xác nhận lần đầu).
-              </li>
+              <li>Bên nhận tự động download file khi nhận xong.</li>
             </ol>
             <p className="mt-2 text-[11px]">
-              File truyền trực tiếp peer-to-peer qua WebRTC, KHÔNG qua server. Broker
-              chỉ dùng để 2 peer tìm thấy nhau lúc đầu.
+              File truyền trực tiếp peer-to-peer qua WebRTC. Không đi qua server.
+              Firebase chỉ dùng để 2 peer tìm nhau lúc đầu (signaling).
             </p>
           </details>
         </div>
@@ -687,43 +824,19 @@ export default function P2PTransfer() {
 // ============================================================
 // Sub-components
 // ============================================================
-function PeerStatusBadge({ status }: { status: 'init' | 'open' | 'error' }) {
-  const cfg = {
-    init: { label: 'Đang kết nối', cls: 'border-yellow-500/30 bg-yellow-500/5 text-yellow-500' },
-    open: { label: 'Sẵn sàng', cls: 'border-green-500/30 bg-green-500/5 text-green-500' },
-    error: { label: 'Lỗi', cls: 'border-destructive/30 bg-destructive/5 text-destructive' },
-  }[status];
-  return (
-    <span className={cn('border px-2 py-0.5 text-[10px] uppercase tracking-wider', cfg.cls)}>
-      {cfg.label}
-    </span>
-  );
-}
 
-function ConnStatusBadge({
-  status,
-  connectedTo,
-}: {
-  status: ConnectionStatus;
-  connectedTo: string | null;
-}) {
-  if (status === 'open' && connectedTo) {
-    return (
-      <span className="border border-green-500/30 bg-green-500/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-green-500">
-        Đã nối
-      </span>
-    );
-  }
-  if (status === 'connecting') {
-    return (
-      <span className="border border-yellow-500/30 bg-yellow-500/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-yellow-500">
-        Đang nối
-      </span>
-    );
-  }
+function PeerStatusBadge({ status }: { status: PeerStatus }) {
+  const cfg: Record<PeerStatus, { label: string; cls: string }> = {
+    idle: { label: 'Chưa mở phòng', cls: 'border-border bg-background text-muted-foreground' },
+    waiting: { label: 'Đang đợi', cls: 'border-yellow-500/30 bg-yellow-500/5 text-yellow-500' },
+    connecting: { label: 'Đang nối', cls: 'border-yellow-500/30 bg-yellow-500/5 text-yellow-500' },
+    connected: { label: 'Đã kết nối', cls: 'border-green-500/30 bg-green-500/5 text-green-500' },
+    error: { label: 'Lỗi', cls: 'border-destructive/30 bg-destructive/5 text-destructive' },
+  };
+  const c = cfg[status];
   return (
-    <span className="border border-border bg-background px-2 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-      Chưa nối
+    <span className={cn('border px-2 py-0.5 text-[10px] uppercase tracking-wider', c.cls)}>
+      {c.label}
     </span>
   );
 }
@@ -739,10 +852,7 @@ function FileDropzone({
   return (
     <div
       onClick={onPickClick}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setOver(true);
-      }}
+      onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -756,20 +866,12 @@ function FileDropzone({
     >
       <Upload className="mb-2 h-8 w-8 text-primary" />
       <p className="text-sm font-medium text-foreground">Kéo-thả file vào đây để gửi</p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Hoặc click để chọn nhiều file
-      </p>
+      <p className="mt-1 text-xs text-muted-foreground">Hoặc click để chọn nhiều file</p>
     </div>
   );
 }
 
-function SendingRow({
-  item,
-  onRemove,
-}: {
-  item: SendingItem;
-  onRemove: () => void;
-}) {
+function SendingRow({ item, onRemove }: { item: SendingItem; onRemove: () => void }) {
   const pct = item.total > 0 ? (item.sent / item.total) * 100 : 0;
   return (
     <li className="border-b border-border last:border-b-0">
@@ -778,9 +880,7 @@ function SendingRow({
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm text-foreground">{item.file.name}</div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
-            <span>
-              {formatBytes(item.sent)} / {formatBytes(item.total)} · {pct.toFixed(0)}%
-            </span>
+            <span>{formatBytes(item.sent)} / {formatBytes(item.total)} · {pct.toFixed(0)}%</span>
             {!item.done && item.speed > 0 && (
               <>
                 <span className="font-mono">{formatSpeed(item.speed)}</span>
@@ -796,25 +896,13 @@ function SendingRow({
         </Button>
       </div>
       <div className="h-0.5 w-full bg-background">
-        <div
-          className={cn(
-            'h-full transition-all',
-            item.done ? 'bg-green-500' : 'bg-primary',
-          )}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={cn('h-full transition-all', item.done ? 'bg-green-500' : 'bg-primary')} style={{ width: `${pct}%` }} />
       </div>
     </li>
   );
 }
 
-function ReceivingRow({
-  item,
-  onRemove,
-}: {
-  item: ReceivedItem;
-  onRemove: () => void;
-}) {
+function ReceivingRow({ item, onRemove }: { item: ReceivedItem; onRemove: () => void }) {
   const pct = item.size > 0 ? (item.receivedBytes / item.size) * 100 : 0;
   return (
     <li className="border-b border-border last:border-b-0">
@@ -823,10 +911,7 @@ function ReceivingRow({
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm text-foreground">{item.name}</div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[10px] text-muted-foreground">
-            <span>
-              {formatBytes(item.receivedBytes)} / {formatBytes(item.size)} ·{' '}
-              {pct.toFixed(0)}%
-            </span>
+            <span>{formatBytes(item.receivedBytes)} / {formatBytes(item.size)} · {pct.toFixed(0)}%</span>
             {!item.done && item.speed > 0 && (
               <>
                 <span className="font-mono">{formatSpeed(item.speed)}</span>
@@ -837,12 +922,7 @@ function ReceivingRow({
           </div>
         </div>
         {item.done && item.blob && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => downloadBlob(item.blob!, item.name)}
-            className="h-7 gap-1 px-2 text-xs"
-          >
+          <Button variant="outline" size="sm" onClick={() => downloadBlob(item.blob!, item.name)} className="h-7 gap-1 px-2 text-xs">
             <Download className="h-3 w-3" />
             Tải lại
           </Button>
@@ -852,13 +932,7 @@ function ReceivingRow({
         </Button>
       </div>
       <div className="h-0.5 w-full bg-background">
-        <div
-          className={cn(
-            'h-full transition-all',
-            item.done ? 'bg-green-500' : 'bg-primary',
-          )}
-          style={{ width: `${pct}%` }}
-        />
+        <div className={cn('h-full transition-all', item.done ? 'bg-green-500' : 'bg-primary')} style={{ width: `${pct}%` }} />
       </div>
     </li>
   );
@@ -875,9 +949,7 @@ function downloadBlob(blob: Blob, name: string) {
   URL.revokeObjectURL(url);
 }
 
-// ============================================================
-// QrDisplay — render QR code SVG (lazy import qrcode)
-// ============================================================
+// QR Display — lazy import qrcode
 function QrDisplay({ value }: { value: string }) {
   const [svg, setSvg] = useState<string>('');
 
@@ -893,27 +965,19 @@ function QrDisplay({ value }: { value: string }) {
       });
       if (!cancelled) setSvg(out);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [value]);
 
   return (
     <div className="mt-3 flex flex-col items-center gap-2 border border-border bg-background p-4">
       {svg ? (
-        <div
-          className="h-[240px] w-[240px]"
-          dangerouslySetInnerHTML={{ __html: svg }}
-          aria-label="QR code"
-        />
+        <div className="h-[240px] w-[240px]" dangerouslySetInnerHTML={{ __html: svg }} aria-label="QR code" />
       ) : (
         <div className="flex h-[240px] w-[240px] items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
         </div>
       )}
-      <code className="break-all text-center text-[10px] text-muted-foreground">
-        {value}
-      </code>
+      <code className="break-all text-center text-[10px] text-muted-foreground">{value}</code>
     </div>
   );
-}
+}

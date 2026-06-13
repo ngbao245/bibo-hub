@@ -61,46 +61,65 @@ export function wrapPart(body: string): string {
  */
 export function parsePackedContent(content: string): PackedFile[] {
   const files: PackedFile[] = [];
-  let pos = 0;
 
-  while (true) {
-    const fileStart = content.indexOf(MARKERS.FILE_START, pos);
-    if (fileStart === -1) break;
+  // Tách theo FILE_START marker (chấp nhận whitespace trước)
+  const blocks = content.split(new RegExp(`\\s*${MARKERS.FILE_START}\\s*`, 'g'));
 
-    const pathStart = content.indexOf(MARKERS.PATH_PREFIX, fileStart);
-    if (pathStart === -1) break;
+  console.log('=== PARSE DEBUG ===');
+  console.log('Content length:', content.length);
+  console.log('Blocks found:', blocks.length);
 
-    const pathEnd = content.indexOf('\n', pathStart + MARKERS.PATH_PREFIX.length);
-    if (pathEnd === -1) break;
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i];
+    if (!block.trim()) continue;
 
-    const path = content
-      .substring(pathStart + MARKERS.PATH_PREFIX.length, pathEnd)
-      .trim();
+    console.log(`\nBlock ${i}:`);
+    console.log('  First 100 chars:', block.substring(0, 100));
 
-    const contentMarker = MARKERS.CONTENT_START + '\n';
-    const contentStart = content.indexOf(contentMarker, pathEnd);
-    if (contentStart === -1) break;
+    // Tìm PATH:
+    const pathMatch = block.match(new RegExp(`${MARKERS.PATH_PREFIX}\\s*(.+?)\\s*\\n`, 'm'));
+    if (!pathMatch) {
+      console.log('  ERROR: No PATH found');
+      continue;
+    }
+    const path = pathMatch[1].trim();
+    console.log('  path:', path);
 
-    const fileEnd = content.indexOf(
-      '\n' + MARKERS.FILE_END,
-      contentStart + contentMarker.length,
-    );
-    if (fileEnd === -1) break;
+    // Tìm CONTENT_START:
+    const contentStartIdx = block.indexOf(MARKERS.CONTENT_START);
+    if (contentStartIdx === -1) {
+      console.log('  ERROR: No CONTENT_START found');
+      continue;
+    }
 
-    const fileContent = content.substring(
-      contentStart + contentMarker.length,
-      fileEnd,
-    );
+    // Tìm FILE_END (có thể có whitespace trước)
+    const fileEndMatch = block.match(new RegExp(`\\n\\s*${MARKERS.FILE_END}`, 'm'));
+    if (!fileEndMatch) {
+      console.log('  ERROR: No FILE_END found');
+      continue;
+    }
 
-    files.push({
-      path,
-      content: fileContent,
-      size: new Blob([fileContent]).size,
-    });
+    const fileEndIdx = block.indexOf(fileEndMatch[0]);
 
-    pos = fileEnd + ('\n' + MARKERS.FILE_END).length;
+    // Extract content giữa CONTENT_START và FILE_END
+    const contentStart = contentStartIdx + MARKERS.CONTENT_START.length;
+    let fileContent = block.substring(contentStart, fileEndIdx);
+
+    // Trim leading newline sau CONTENT_START:
+    fileContent = fileContent.replace(/^\n/, '');
+
+    console.log('  fileContent length:', fileContent.length);
+
+    if (path) {
+      files.push({
+        path,
+        content: fileContent,
+        size: new Blob([fileContent]).size,
+      });
+    }
   }
 
+  console.log('Total files parsed:', files.length);
   return files;
 }
 

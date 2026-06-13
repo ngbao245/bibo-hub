@@ -1,3 +1,4 @@
+
 // ============================================================
 // Secret notes encryption helpers
 // ============================================================
@@ -8,6 +9,8 @@
 // Để bảo mật thật, nên migrate sang AES-GCM với key từ password.
 // Giữ thuật toán cũ để tương thích data v1.
 // ============================================================
+
+import { APP_SECRET } from './appSecret';
 
 export function encryptSecret(text: string): string {
   if (!text) return '';
@@ -43,15 +46,10 @@ export function decryptSecret(encoded: string): string {
 }
 
 /**
- * Verify password match. Logic v1:
- *   correct = atob(SECRET_PASSWORD_ENCODED).split('').reverse().join('')
- *
- * Hardcoded password để tương thích v1, đổi cách lưu hoặc dùng auth thật
- * trong tương lai. Đây không phải bảo mật mạnh, chỉ là khoá mềm.
+ * Verify password mở Secret Notes. Password lấy từ APP_SECRET
+ * (lib/appSecret.ts) — đây không phải bảo mật mạnh, chỉ là khoá
+ * mềm tương thích v1.
  */
-const SECRET_PASSWORD_ENCODED = 'MzAwMkBvYmlib2FC';
-
 export function verifySecretPassword(input: string): boolean {
-  const correct = atob(SECRET_PASSWORD_ENCODED).split('').reverse().join('');
-  return input === correct;
-}
+  return input === APP_SECRET;
+}

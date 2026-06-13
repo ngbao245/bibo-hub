@@ -1,3 +1,4 @@
+
 import type { PackedFile, PackPart, PackOptions } from './types';
 import { serializeFile, wrapPart, MARKERS } from './format';
 
@@ -19,21 +20,31 @@ const WRAPPER_OVERHEAD =
 
 export async function packFiles(files: PackedFile[], options: PackOptions): Promise<PackPart[]> {
   const parts: PackPart[] = [];
-  let currentBody = '';
+  // Buffer mỗi part dùng array để tránh string concat O(n²)
+  let currentBlocks: string[] = [];
+  let currentSize = 0;
   let currentFiles: string[] = [];
+
+  function flushPart() {
+    if (currentBlocks.length === 0) return;
+    const body = currentBlocks.join('');
+    parts.push(buildPart(parts.length + 1, body, currentFiles));
+    currentBlocks = [];
+    currentSize = 0;
+    currentFiles = [];
+  }
 
   for (let i = 0; i < files.length; i++) {
     const file = files[i];
     const block = serializeFile(file);
-    const projectedSize = currentBody.length + block.length + WRAPPER_OVERHEAD;
+    const projectedSize = currentSize + block.length + WRAPPER_OVERHEAD;
 
-    if (projectedSize > options.maxCharsPerPart && currentBody.length > 0) {
-      parts.push(buildPart(parts.length + 1, currentBody, currentFiles));
-      currentBody = '';
-      currentFiles = [];
+    if (projectedSize > options.maxCharsPerPart && currentSize > 0) {
+      flushPart();
     }
 
-    currentBody += block;
+    currentBlocks.push(block);
+    currentSize += block.length;
     currentFiles.push(file.path);
 
     // Yield mỗi 50 file để tránh freeze khi serialize
@@ -42,9 +53,7 @@ export async function packFiles(files: PackedFile[], options: PackOptions): Prom
     }
   }
 
-  if (currentBody.length > 0) {
-    parts.push(buildPart(parts.length + 1, currentBody, currentFiles));
-  }
+  flushPart();
 
   return parts.map((p) => ({ ...p, total: parts.length }));
 }
@@ -154,4 +163,4 @@ function readFileAsText(file: File): Promise<string | null> {
     reader.onerror = () => resolve(null);
     reader.readAsText(file);
   });
-}
+}

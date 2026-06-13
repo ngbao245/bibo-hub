@@ -1,8 +1,7 @@
-import { useCallback, useState } from 'react';
+
+import { useState } from 'react';
 import { PiggyBank, Trash2, Plus, RotateCcw, Sprout, Leaf, TreePine, Trophy } from 'lucide-react';
 
-import { useShortcut } from '@/hooks/useShortcut';
-import { useModalStore } from '@/stores/modalStore';
 import { useSavings, useCreateSavings, useUpdateSavings, useDeleteSavings } from '@/api/savings';
 import {
   formatMoney,
@@ -22,27 +21,10 @@ import { toast } from '@/components/ui/sonner';
 // ============================================================
 // Savings Modal
 // ============================================================
-//
-// V2 đơn giản hoá so với v1:
-// - Chỉ hỗ trợ 1 goal active
-// - Bỏ challenge feature (có thể thêm sau)
-// - Bỏ QR upload (có thể thêm sau)
-// - Giữ: target amount, current, deadline (days), history, milestones, quick add
-// ============================================================
 
 const QUICK_AMOUNTS = [50_000, 100_000, 200_000, 500_000, 1_000_000];
 
 export default function Savings() {
-  const toggle = useModalStore((s) => s.toggle);
-  const handleShortcut = useCallback(() => toggle('savings'), [toggle]);
-
-  useShortcut({
-    key: 'alt+shift+v',
-    label: 'Savings',
-    group: 'Tools',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal id="savings" title="Tiết kiệm" className="max-w-xl">
       <SavingsContent />
@@ -428,4 +410,4 @@ function Field({
 }
 
 // Trash2 import giữ tránh "unused"
-void Trash2;
+void Trash2;

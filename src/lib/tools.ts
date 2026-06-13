@@ -1,3 +1,4 @@
+
 import type { ModalId } from '@/stores/modalStore';
 
 // ============================================================
@@ -129,6 +130,14 @@ export const TOOLS: Tool[] = [
     description: 'Encode API URL cho config.js',
   },
   {
+    id: 'crypto',
+    label: 'Crypto',
+    shortcut: 'Alt+Shift+C',
+    group: 'Utilities',
+    action: { kind: 'modal', modalId: 'crypto' },
+    description: 'Mã hoá / giải mã AES-GCM (dùng chung passphrase với Setting)',
+  },
+  {
     id: 'backup',
     label: 'Backup',
     shortcut: 'Alt+B',
@@ -160,12 +169,27 @@ export const TOOLS: Tool[] = [
     description: 'Quản lý sản phẩm bán lẻ',
   },
   {
+    id: 'setting',
+    label: 'Config',
+    group: 'Developer',
+    action: { kind: 'route', path: '/setting' },
+    description: 'Quản lý setting dự án (CRUD qua mockapi)',
+  },
+  {
     id: 'cache-inspector',
     label: 'Cache',
     shortcut: 'Alt+I',
     group: 'Developer',
     action: { kind: 'modal', modalId: 'cacheInspector' },
     description: 'Xem & quản lý cache',
+  },
+  {
+    id: 'code-compare',
+    label: 'Compare',
+    shortcut: 'Alt+Shift+D',
+    group: 'Developer',
+    action: { kind: 'route', path: '/code-compare' },
+    description: 'So sánh 2 đoạn code — inline diff',
   },
 ];
 
@@ -180,4 +204,4 @@ export function groupTools(tools: Tool[]): Record<ToolGroup, Tool[]> {
   };
   for (const t of tools) result[t.group].push(t);
   return result;
-}
+}

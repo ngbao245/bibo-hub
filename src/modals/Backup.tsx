@@ -1,9 +1,8 @@
-import { useCallback, useRef, useState } from 'react';
+
+import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, Upload, AlertTriangle, Loader2 } from 'lucide-react';
 
-import { useShortcut } from '@/hooks/useShortcut';
-import { useModalStore } from '@/stores/modalStore';
 import ToolModal from '@/components/ToolModal';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,16 +22,6 @@ import {
 // ============================================================
 
 export default function Backup() {
-  const toggle = useModalStore((s) => s.toggle);
-  const handleShortcut = useCallback(() => toggle('backup'), [toggle]);
-
-  useShortcut({
-    key: 'alt+b',
-    label: 'Backup',
-    group: 'Tools',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal
       id="backup"
@@ -330,4 +319,4 @@ function ImportBlock({ kind }: { kind: BackupKind }) {
       )}
     </div>
   );
-}
+}

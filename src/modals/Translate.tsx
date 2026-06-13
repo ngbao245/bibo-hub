@@ -1,35 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+
+import { useState, useEffect, useRef } from 'react';
 import { Copy, Trash2, ArrowDown, Loader2 } from 'lucide-react';
 
-import { useShortcut } from '@/hooks/useShortcut';
-import { useModalStore } from '@/stores/modalStore';
 import ToolModal from '@/components/ToolModal';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 
 // ============================================================
-// Translate Modal - dịch Việt-Anh tự động qua MyMemory API
-// ============================================================
-//
-// API: https://api.mymemory.translated.net (free, không cần key)
-// Auto-detect ngôn ngữ qua regex Vietnamese diacritics.
-// Debounce 500ms khi user gõ để tránh spam request.
+// Translate Modal — dịch Việt-Anh tự động qua MyMemory API
 // ============================================================
 
 const VIETNAMESE_REGEX =
   /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]/i;
 
 export default function Translate() {
-  const toggle = useModalStore((s) => s.toggle);
-  const handleShortcut = useCallback(() => toggle('translate'), [toggle]);
-
-  useShortcut({
-    key: 'alt+t',
-    label: 'Translate',
-    group: 'Tools',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal
       id="translate"
@@ -243,4 +227,4 @@ async function translateLingva(text: string, from: string, to: string): Promise<
 function openGoogleTranslate(text: string, from: string, to: string) {
   const url = `https://translate.google.com/?sl=${from}&tl=${to}&text=${encodeURIComponent(text)}&op=translate`;
   window.open(url, '_blank', 'noopener,noreferrer');
-}
+}

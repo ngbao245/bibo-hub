@@ -1,8 +1,8 @@
+
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
-import { useShortcut } from './hooks/useShortcut';
-import { useModalStore } from './stores/modalStore';
+import { useBootstrapShortcutOverrides } from './hooks/useBootstrapShortcutOverrides';
 
 // ============================================================
 // Lazy routes - mỗi page load chunk riêng khi navigate tới.
@@ -17,6 +17,8 @@ const Expense = lazy(() => import('./routes/Expense'));
 const Keycap = lazy(() => import('./routes/Keycap'));
 const ProjectPacker = lazy(() => import('./routes/ProjectPacker'));
 const P2PTransfer = lazy(() => import('./routes/P2PTransfer'));
+const Setting = lazy(() => import('./routes/Setting'));
+const CodeCompare = lazy(() => import('./routes/CodeCompare'));
 
 // Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
 import Calculator from './modals/Calculator';
@@ -29,6 +31,7 @@ import SpxTracking from './modals/Spx';
 import DailyReminder from './modals/DailyReminder';
 import Shortcuts from './modals/Shortcuts';
 import CacheInspector from './modals/CacheInspector';
+import Crypto from './modals/Crypto';
 
 // Fallback loading UI cho Suspense
 function PageLoader() {
@@ -41,14 +44,7 @@ function PageLoader() {
 
 export default function App() {
   useGlobalShortcuts();
-
-  const close = useModalStore((s) => s.close);
-  useShortcut({
-    key: 'escape',
-    label: 'Close Modal',
-    group: 'Controls',
-    handler: close,
-  });
+  useBootstrapShortcutOverrides();
 
   return (
     <>
@@ -63,6 +59,8 @@ export default function App() {
           <Route path="/keycap" element={<Keycap />} />
           <Route path="/project-packer" element={<ProjectPacker />} />
           <Route path="/p2p" element={<P2PTransfer />} />
+          <Route path="/setting" element={<Setting />} />
+          <Route path="/code-compare" element={<CodeCompare />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -78,6 +76,7 @@ export default function App() {
       <DailyReminder />
       <Shortcuts />
       <CacheInspector />
+      <Crypto />
     </>
   );
-}
+}

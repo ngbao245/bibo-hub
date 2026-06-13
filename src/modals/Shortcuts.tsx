@@ -1,31 +1,16 @@
-import { useCallback, useMemo } from 'react';
+
+import { useMemo } from 'react';
 import { Keyboard } from 'lucide-react';
 
-import { useShortcut } from '@/hooks/useShortcut';
 import { useShortcutStore, type Shortcut } from '@/stores/shortcutStore';
-import { useModalStore } from '@/stores/modalStore';
 
 import ToolModal from '@/components/ToolModal';
 
 // ============================================================
-// Shortcuts Modal - hiển thị tất cả phím tắt đã đăng ký
-// ============================================================
-//
-// Đọc trực tiếp từ shortcutStore. Component nào dùng useShortcut()
-// thì shortcut đó tự xuất hiện trong list.
+// Shortcuts Modal — hiển thị tất cả phím tắt active
 // ============================================================
 
 export default function Shortcuts() {
-  const toggle = useModalStore((s) => s.toggle);
-  const handleShortcut = useCallback(() => toggle('shortcuts'), [toggle]);
-
-  useShortcut({
-    key: 'alt+k',
-    label: 'Phím tắt',
-    group: 'Controls',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal
       id="shortcuts"
@@ -124,4 +109,4 @@ function prettyKey(part: string): string {
     arrowright: '→',
   };
   return map[part] ?? part.toUpperCase();
-}
+}

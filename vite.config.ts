@@ -30,7 +30,9 @@ export default defineConfig(() => ({
     ],
   },
   server: {
-    port: 5173,
+    port: 3000,
+    strictPort: false, // nếu 3000 bị chiếm → tự thử 3001, 3002...
     open: true,
   },
 }));
+

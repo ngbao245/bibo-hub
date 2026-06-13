@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import {
   CheckSquare,
@@ -42,16 +43,7 @@ export default function FocusLayer({ onHide }: FocusLayerProps) {
   const tasksQuery = useTasks();
   const notesQuery = useNotes();
 
-  // DEBUG: log để trace vấn đề focus tasks không hiện
-  if (tasksQuery.data) {
-    console.log('[FocusLayer] Raw tasks count:', tasksQuery.data.tasks.length);
-    console.log('[FocusLayer] Pending tasks:', tasksQuery.data.tasks.filter(t => t.status !== 'completed'));
-  }
-
   const focusTasks = tasksQuery.data ? getFocusTasks(tasksQuery.data.tasks, 5) : [];
-
-  // DEBUG
-  console.log('[FocusLayer] Focus tasks result:', focusTasks.length, focusTasks);
 
   const focusNotes = notesQuery.data ? getFocusNotes(notesQuery.data, 3) : [];
 
@@ -352,4 +344,4 @@ function Empty({ text }: { text: string }) {
       {text}
     </div>
   );
-}
+}

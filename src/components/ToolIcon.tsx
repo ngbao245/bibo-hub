@@ -1,3 +1,4 @@
+
 import {
   StickyNote,
   ListTodo,
@@ -14,6 +15,9 @@ import {
   Briefcase,
   ShoppingCart,
   Send,
+  Settings2,
+  ShieldCheck,
+  GitCompareArrows,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -41,6 +45,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'project-packer': Briefcase,
   'p2p-transfer': Send,
   keycap: ShoppingCart,
+  setting: Settings2,
+  crypto: ShieldCheck,
+  'code-compare': GitCompareArrows,
 };
 
 interface ToolIconProps {
@@ -51,4 +58,4 @@ interface ToolIconProps {
 export function ToolIcon({ id, className }: ToolIconProps) {
   const Icon = ICON_MAP[id] ?? StickyNote;
   return <Icon className={className} />;
-}
+}

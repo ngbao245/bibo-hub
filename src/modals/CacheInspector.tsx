@@ -1,9 +1,8 @@
-import { useCallback, useState } from 'react';
+
+import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Database, HardDrive, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 
-import { useShortcut } from '@/hooks/useShortcut';
-import { useModalStore } from '@/stores/modalStore';
 import ToolModal from '@/components/ToolModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -13,27 +12,10 @@ import QueryCacheTab from '@/components/cache/QueryCacheTab';
 import LocalStorageTab from '@/components/cache/LocalStorageTab';
 
 // ============================================================
-// Cache Inspector Modal — Alt+I
-// ============================================================
-//
-// 2 tabs:
-// - Query Cache: TanStack Query state (server data)
-// - LocalStorage: browser localStorage (settings + UI state)
-//
-// + Clear All button — xoá toàn bộ + reload trang
+// Cache Inspector Modal
 // ============================================================
 
 export default function CacheInspector() {
-  const toggle = useModalStore((s) => s.toggle);
-  const handleShortcut = useCallback(() => toggle('cacheInspector'), [toggle]);
-
-  useShortcut({
-    key: 'alt+i',
-    label: 'Cache Inspector',
-    group: 'Tools',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal
       id="cacheInspector"
@@ -102,4 +84,4 @@ function CacheContent() {
       </Tabs>
     </div>
   );
-}
+}

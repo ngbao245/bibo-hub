@@ -1,8 +1,7 @@
-import { useCallback, useMemo, useState } from 'react';
+
+import { useMemo, useState } from 'react';
 import { Lock, Eye, EyeOff, Plus, Trash2, Save, Copy } from 'lucide-react';
 
-import { useShortcut } from '@/hooks/useShortcut';
-import { useModalStore } from '@/stores/modalStore';
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from '@/api/notes';
 import {
   encryptSecret,
@@ -20,29 +19,10 @@ import { toast } from '@/components/ui/sonner';
 import type { Note } from '@/schemas/note';
 
 // ============================================================
-// Secret Modal - notes mã hoá bằng password
-// ============================================================
-//
-// Flow:
-// 1. User mở modal → hiện password prompt (nếu chưa unlock)
-// 2. Nhập đúng password → unlock state local (không persist)
-// 3. List secret notes (decrypt khi hiển thị)
-// 4. Create/edit/delete như notes thường, encrypt khi save
-//
-// Lưu ý: state unlock chỉ tồn tại khi modal mở. Đóng modal → reset.
+// Secret Modal — notes mã hoá bằng password
 // ============================================================
 
 export default function Secret() {
-  const toggle = useModalStore((s) => s.toggle);
-  const handleShortcut = useCallback(() => toggle('secret'), [toggle]);
-
-  useShortcut({
-    key: 'alt+shift+s',
-    label: 'Secret Notes',
-    group: 'Tools',
-    handler: handleShortcut,
-  });
-
   return (
     <ToolModal id="secret" title="Secret Notes" className="max-w-4xl">
       <SecretContent />
@@ -376,4 +356,4 @@ function SecretEditor({ note, onSaved, onDeleted, onCancel }: SecretEditorProps)
       </div>
     </div>
   );
-}
+}

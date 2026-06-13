@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,3 +93,16 @@
     @apply border-primary bg-popover;
   }
 }
+
+/* ============================================================
+   Ẩn nút reveal password mặc định của Edge / IE / Chromium.
+   App tự render toggle eye → tránh hiển thị 2 nút trùng.
+   ============================================================ */
+input[type='password']::-ms-reveal,
+input[type='password']::-ms-clear,
+input[type='password']::-webkit-credentials-auto-fill-button,
+input[type='password']::-webkit-strong-password-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}

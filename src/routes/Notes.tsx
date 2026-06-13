@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
@@ -115,7 +116,7 @@ export default function Notes() {
   // 📚 Sync panes với data: gỡ tabs đã bị xoá; auto-mở note đầu khi rỗng.
   useEffect(() => {
     if (!notesQuery.data) return;
-    const validIds = new Set(notesQuery.data.map((n: any) => n.id));
+    const validIds = new Set(notesQuery.data.map((n) => n.id));
 
     let dirty = false;
     const cleanedPanes = panes.map((p) => {
@@ -132,7 +133,7 @@ export default function Notes() {
     // Pane đầu tiên rỗng → auto-mở note mới nhất
     if (cleanedPanes[0].tabs.length === 0) {
       const regular = notesQuery.data.filter(
-        (n: any) =>
+        (n) =>
           ['note', 'ielts', 'course', 'code'].includes(n.type) && !n.isChildNote,
       );
       if (regular.length > 0) {
@@ -227,7 +228,7 @@ export default function Notes() {
   // Active note của pane đang focus (cho mobile header hiển thị)
   const focusedPane = panes[safeFocusedIdx];
   const focusedActiveNote =
-    notesQuery.data?.find((n: any) => n.id === focusedPane?.activeId) ?? null;
+    notesQuery.data?.find((n) => n.id === focusedPane?.activeId) ?? null;
 
   // Ctrl+B: cycle layout. Ctrl+W: đóng tab focused. Ctrl+Tab: switch tab focused.
   // Ctrl+\: split pane.
@@ -407,10 +408,10 @@ export default function Notes() {
           {panes.map((pane, idx) => {
             const isFocused = idx === safeFocusedIdx;
             const tabsResolved: Note[] = pane.tabs
-              .map((id) => notesQuery.data?.find((n: any) => n.id === id))
-              .filter((n: any): n is Note => !!n);
+              .map((id) => notesQuery.data?.find((n) => n.id === id))
+              .filter((n): n is Note => !!n);
             const activeNote =
-              notesQuery.data?.find((n: any) => n.id === pane.activeId) ?? null;
+              notesQuery.data?.find((n) => n.id === pane.activeId) ?? null;
 
             return (
               <section
@@ -585,4 +586,4 @@ function layoutModeTitle(mode: 'pinned' | 'compact' | 'zen'): string {
     case 'zen':
       return 'Layout: Zen (cả 2 auto-hide) → Ctrl+B để quay lại Pinned';
   }
-}
+}
