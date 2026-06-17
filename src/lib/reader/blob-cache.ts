@@ -86,7 +86,7 @@ export async function getCached(store: string, key: string): Promise<Blob | null
     const entry = await tx<Entry | undefined>(store, 'readonly', (s) => s.get(key));
     if (!entry) return null;
     // Cập nhật last_accessed lazily để LRU đúng
-    void touch(store, key).catch(() => {});
+    void touch(store, key).catch(() => { });
     return entry.blob;
   } catch {
     return null;
@@ -132,11 +132,11 @@ export async function putCached(
       });
     });
     // Evict best-effort — không throw nếu fail
-    await evictIfNeeded(store, budget).catch(() => {});
+    await evictIfNeeded(store, budget).catch(() => { });
   } catch (err) {
     // QuotaExceededError → thử evict rồi retry 1 lần
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      await evictIfNeeded(store, budget * 0.7).catch(() => {});
+      await evictIfNeeded(store, budget * 0.7).catch(() => { });
       // Best-effort retry
       await tx<void>(store, 'readwrite', (s) => {
         const entry: Entry = {
@@ -150,7 +150,7 @@ export async function putCached(
           req.onsuccess = () => resolve();
           req.onerror = () => reject(req.error);
         });
-      }).catch(() => {});
+      }).catch(() => { });
     }
     // Không throw — cache fail không nên block reader
   }
@@ -163,7 +163,7 @@ export async function deleteCached(store: string, key: string): Promise<void> {
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 export async function clearStore(store: string): Promise<void> {
@@ -173,7 +173,7 @@ export async function clearStore(store: string): Promise<void> {
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 export async function listEntries(store: string): Promise<Array<Omit<Entry, 'blob'>>> {
@@ -222,10 +222,59 @@ export async function fetchThroughCache(
 ): Promise<Blob> {
   const cached = await getCached(store, key);
   if (cached) return cached;
+
   const url = await urlProvider();
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const blob = await res.blob();
-  void putCached(store, key, blob);
-  return blob;
+
+  // Retry logic for large files or network issues
+  let lastError: Error | null = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (import.meta.env.DEV) {
+        console.log(`[blob-cache] Fetching ${key} (attempt ${attempt}/3)...`);
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
+
+      const res = await fetch(url, {
+        signal: controller.signal,
+        headers: {
+          'Accept': '*/*',
+        },
+        cache: 'no-store',
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const blob = await res.blob();
+
+      if (import.meta.env.DEV) {
+        console.log(`[blob-cache] Successfully fetched ${key}, size: ${blob.size} bytes`);
+      }
+
+      void putCached(store, key, blob);
+      return blob;
+
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+
+      if (import.meta.env.DEV) {
+        console.warn(`[blob-cache] Attempt ${attempt} failed:`, lastError.message);
+      }
+
+      if (attempt < 3) {
+        const delay = attempt * 1000;
+        if (import.meta.env.DEV) {
+          console.log(`[blob-cache] Retrying after ${delay}ms...`);
+        }
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError || new Error('Failed to fetch after 3 attempts');
 }

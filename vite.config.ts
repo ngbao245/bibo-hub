@@ -44,7 +44,14 @@ export default defineConfig(() => ({
       '@tiptap/pm/keymap',
       '@tiptap/pm/schema-list',
       'lowlight',
+      // PDF.js: pre-bundle để tránh worker load issues
+      'pdfjs-dist',
     ],
+    // Exclude worker files khỏi optimization
+    exclude: ['pdfjs-dist/build/pdf.worker.min.mjs'],
+  },
+  worker: {
+    format: 'es' as const,
   },
   server: {
     port: 3000,
