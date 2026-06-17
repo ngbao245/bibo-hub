@@ -13,10 +13,7 @@
 //          cache-control: max-age=...
 //          content-type: ...
 
-import { supabase, BUCKET } from './supabase';
-
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string | undefined) ?? '';
-const SUPABASE_ANON = (import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined) ?? '';
+import { supabase, BUCKET, SUPABASE_URL, SUPABASE_ANON_KEY } from './supabase';
 
 export interface UploadProgressEvent {
   loaded: number;
@@ -46,7 +43,7 @@ export async function uploadWithProgress(
     const xhr = new XMLHttpRequest();
     xhr.open('POST', url);
     xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-    xhr.setRequestHeader('apikey', SUPABASE_ANON);
+    xhr.setRequestHeader('apikey', SUPABASE_ANON_KEY);
     xhr.setRequestHeader('x-upsert', opts.upsert ? 'true' : 'false');
     xhr.setRequestHeader('cache-control', opts.cacheControl ?? '3600');
     // Note: KHÔNG set Content-Type qua header rồi gửi blob — browser sẽ tự
@@ -79,3 +76,4 @@ export async function uploadWithProgress(
     xhr.send(body);
   });
 }
+
