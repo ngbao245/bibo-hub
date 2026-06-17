@@ -18,6 +18,7 @@ import {
   Settings2,
   ShieldCheck,
   GitCompareArrows,
+  BookOpen,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -48,6 +49,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   setting: Settings2,
   crypto: ShieldCheck,
   'code-compare': GitCompareArrows,
+  readest: BookOpen,
 };
 
 interface ToolIconProps {
@@ -58,4 +60,4 @@ interface ToolIconProps {
 export function ToolIcon({ id, className }: ToolIconProps) {
   const Icon = ICON_MAP[id] ?? StickyNote;
   return <Icon className={className} />;
-}
+}

@@ -183,8 +183,8 @@ function TaskRow({ task }: { task: Task }) {
       }[due.tone]
     : '';
 
-  function handleDelete() {
-    if (!window.confirm(`Xoá task "${task.title || 'Untitled'}"?`)) return;
+  async function handleDelete() {
+    if (!window.confirm(`Delete task "${task.title || 'Untitled'}"?`)) return;
     deleteTask.mutate(task.id, {
       onSuccess: () => toast.success('Đã xoá'),
       onError: () => toast.error('Không xoá được'),

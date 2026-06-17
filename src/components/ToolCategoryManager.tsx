@@ -73,8 +73,8 @@ export default function ToolCategoryManager({
     setDirty(true);
   }
 
-  function removeCategory(cat: string) {
-    if (!window.confirm(`Xoá category "${cat}"? Tools sẽ thành unassigned.`)) return;
+  async function removeCategory(cat: string) {
+    if (!window.confirm(`Delete category "${cat}"? Tools will become unassigned.`)) return;
     setCategories((prev) => prev.filter((c) => c !== cat));
     setMapping((prev) => {
       const next = { ...prev };
@@ -369,4 +369,4 @@ function ToolChip({
       )}
     </div>
   );
-}
+}

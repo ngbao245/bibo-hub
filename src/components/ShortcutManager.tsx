@@ -80,8 +80,8 @@ export default function ShortcutManager({ onDirtyChange }: ShortcutManagerProps)
     setDirty(true);
   }
 
-  function resetAll() {
-    if (!window.confirm('Reset toàn bộ shortcut về default?')) return;
+  async function resetAll() {
+    if (!window.confirm('Reset shortcuts? All custom shortcuts will be removed.')) return;
     setOverrides({});
     setDirty(true);
   }
@@ -360,4 +360,4 @@ function formatShortcut(key: string): string {
       return k.charAt(0).toUpperCase() + k.slice(1);
     })
     .join('+');
-}
+}

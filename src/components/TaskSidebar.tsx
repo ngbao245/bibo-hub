@@ -94,8 +94,8 @@ export default function TaskSidebar({
               count={count}
               active={selected === list.id}
               onSelect={() => onSelect(list.id)}
-              onDelete={() => {
-                if (window.confirm(`Xoá danh sách "${list.title}"?`)) {
+              onDelete={async () => {
+                if (window.confirm(`Delete list "${list.title || 'Untitled'}"?`)) {
                   onDeleteList(list.id);
                 }
               }}
