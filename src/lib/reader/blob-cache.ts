@@ -86,7 +86,7 @@ export async function getCached(store: string, key: string): Promise<Blob | null
     const entry = await tx<Entry | undefined>(store, 'readonly', (s) => s.get(key));
     if (!entry) return null;
     // Cập nhật last_accessed lazily để LRU đúng
-    void touch(store, key).catch(() => {});
+    void touch(store, key).catch(() => { });
     return entry.blob;
   } catch {
     return null;
@@ -132,11 +132,11 @@ export async function putCached(
       });
     });
     // Evict best-effort — không throw nếu fail
-    await evictIfNeeded(store, budget).catch(() => {});
+    await evictIfNeeded(store, budget).catch(() => { });
   } catch (err) {
     // QuotaExceededError → thử evict rồi retry 1 lần
     if (err instanceof DOMException && err.name === 'QuotaExceededError') {
-      await evictIfNeeded(store, budget * 0.7).catch(() => {});
+      await evictIfNeeded(store, budget * 0.7).catch(() => { });
       // Best-effort retry
       await tx<void>(store, 'readwrite', (s) => {
         const entry: Entry = {
@@ -150,7 +150,7 @@ export async function putCached(
           req.onsuccess = () => resolve();
           req.onerror = () => reject(req.error);
         });
-      }).catch(() => {});
+      }).catch(() => { });
     }
     // Không throw — cache fail không nên block reader
   }
@@ -163,7 +163,7 @@ export async function deleteCached(store: string, key: string): Promise<void> {
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 export async function clearStore(store: string): Promise<void> {
@@ -173,7 +173,7 @@ export async function clearStore(store: string): Promise<void> {
       req.onsuccess = () => resolve();
       req.onerror = () => reject(req.error);
     });
-  }).catch(() => {});
+  }).catch(() => { });
 }
 
 export async function listEntries(store: string): Promise<Array<Omit<Entry, 'blob'>>> {
@@ -207,27 +207,6 @@ async function evictIfNeeded(store: string, budget: number): Promise<void> {
     await deleteCached(store, e.key);
     total -= e.size;
   }
-}
-
-/**
- * Convenience: fetch URL với cache layer.
- * - Có blob trong store + key → trả blob (không gọi urlProvider).
- * - Không → gọi urlProvider() để lấy URL (lazy, để khỏi sign mạng khi không cần),
- *   fetch về, put vào store, trả blob.
- */
-export async function fetchThroughCache(
-  store: string,
-  key: string,
-  urlProvider: () => Promise<string> | string,
-): Promise<Blob> {
-  const cached = await getCached(store, key);
-  if (cached) return cached;
-  const url = await urlProvider();
-  const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  const blob = await res.blob();
-  void putCached(store, key, blob);
-  return blob;
 }
 
 /**

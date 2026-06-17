@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { getBookFileUrl } from '@/api/reader/books';
-import { fetchThroughCache, STORE_COVERS } from '@/lib/reader/blob-cache';
+import { downloadBookFile } from '@/api/reader/books';
+import { fetchBlobThroughCache, STORE_COVERS } from '@/lib/reader/blob-cache';
 
 /**
  * Render cover image cho 1 book.
  *
  * Strategy:
  *   1. Lookup IndexedDB store "covers" với key = path.
- *   2. Cache miss → sign URL từ Supabase, fetch blob, put cache.
+ *   2. Cache miss → SDK download() (bypass CORS), put cache.
  *   3. Render qua object URL (revoke khi unmount).
  */
 export default function BookCover({
@@ -27,7 +27,9 @@ export default function BookCover({
 
     (async () => {
       try {
-        const blob = await fetchThroughCache(STORE_COVERS, path, () => getBookFileUrl(path));
+        const blob = await fetchBlobThroughCache(STORE_COVERS, path, () =>
+          downloadBookFile(path),
+        );
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setUrl(objectUrl);

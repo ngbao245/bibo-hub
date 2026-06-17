@@ -122,15 +122,6 @@ export function useBook(bookId: string | undefined) {
   });
 }
 
-/** Signed URL valid 1h, bucket is private. */
-export async function getBookFileUrl(filePath: string): Promise<string> {
-  const { data, error } = await supabase.storage
-    .from(BUCKET)
-    .createSignedUrl(filePath, 60 * 60);
-  if (error) throw error;
-  return data.signedUrl;
-}
-
 /** Download file blob qua Supabase SDK — bypass CORS issues của signed URL. */
 export async function downloadBookFile(filePath: string): Promise<Blob> {
   const { data, error } = await supabase.storage.from(BUCKET).download(filePath);
@@ -231,7 +222,7 @@ export function useUploadBook() {
 
       report({ stage: 'done', percent: 100 });
       // Optimistic invalidate snapshot — onSuccess refetch sẽ ghi lại
-      try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
+      try { localStorage.removeItem(SNAPSHOT_KEY); } catch { }
       return data as Book;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['reader', 'books'] }),
@@ -250,7 +241,7 @@ export function useDeleteBook() {
       // Evict blob cache để khỏi giữ rác
       await deleteCached(STORE_FILES, book.file_path);
       if (book.cover_url) await deleteCached(STORE_COVERS, book.cover_url);
-      try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
+      try { localStorage.removeItem(SNAPSHOT_KEY); } catch { }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['reader', 'books'] }),
   });
