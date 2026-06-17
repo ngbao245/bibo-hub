@@ -1,11 +1,12 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/lib/reader/auth';
-import { initSupabaseConfig } from '@/lib/reader/supabase';
+// import { initSupabaseConfig } from '@/lib/reader/supabase';
 import ReaderSkeleton from '@/components/reader/ReaderSkeleton';
 
 // Trigger config init khi reader route load (1 lần, dedup, cached)
-initSupabaseConfig();
+// TODO: Fix initSupabaseConfig hoặc remove reader feature
+// initSupabaseConfig();
 
 // Lazy-load each reader page so the bulk of the reader bundle (foliate-js,
 // pdfjs-dist) isn't loaded when the user only opens the hub.
