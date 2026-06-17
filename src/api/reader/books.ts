@@ -131,6 +131,13 @@ export async function getBookFileUrl(filePath: string): Promise<string> {
   return data.signedUrl;
 }
 
+/** Download file blob qua Supabase SDK — bypass CORS issues của signed URL. */
+export async function downloadBookFile(filePath: string): Promise<Blob> {
+  const { data, error } = await supabase.storage.from(BUCKET).download(filePath);
+  if (error) throw error;
+  return data;
+}
+
 export function useUploadBook() {
   const qc = useQueryClient();
   return useMutation({
