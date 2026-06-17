@@ -5,7 +5,7 @@ import path from 'node:path';
 // Cấu hình Vite cho React + TS + Tailwind.
 // Dùng alias `@` để import từ src/ cho gọn: import X from '@/components/X'
 export default defineConfig(() => ({
-  base: '/',  // Root base, Vercel rewrite sẽ handle routing
+  base: process.env.NODE_ENV === 'production' ? '/hubibo/' : '/',
   plugins: [react()],
   resolve: {
     alias: {
