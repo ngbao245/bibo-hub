@@ -18,8 +18,8 @@ export default function LocalStorageTab({ refreshKey, onChange }: Props) {
     const entries = useMemo(() => getAllLocalStorage(), [refreshKey]);
     const totalSize = useMemo(() => getLocalStorageTotalSize(), [refreshKey]);
 
-    function clearAll() {
-        if (!window.confirm(`Xoá ${entries.length} keys trong localStorage?`)) return;
+    async function clearAll() {
+        if (!window.confirm(`Clear ${entries.length} keys? LocalStorage will be wiped.`)) return;
         localStorage.clear();
         toast.success('Đã xoá tất cả');
         onChange();
@@ -105,8 +105,8 @@ function EntryRow({
         setEditValue(entry.rawValue);
     }
 
-    function remove() {
-        if (!window.confirm(`Xoá key "${entry.key}"?`)) return;
+    async function remove() {
+        if (!window.confirm(`Delete key "${entry.key}"?`)) return;
         localStorage.removeItem(entry.key);
         toast.success('Đã xoá');
         onChange();

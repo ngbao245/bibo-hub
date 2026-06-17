@@ -106,8 +106,8 @@ export default function Movies() {
     updateMovie.mutate({ ...movie, rating });
   }
 
-  function handleDelete(movie: Movie) {
-    if (!window.confirm(`Xoá phim "${movie.title}"?`)) return;
+  async function handleDelete(movie: Movie) {
+    if (!window.confirm(`Delete movie "${movie.title}"?`)) return;
     deleteMovie.mutate(movie.id, {
       onSuccess: () => toast.success('Đã xoá'),
       onError: () => toast.error('Lỗi xoá'),

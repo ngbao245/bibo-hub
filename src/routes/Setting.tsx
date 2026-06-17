@@ -199,12 +199,12 @@ function GroupIndex({
     toast.success(`Đã tạo group "${name}"`);
   }
 
-  function handleRemoveGhost(group: string) {
+  async function handleRemoveGhost(group: string) {
     if (countInGroup(listQuery.data ?? [], group) > 0) {
       toast.error('Group còn record, không xoá ghost được');
       return;
     }
-    if (!window.confirm(`Xoá group rỗng "${group}"?`)) return;
+    if (!window.confirm(`Delete empty group "${group}"?`)) return;
     removeGhostGroup(group);
     setTick((t) => t + 1);
   }
@@ -459,8 +459,8 @@ function GroupView({ group, onBack }: { group: string; onBack: () => void }) {
     }
   }
 
-  function handleDelete(c: Setting) {
-    if (!window.confirm(`Xoá "${c.description || c.id}"?`)) return;
+  async function handleDelete(c: Setting) {
+    if (!window.confirm(`Delete record? ${c.description || c.id}`)) return;
     deleteMut.mutate(c.id, {
       onSuccess: () => toast.success('Đã xoá'),
       onError: () => toast.error('Lỗi xoá'),
@@ -594,10 +594,10 @@ function GroupView({ group, onBack }: { group: string; onBack: () => void }) {
       {categoryManagerOpen && (
         <Dialog
           open
-          onOpenChange={(o) => {
+          onOpenChange={async (o) => {
             if (!o) {
               if (categoryDirty) {
-                if (!window.confirm('Có thay đổi chưa lưu. Bạn muốn đóng mà không lưu?')) return;
+                if (!window.confirm('Discard changes? You have unsaved changes.')) return;
               }
               setCategoryManagerOpen(false);
             }
@@ -621,10 +621,10 @@ function GroupView({ group, onBack }: { group: string; onBack: () => void }) {
       {shortcutManagerOpen && (
         <Dialog
           open
-          onOpenChange={(o) => {
+          onOpenChange={async (o) => {
             if (!o) {
               if (shortcutDirty) {
-                if (!window.confirm('Có thay đổi chưa lưu. Bạn muốn đóng mà không lưu?')) return;
+                if (!window.confirm('Discard changes? You have unsaved changes.')) return;
               }
               setShortcutManagerOpen(false);
             }
@@ -1386,4 +1386,4 @@ function ErrorState({ message }: { message?: string }) {
       {message && <p className="mt-1 break-all font-mono text-xs">{message}</p>}
     </div>
   );
-}
+}

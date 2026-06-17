@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ToolIcon } from '@/components/ToolIcon';
 import { toast } from '@/components/ui/sonner';
+import { useModalStore } from '@/stores/modalStore';
 
 // ============================================================
 // HubPro - bản REDESIGNED dùng shadcn/ui
@@ -413,7 +414,7 @@ function Header({
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="outline" size="icon" onClick={() => alert('Shortcuts modal — sẽ migrate sau')}>
+            <Button variant="outline" size="icon" onClick={() => useModalStore.getState().open('shortcuts')}>
               <Keyboard className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
@@ -540,4 +541,4 @@ function ToolCell({
       </TooltipContent>
     </Tooltip>
   );
-}
+}

@@ -1,0 +1,651 @@
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
+import { Document, Page } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun } from 'lucide-react';
+import { toast } from 'sonner';
+
+import '@/lib/reader/pdfjs-setup';
+import { getBookFileUrl } from '@/api/reader/books';
+import { fetchThroughCache, STORE_FILES } from '@/lib/reader/blob-cache';
+import { useProgress, useSaveProgress } from '@/api/reader/progress';
+import { useCreateHighlight, useHighlights } from '@/api/reader/highlights';
+import SelectionMenu from './SelectionMenu';
+import TranslatePopover from './TranslatePopover';
+import EdgeClickZones from './EdgeClickZones';
+import ReaderSkeleton from './ReaderSkeleton';
+import ReaderSidebar from './ReaderSidebar';
+import HighlightList from './sidebar/HighlightList';
+import TocList, { type TocItem } from './sidebar/TocList';
+import PdfSearchTab from './sidebar/PdfSearchTab';
+import ProgressBar from './ProgressBar';
+import type { Book, Highlight } from '@/lib/reader/types';
+import { ReaderHeader } from './ReaderHeader';
+
+interface SelectionState {
+  text: string;
+  page: number;
+  rectsNorm: Array<{ x: number; y: number; w: number; h: number }>;
+  menuRect: { top: number; left: number; width: number; height: number };
+}
+
+const ZOOM_KEY = 'reader_pdf_zoom';
+const THEME_KEY = 'reader_pdf_theme';
+
+type ReaderTheme = 'light' | 'sepia' | 'dark';
+
+const THEME_ORDER: ReaderTheme[] = ['light', 'sepia', 'dark'];
+
+const THEME_BG: Record<ReaderTheme, string> = {
+  light: '#27272a', // zinc-800 (xung quanh trang)
+  sepia: '#3a2f22',
+  dark: '#0a0a0a',
+};
+
+export default function PdfReader({ book }: { book: Book }) {
+  const progressQuery = useProgress(book.id);
+  const saveProgress = useSaveProgress();
+  const highlightsQuery = useHighlights(book.id);
+  const createHighlight = useCreateHighlight();
+
+  const [fileData, setFileData] = useState<{ data: ArrayBuffer } | null>(null);
+  const [numPages, setNumPages] = useState(0);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [docLoaded, setDocLoaded] = useState(false);
+  const [scale, setScale] = useState<number>(() => {
+    const v = localStorage.getItem(ZOOM_KEY);
+    return v ? Number(v) : 1.2;
+  });
+  const [theme, setTheme] = useState<ReaderTheme>(() => {
+    const v = localStorage.getItem(THEME_KEY);
+    return v === 'sepia' || v === 'dark' || v === 'light' ? v : 'light';
+  });
+  const [error, setError] = useState<string | null>(null);
+
+  const [selection, setSelection] = useState<SelectionState | null>(null);
+  const [translateText, setTranslateText] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [toc, setToc] = useState<TocItem[]>([]);
+  /** Snapshot canvas trang trước → đè lên trong lúc react-pdf render
+   * trang mới, tránh flicker nền tối. Tái sử dụng 1 offscreen canvas
+   * và copy bitmap bằng drawImage — gần như free, không cần encode PNG. */
+  const snapshotRef = useRef<HTMLCanvasElement | null>(null);
+  const [snapshotVisible, setSnapshotVisible] = useState(false);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const pageWrapRef = useRef<HTMLDivElement>(null);
+  /** PDFDocumentProxy — capture lúc onLoadSuccess để prefetch page kế cận. */
+  const pdfDocRef = useRef<unknown>(null);
+  /** Đã restore page từ progress lần đầu chưa — tránh feedback loop khi
+   * saveProgress invalidate query và refetch trả về giá trị cũ giữa lúc user
+   * vừa lật sang trang mới. */
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        // Cache hit → blob load IndexedDB rất nhanh; miss → sign + fetch network
+        const blob = await fetchThroughCache(STORE_FILES, book.file_path, () =>
+          getBookFileUrl(book.file_path),
+        );
+        if (cancelled) return;
+        const buffer = await blob.arrayBuffer();
+        if (cancelled) return;
+        // react-pdf nhận object `{ data: ArrayBuffer }` để đọc trực tiếp
+        // không qua mạng nữa.
+        setFileData({ data: buffer });
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load file');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [book.file_path]);
+
+  useEffect(() => {
+    if (restoredRef.current) return;
+    if (!progressQuery.data) return; // chưa load xong (kể cả null cũng coi như xong)
+    restoredRef.current = true;
+    const loc = progressQuery.data.location;
+    if (!loc) return;
+    const n = Number(loc);
+    if (Number.isFinite(n) && n >= 1) setPageNumber(n);
+  }, [progressQuery.data]);
+
+  useEffect(() => {
+    localStorage.setItem(ZOOM_KEY, String(scale));
+  }, [scale]);
+
+  useEffect(() => {
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  const cycleTheme = useCallback(() => {
+    setTheme((t) => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length]);
+  }, []);
+
+  // Pre-fetch trang kế cận để click next/prev render gần như tức thì.
+  // pdfjs cache page object nội bộ trong PDFDocumentProxy → lần sau Page
+  // component fetch lại sẽ hit cache.
+  useEffect(() => {
+    if (!docLoaded || !numPages) return;
+    const doc = pdfDocRef.current as { getPage?: (n: number) => Promise<unknown> } | null;
+    const getPage = doc?.getPage;
+    if (!doc || !getPage) return;
+    const targets = [pageNumber + 1, pageNumber - 1].filter(
+      (n) => n >= 1 && n <= numPages && n !== pageNumber,
+    );
+    let cancelled = false;
+    (async () => {
+      for (const n of targets) {
+        if (cancelled) break;
+        try {
+          await getPage.call(doc, n);
+        } catch {
+          // ignore
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [pageNumber, numPages, docLoaded]);
+  // Debounce save: lật trang nhanh chỉ persist 1 lần khi user dừng ~600ms.
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    if (!numPages) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveProgress.mutate({
+        bookId: book.id,
+        location: String(pageNumber),
+        progress: numPages > 0 ? pageNumber / numPages : 0,
+      });
+    }, 600);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageNumber, numPages]);
+
+  const pageHighlights = useMemo(() => {
+    if (!highlightsQuery.data) return [] as Highlight[];
+    return highlightsQuery.data.filter(
+      (h) => h.location.type === 'pdf' && h.location.page === pageNumber,
+    );
+  }, [highlightsQuery.data, pageNumber]);
+
+  const captureSelection = useCallback(() => {
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
+      setSelection(null);
+      return;
+    }
+    const text = sel.toString().trim();
+    if (text.length < 2) {
+      setSelection(null);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    const wrap = pageWrapRef.current;
+    if (!wrap) return;
+    if (!wrap.contains(range.commonAncestorContainer)) return;
+
+    const wrapRect = wrap.getBoundingClientRect();
+    const rects = Array.from(range.getClientRects()).filter((r) => r.width > 1 && r.height > 1);
+    if (rects.length === 0) return;
+
+    const rectsNorm = rects.map((r) => ({
+      x: (r.left - wrapRect.left) / wrapRect.width,
+      y: (r.top - wrapRect.top) / wrapRect.height,
+      w: r.width / wrapRect.width,
+      h: r.height / wrapRect.height,
+    }));
+
+    const first = rects[0];
+    setSelection({
+      text,
+      page: pageNumber,
+      rectsNorm,
+      menuRect: {
+        top: first.top,
+        left: first.left,
+        width: first.width,
+        height: first.height,
+      },
+    });
+  }, [pageNumber]);
+
+  useEffect(() => {
+    function onUp() {
+      setTimeout(captureSelection, 0);
+    }
+    document.addEventListener('mouseup', onUp);
+    document.addEventListener('touchend', onUp);
+    return () => {
+      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('touchend', onUp);
+    };
+  }, [captureSelection]);
+
+  async function handleHighlight() {
+    if (!selection) return;
+    try {
+      await createHighlight.mutateAsync({
+        bookId: book.id,
+        location: { type: 'pdf', page: selection.page, rects: selection.rectsNorm },
+        text: selection.text,
+        color: 'yellow',
+      });
+      window.getSelection()?.removeAllRanges();
+      setSelection(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
+  async function handleNote() {
+    if (!selection) return;
+    const note = window.prompt(`Note for: ${selection.text.slice(0, 80)}${selection.text.length > 80 ? '…' : ''}`);
+    if (note === null) return;
+    try {
+      await createHighlight.mutateAsync({
+        bookId: book.id,
+        location: { type: 'pdf', page: selection.page, rects: selection.rectsNorm },
+        text: selection.text,
+        color: 'blue',
+        note,
+      });
+      window.getSelection()?.removeAllRanges();
+      setSelection(null);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
+  function handleTranslate() {
+    if (!selection) return;
+    setTranslateText(selection.text);
+    window.getSelection()?.removeAllRanges();
+    setSelection(null);
+  }
+
+  /**
+   * Snapshot canvas hiện tại → đặt làm placeholder để tránh flicker khi
+   * react-pdf clear canvas trong lúc render trang mới. Dùng offscreen
+   * canvas + drawImage (chỉ copy bitmap, không encode) → gần như free.
+   */
+  const captureSnapshot = useCallback(() => {
+    const wrap = pageWrapRef.current;
+    if (!wrap) return;
+    const src = wrap.querySelector('canvas.react-pdf__Page__canvas');
+    if (!(src instanceof HTMLCanvasElement)) return;
+    let off = snapshotRef.current;
+    if (!off) {
+      off = document.createElement('canvas');
+      off.setAttribute('aria-hidden', 'true');
+      off.dataset.pdfSnapshot = 'true';
+      off.className = 'pointer-events-none absolute inset-0 z-10';
+      snapshotRef.current = off;
+    }
+    off.width = src.width;
+    off.height = src.height;
+    off.style.width = `${src.clientWidth}px`;
+    off.style.height = `${src.clientHeight}px`;
+    const ctx = off.getContext('2d');
+    if (!ctx) return;
+    ctx.drawImage(src, 0, 0);
+    // Mount canvas vào DOM (hoặc đảm bảo còn ở đúng chỗ)
+    if (off.parentElement !== wrap) wrap.appendChild(off);
+    setSnapshotVisible(true);
+  }, []);
+
+  const clearSnapshot = useCallback(() => {
+    setSnapshotVisible(false);
+    const off = snapshotRef.current;
+    if (off && off.parentElement) off.parentElement.removeChild(off);
+  }, []);
+
+  // Safety: clear snapshot sau 1.5s phòng khi onRenderSuccess không fire
+  // (page bị cancel do user lật trang quá nhanh).
+  useEffect(() => {
+    if (!snapshotVisible) return;
+    const id = setTimeout(() => clearSnapshot(), 1500);
+    return () => clearTimeout(id);
+  }, [snapshotVisible, clearSnapshot]);
+
+  // Cleanup offscreen canvas khi unmount
+  useEffect(
+    () => () => {
+      const off = snapshotRef.current;
+      if (off && off.parentElement) off.parentElement.removeChild(off);
+      snapshotRef.current = null;
+    },
+    [],
+  );
+
+  const changePage = useCallback(
+    (updater: number | ((p: number) => number)) => {
+      setPageNumber((p) => {
+        const target = typeof updater === 'function' ? updater(p) : updater;
+        const next = Math.min(numPages || target, Math.max(1, target));
+        // Chỉ snapshot khi page thực sự đổi → tránh toDataURL/drawImage
+        // không cần thiết khi đã ở page đầu/cuối.
+        if (next !== p) captureSnapshot();
+        return next;
+      });
+    },
+    [captureSnapshot, numPages],
+  );
+
+  /** Zoom: snapshot canvas hiện tại, scale CSS-size theo ratio để khớp
+   * canvas mới → người dùng thấy trang to/nhỏ ngay lập tức, không flicker. */
+  const changeScale = useCallback(
+    (updater: (s: number) => number) => {
+      setScale((s) => {
+        const next = Math.min(3, Math.max(0.5, updater(s)));
+        if (next === s) return s;
+        captureSnapshot();
+        const off = snapshotRef.current;
+        if (off) {
+          const ratio = next / s;
+          off.style.width = `${parseFloat(off.style.width) * ratio}px`;
+          off.style.height = `${parseFloat(off.style.height) * ratio}px`;
+        }
+        return next;
+      });
+    },
+    [captureSnapshot],
+  );
+
+  function goToPage(target: number) {
+    changePage(target);
+    if (containerRef.current) containerRef.current.scrollTop = 0;
+  }
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === 'ArrowLeft') changePage((p) => Math.max(1, p - 1));
+      if (e.key === 'ArrowRight') changePage((p) => Math.min(numPages || p, p + 1));
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [numPages, changePage]);
+
+  return (
+    <div className="flex h-full flex-col bg-zinc-950 text-zinc-100">
+      <ReaderHeader title={book.title}>
+        <button
+          onClick={() => setSidebarOpen((v) => !v)}
+          className="p-1.5 text-zinc-400 hover:text-zinc-100"
+          title="Mục lục / Highlights"
+        >
+          <Menu className="h-4 w-4" />
+        </button>
+        <span className="mx-1 h-4 w-px bg-zinc-800" />
+        <button
+          onClick={() => changePage((p) => Math.max(1, p - 1))}
+          disabled={pageNumber <= 1}
+          className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
+          title="Previous page (←)"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </button>
+        <input
+          type="number"
+          min={1}
+          max={numPages || 1}
+          value={pageNumber}
+          onChange={(e) => {
+            const n = Number(e.target.value);
+            if (Number.isFinite(n)) changePage(n);
+          }}
+          className="w-12 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center text-xs"
+        />
+        <span className="text-xs text-zinc-500">/ {numPages || '?'}</span>
+        <button
+          onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
+          disabled={pageNumber >= numPages}
+          className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
+          title="Next page (→)"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </button>
+        <span className="mx-1 h-4 w-px bg-zinc-800" />
+        <button
+          onClick={() => changeScale((s) => s - 0.1)}
+          className="p-1.5 text-zinc-400 hover:text-zinc-100"
+          title="Zoom out"
+        >
+          <Minus className="h-4 w-4" />
+        </button>
+        <span className="text-xs font-mono text-zinc-500">{Math.round(scale * 100)}%</span>
+        <button
+          onClick={() => changeScale((s) => s + 0.1)}
+          className="p-1.5 text-zinc-400 hover:text-zinc-100"
+          title="Zoom in"
+        >
+          <Plus className="h-4 w-4" />
+        </button>
+        <span className="mx-1 h-4 w-px bg-zinc-800" />
+        <button
+          onClick={cycleTheme}
+          className="p-1.5 text-zinc-400 hover:text-zinc-100"
+          title={`Theme: ${theme} (click to switch)`}
+        >
+          {theme === 'dark' ? (
+            <Moon className="h-4 w-4" />
+          ) : theme === 'sepia' ? (
+            <Sun className="h-4 w-4 text-amber-400" />
+          ) : (
+            <Sun className="h-4 w-4" />
+          )}
+        </button>
+      </ReaderHeader>
+
+      <ProgressBar current={pageNumber} total={numPages} onJump={(p) => goToPage(p)} />
+
+      <div className="relative flex-1 overflow-hidden">
+        <div
+          ref={containerRef}
+          className="absolute inset-0 overflow-auto p-4 transition-colors"
+          style={{ backgroundColor: THEME_BG[theme] }}
+        >
+          {error && <div className="text-center text-sm text-red-400">{error}</div>}
+          {fileData && (
+            <div className="flex justify-center">
+              <Document
+                file={fileData}
+                onLoadSuccess={async (pdf) => {
+                  setNumPages(pdf.numPages);
+                  setDocLoaded(true);
+                  pdfDocRef.current = pdf;
+                  // Lazy build TOC từ outline
+                  try {
+                    const outline = await (pdf as unknown as {
+                      getOutline?: () => Promise<unknown[]>;
+                    }).getOutline?.();
+                    if (outline) setToc(await buildPdfToc(pdf as unknown, outline));
+                  } catch {
+                    // ignore — không có outline cũng OK
+                  }
+                }}
+                onLoadError={(err) => setError(err.message)}
+                loading={null}
+                className="shadow-2xl"
+              >
+                <div ref={pageWrapRef} className="relative" data-pdf-theme={theme}>
+                  <Page
+                    pageNumber={pageNumber}
+                    scale={scale}
+                    renderAnnotationLayer={false}
+                    renderTextLayer
+                    loading={null}
+                    onRenderSuccess={clearSnapshot}
+                  />
+                  <HighlightOverlay highlights={pageHighlights} />
+                </div>
+              </Document>
+            </div>
+          )}
+        </div>
+
+        {/* Edge zones — đặt ngoài scroll container để cố định theo viewport
+            reader, không bị đẩy khuất khi user zoom rồi scroll xuống */}
+        <EdgeClickZones
+          onPrev={() => {
+            if (pageNumber <= 1) return;
+            changePage((p) => Math.max(1, p - 1));
+            if (containerRef.current) containerRef.current.scrollTop = 0;
+          }}
+          onNext={() => {
+            if (numPages && pageNumber >= numPages) return;
+            changePage((p) => Math.min(numPages || p, p + 1));
+            if (containerRef.current) containerRef.current.scrollTop = 0;
+          }}
+        />
+
+        {/* Skeleton chỉ hiện khi document chưa parse xong. Page render sau
+            đó tốc độ ~100-300ms — không cần skeleton, để render canvas đè
+            page cũ tự nhiên hơn. */}
+        {!error && (!fileData || !docLoaded) && <ReaderSkeleton withHeader={false} />}
+
+        <ReaderSidebar
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          renderToc={() => (
+            <TocList
+              items={toc}
+              activeTarget={pageNumber}
+              onJump={(target) => {
+                if (typeof target === 'number') goToPage(target);
+                setSidebarOpen(false);
+              }}
+            />
+          )}
+          renderHighlights={() => (
+            <HighlightList
+              bookId={book.id}
+              onJump={(h: Highlight) => {
+                if (h.location.type !== 'pdf') return;
+                goToPage(h.location.page);
+                setSidebarOpen(false);
+              }}
+            />
+          )}
+          renderSearch={() => (
+            <PdfSearchTab
+              doc={pdfDocRef.current}
+              onJump={(page) => {
+                goToPage(page);
+                setSidebarOpen(false);
+              }}
+            />
+          )}
+        />
+      </div>
+
+      {selection && (
+        <SelectionMenu
+          rect={selection.menuRect}
+          onHighlight={handleHighlight}
+          onNote={handleNote}
+          onTranslate={handleTranslate}
+          onDismiss={() => {
+            window.getSelection()?.removeAllRanges();
+            setSelection(null);
+          }}
+        />
+      )}
+      {translateText && (
+        <TranslatePopover text={translateText} onClose={() => setTranslateText(null)} />
+      )}
+    </div>
+  );
+}
+
+function HighlightOverlay({ highlights }: { highlights: Highlight[] }) {
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      {highlights.flatMap((h) => {
+        if (h.location.type !== 'pdf') return [];
+        const color =
+          h.color === 'blue'
+            ? 'rgba(59, 130, 246, 0.35)'
+            : h.color === 'green'
+            ? 'rgba(34, 197, 94, 0.35)'
+            : h.color === 'red'
+            ? 'rgba(239, 68, 68, 0.35)'
+            : 'rgba(250, 204, 21, 0.35)';
+        return h.location.rects.map((r, i) => (
+          <div
+            key={`${h.id}-${i}`}
+            title={h.note ?? undefined}
+            className="absolute"
+            style={{
+              left: `${r.x * 100}%`,
+              top: `${r.y * 100}%`,
+              width: `${r.w * 100}%`,
+              height: `${r.h * 100}%`,
+              backgroundColor: color,
+              mixBlendMode: 'multiply',
+            }}
+          />
+        ));
+      })}
+    </div>
+  );
+}
+
+
+/**
+ * Convert PDF outline (recursive) → TocItem[]. Resolve dest → page number
+ * qua `pdf.getPageIndex(dest[0])`. Item nào không resolve được sẽ skip.
+ */
+async function buildPdfToc(pdf: unknown, outline: unknown[]): Promise<TocItem[]> {
+  const doc = pdf as {
+    getPageIndex: (ref: unknown) => Promise<number>;
+    getDestination: (name: string) => Promise<unknown[] | null>;
+  };
+
+  async function resolveDest(dest: unknown): Promise<number | null> {
+    try {
+      let arr: unknown[] | null = null;
+      if (Array.isArray(dest)) arr = dest;
+      else if (typeof dest === 'string') arr = await doc.getDestination(dest);
+      if (!arr || arr.length === 0) return null;
+      const idx = await doc.getPageIndex(arr[0]);
+      return idx + 1; // 1-based
+    } catch {
+      return null;
+    }
+  }
+
+  async function visit(items: unknown[], level: number): Promise<TocItem[]> {
+    const out: TocItem[] = [];
+    for (const it of items) {
+      if (!it || typeof it !== 'object') continue;
+      const node = it as { title?: unknown; dest?: unknown; items?: unknown[] };
+      const label = typeof node.title === 'string' ? node.title.trim() : '';
+      if (!label) continue;
+      const target = await resolveDest(node.dest);
+      const children =
+        Array.isArray(node.items) && node.items.length > 0
+          ? await visit(node.items, level + 1)
+          : undefined;
+      if (target === null && (!children || children.length === 0)) continue;
+      out.push({
+        label,
+        target: target ?? 1,
+        level,
+        children,
+      });
+    }
+    return out;
+  }
+
+  return visit(outline, 0);
+}

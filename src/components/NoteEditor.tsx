@@ -136,8 +136,8 @@ function NoteViewMode({
     setEditingTitle(false);
   }, [note.id, note.title]);
 
-  function handleDelete() {
-    if (!window.confirm(`Xoá note "${note.title || 'Untitled'}"?`)) return;
+  async function handleDelete() {
+    if (!window.confirm(`Delete note "${note.title || 'Untitled'}"?`)) return;
     remove.mutate(note.id, {
       onSuccess: () => {
         toast.success('Đã xoá');
@@ -166,13 +166,13 @@ function NoteViewMode({
     );
   }
 
-  function handleQuickCreateChildFromToolbar() {
+  async function handleQuickCreateChildFromToolbar() {
     const linkedIds = note.linkedNotes ?? [];
     const childCount = linkedIds
       .map((id) => allNotes.find((n) => n.id === id))
       .filter((n): n is Note => !!n && n.isChildNote).length;
     const defaultTitle = `New ${childCount + 1} - ${new Date().toLocaleDateString('vi-VN')}`;
-    const title = window.prompt('Tên child note:', defaultTitle);
+    const title = window.prompt('Child note name', defaultTitle);
     if (!title) return;
     createNote.mutate(
       {
@@ -561,10 +561,10 @@ function RelatedNotesViewSection({
     .map((id) => allNotes.find((n) => n.id === id))
     .filter((n): n is Note => !!n);
 
-  function handleQuickCreateChild() {
+  async function handleQuickCreateChild() {
     const childCount = linkedNotes.filter((n) => n.isChildNote).length;
     const defaultTitle = `New ${childCount + 1} - ${new Date().toLocaleDateString('vi-VN')}`;
-    const title = window.prompt('Tên child note:', defaultTitle);
+    const title = window.prompt('Child note name', defaultTitle);
     if (!title) return;
     createNote.mutate(
       {
@@ -600,8 +600,8 @@ function RelatedNotesViewSection({
     );
   }
 
-  function handleDeleteChild(childId: string) {
-    if (!window.confirm('Xoá child note này? Hành động không hoàn tác.')) return;
+  async function handleDeleteChild(childId: string) {
+    if (!window.confirm('Delete child note? Cannot be undone.')) return;
     remove.mutate(childId, {
       onSuccess: () => toast.success('Đã xoá child note'),
       onError: () => toast.error('Không xoá được'),
@@ -848,7 +848,7 @@ function NoteEditMode({
   ]);
 
   const doSave = useCallback(
-    ({ silent = false } = {}) => {
+    async ({ silent = false } = {}) => {
       const updated: Note = {
         ...note,
         title,
@@ -866,14 +866,13 @@ function NoteEditMode({
         linkedNotes,
         wordCountEnabled,
       };
-      update.mutate(updated, {
-        onSuccess: () => {
-          if (!silent) toast.success('Đã lưu');
-        },
-        onError: () => {
-          if (!silent) toast.error('Không lưu được');
-        },
-      });
+      try {
+        await update.mutateAsync(updated);
+        if (!silent) toast.success('Đã lưu');
+      } catch {
+        if (!silent) toast.error('Không lưu được');
+        throw new Error('save_failed');
+      }
     },
     [
       note,
@@ -895,8 +894,8 @@ function NoteEditMode({
     ],
   );
 
-  function handleDelete() {
-    if (!window.confirm(`Xoá note "${note.title || 'Untitled'}"?`)) return;
+  async function handleDelete() {
+    if (!window.confirm(`Delete note "${note.title || 'Untitled'}"?`)) return;
     remove.mutate(note.id, {
       onSuccess: () => {
         toast.success('Đã xoá');
@@ -905,12 +904,12 @@ function NoteEditMode({
     });
   }
 
-  function handleQuickCreateChild() {
+  async function handleQuickCreateChild() {
     const childCount = linkedNotes
       .map((id) => allNotes.find((n) => n.id === id))
       .filter((n): n is Note => !!n && n.isChildNote).length;
     const defaultTitle = `New ${childCount + 1} - ${new Date().toLocaleDateString('vi-VN')}`;
-    const t = window.prompt('Tên child note:', defaultTitle);
+    const t = window.prompt('Child note name', defaultTitle);
     if (!t) return;
     createNote.mutate(
       {
@@ -941,8 +940,8 @@ function NoteEditMode({
     setLinkedNotes((prev) => prev.filter((x) => x !== id));
   }
 
-  function handleDeleteChild(childId: string) {
-    if (!window.confirm('Xoá child note này? Hành động không hoàn tác.')) return;
+  async function handleDeleteChild(childId: string) {
+    if (!window.confirm('Delete child note? Cannot be undone.')) return;
     remove.mutate(childId, {
       onSuccess: () => {
         const nextLinked = linkedNotes.filter((x) => x !== childId);
@@ -957,14 +956,12 @@ function NoteEditMode({
 
   // ============================================================
   // Keyboard shortcuts: Ctrl+S = save, Esc = thoát về view mode
-  //   - Nếu có thay đổi chưa lưu → confirm trước khi thoát
+  //   - Nếu có thay đổi chưa lưu → cho user 3 lựa chọn:
+  //     Discard without saving? OK = exit, Cancel = stay
   // ============================================================
-  function tryExitToView() {
+  async function tryExitToView() {
     if (isDirty) {
-      const ok = window.confirm(
-        'Có thay đổi chưa lưu. Thoát mà không lưu?\n\nOK: Bỏ thay đổi và thoát.\nCancel: Ở lại.',
-      );
-      if (!ok) return;
+      if (!window.confirm('Discard changes without saving?')) return;
     }
     onView();
   }
@@ -977,7 +974,7 @@ function NoteEditMode({
       // Ctrl+S / Cmd+S → save (luôn override behavior browser save page)
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
-        if (isDirty && !update.isPending) doSave();
+        if (isDirty && !update.isPending) void doSave().catch(() => {});
         return;
       }
 
@@ -1030,7 +1027,7 @@ function NoteEditMode({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => doSave()}
+            onClick={() => void doSave().catch(() => {})}
             disabled={!isDirty || update.isPending}
             className="gap-1.5"
             title="Ctrl+S"

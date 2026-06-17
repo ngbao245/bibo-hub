@@ -19,6 +19,7 @@ const ProjectPacker = lazy(() => import('./routes/ProjectPacker'));
 const P2PTransfer = lazy(() => import('./routes/P2PTransfer'));
 const Setting = lazy(() => import('./routes/Setting'));
 const CodeCompare = lazy(() => import('./routes/CodeCompare'));
+const ReaderApp = lazy(() => import('./routes/reader'));
 
 // Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
 import Calculator from './modals/Calculator';
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/p2p" element={<P2PTransfer />} />
           <Route path="/setting" element={<Setting />} />
           <Route path="/code-compare" element={<CodeCompare />} />
+          <Route path="/reader/*" element={<ReaderApp />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
@@ -79,4 +81,4 @@ export default function App() {
       <Crypto />
     </>
   );
-}
+}

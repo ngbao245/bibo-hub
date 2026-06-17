@@ -88,12 +88,12 @@ export default function Keycap() {
   // Quick actions (prompt-based for now)
   // ============================================================
 
-  function quickAddItem() {
-    const name = window.prompt('Tên item:');
+  async function quickAddItem() {
+    const name = window.prompt('Item name');
     if (!name) return;
-    const buyPriceStr = window.prompt('Giá mua (vd: 150k):') ?? '0';
-    const sellPriceStr = window.prompt('Giá bán dự kiến (vd: 200k, hoặc ?):') ?? '0';
-    const catStr = window.prompt('Loại (keycap/keyboard/switch/other):', 'keycap') ?? 'keycap';
+    const buyPriceStr = window.prompt('Buy price (e.g. 150k)') ?? '0';
+    const sellPriceStr = window.prompt('Expected sell price (e.g. 200k or ?)') ?? '0';
+    const catStr = window.prompt('Category (keycap / keyboard / switch / other)', 'keycap') ?? 'keycap';
 
     const newItem: KeycapItem = {
       id: 'kc_' + Date.now(),
@@ -118,11 +118,11 @@ export default function Keycap() {
     saveAll({ ...inventory, items: [newItem, ...items] });
   }
 
-  function quickMarkSold(item: KeycapItem) {
-    const priceStr = window.prompt(`Giá bán thực tế cho "${item.name}":`, formatMoneyInput(item.sellPrice));
+  async function quickMarkSold(item: KeycapItem) {
+    const priceStr = window.prompt(`Actual sell price — ${item.name}`, formatMoneyInput(item.sellPrice));
     if (priceStr === null) return;
     const actualPrice = parseMoney(priceStr);
-    const buyer = window.prompt('Tên người mua (optional):') ?? '';
+    const buyer = window.prompt('Buyer (optional)') ?? '';
 
     const updated: KeycapItem = {
       ...item,
@@ -136,19 +136,18 @@ export default function Keycap() {
     saveAll({ ...inventory, items: newItems });
   }
 
-  function deleteItem(item: KeycapItem) {
-    if (!window.confirm(`Xoá "${item.name}"?`)) return;
-    // Snapshot buyPrice nếu thuộc lot (standalone)
+  async function deleteItem(item: KeycapItem) {
+    if (!window.confirm(`Delete item "${item.name}"?`)) return;
     const newItems = items.filter((i) => i.id !== item.id);
     saveAll({ ...inventory, items: newItems });
   }
 
-  function editItem(item: KeycapItem) {
-    const name = window.prompt('Tên:', item.name);
+  async function editItem(item: KeycapItem) {
+    const name = window.prompt('Name', item.name);
     if (name === null) return;
-    const sellStr = window.prompt('Giá bán:', formatMoneyInput(item.sellPrice));
+    const sellStr = window.prompt('Sell price', formatMoneyInput(item.sellPrice));
     if (sellStr === null) return;
-    const note = window.prompt('Ghi chú:', item.note) ?? '';
+    const note = window.prompt('Note', item.note) ?? '';
 
     const updated: KeycapItem = {
       ...item,
@@ -160,10 +159,10 @@ export default function Keycap() {
     saveAll({ ...inventory, items: newItems });
   }
 
-  function addGroup() {
-    const name = window.prompt('Tên group:');
+  async function addGroup() {
+    const name = window.prompt('Group name');
     if (!name) return;
-    const url = window.prompt('URL (optional):') ?? '';
+    const url = window.prompt('URL (optional)') ?? '';
     const newGroup: KeycapGroup = {
       id: 'grp_' + Date.now(),
       name,
@@ -174,8 +173,8 @@ export default function Keycap() {
     saveAll({ ...inventory, groups: [...groups, newGroup] });
   }
 
-  function deleteGroup(id: string) {
-    if (!window.confirm('Xoá group này?')) return;
+  async function deleteGroup(id: string) {
+    if (!window.confirm('Delete group?')) return;
     saveAll({ ...inventory, groups: groups.filter((g) => g.id !== id) });
   }
 

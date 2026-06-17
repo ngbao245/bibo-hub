@@ -211,10 +211,7 @@ function ImportBlock({ kind }: { kind: BackupKind }) {
 
   async function handleImport(mode: 'merge' | 'replace', file: File) {
     if (mode === 'replace') {
-      const ok = window.confirm(
-        `CẢNH BÁO\n\nThao tác này sẽ XOÁ TOÀN BỘ ${kind} hiện có và thay bằng data trong file.\n\nKhông thể hoàn tác. Tiếp tục?`,
-      );
-      if (!ok) return;
+      if (!window.confirm(`Replace all ${kind}? This wipes ALL data and replaces with the file. Cannot be undone.`)) return;
     }
 
     setIsImporting(true);
@@ -319,4 +316,4 @@ function ImportBlock({ kind }: { kind: BackupKind }) {
       )}
     </div>
   );
-}
+}

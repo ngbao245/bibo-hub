@@ -244,9 +244,9 @@ function SecretEditor({ note, onSaved, onDeleted, onCancel }: SecretEditorProps)
     }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     if (!note?.id) return;
-    if (!window.confirm('Xoá secret note này?')) return;
+    if (!window.confirm('Delete secret note?')) return;
     remove.mutate(note.id, {
       onSuccess: () => {
         toast.success('Đã xoá');
@@ -356,4 +356,4 @@ function SecretEditor({ note, onSaved, onDeleted, onCancel }: SecretEditorProps)
       </div>
     </div>
   );
-}
+}

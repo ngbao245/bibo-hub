@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useModalStore } from '@/stores/modalStore';
+import { toast } from '@/components/ui/sonner';
 import type { Tool } from '@/lib/tools';
 
 // ============================================================
@@ -24,7 +25,7 @@ export function useToolAction() {
         navigate(action.path);
         break;
       case 'todo':
-        alert(`${tool.label} - Coming soon!`);
+        toast.info(`${tool.label} - Coming soon!`);
         break;
     }
   };

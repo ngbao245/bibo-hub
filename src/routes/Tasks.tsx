@@ -12,6 +12,7 @@ import { toast } from '@/components/ui/sonner';
 import TaskSidebar from '@/components/TaskSidebar';
 import TaskList from '@/components/TaskList';
 import { isCustomListId, type TaskListFilter } from '@/lib/taskFilters';
+import { useModalStore } from '@/stores/modalStore';
 
 // ============================================================
 // Tasks Page - layout 3 cột
@@ -161,7 +162,7 @@ export default function Tasks() {
           <Button
             variant="outline"
             size="icon"
-            onClick={() => alert('Shortcuts modal — sẽ migrate sau')}
+            onClick={() => useModalStore.getState().open('shortcuts')}
             className="h-9 w-9"
           >
             <Keyboard className="h-4 w-4" />
@@ -177,4 +178,4 @@ export default function Tasks() {
       </main>
     </div>
   );
-}
+}

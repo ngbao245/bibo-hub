@@ -191,6 +191,13 @@ export const TOOLS: Tool[] = [
     action: { kind: 'route', path: '/code-compare' },
     description: 'So sánh 2 đoạn code — inline diff',
   },
+  {
+    id: 'readest',
+    label: 'Reader',
+    group: 'Productivity',
+    action: { kind: 'route', path: '/reader' },
+    description: 'PDF reader với highlight, note, translate',
+  },
 ];
 
 // Nhóm tools theo group (cho HubPro hiển thị section)
@@ -204,4 +211,4 @@ export function groupTools(tools: Tool[]): Record<ToolGroup, Tool[]> {
   };
   for (const t of tools) result[t.group].push(t);
   return result;
-}
+}

@@ -105,4 +105,31 @@ input[type='password']::-webkit-strong-password-auto-fill-button {
   display: none !important;
   visibility: hidden;
   pointer-events: none;
-}
+}
+
+/* Ẩn spinner mặc định của input[type=number] (Chrome, Safari, Firefox) */
+input[type='number']::-webkit-outer-spin-button,
+input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+/* ============================================================
+   PDF Reader theme — chỉ filter canvas (bitmap), giữ text layer
+   nguyên gốc để chữ không bị mất subpixel anti-aliasing.
+   Snapshot canvas trang trước cũng theo filter để khớp dark/sepia.
+   ============================================================ */
+[data-pdf-theme='dark'] :is(.react-pdf__Page__canvas, [data-pdf-snapshot]) {
+  filter: invert(1) hue-rotate(180deg);
+}
+[data-pdf-theme='sepia'] :is(.react-pdf__Page__canvas, [data-pdf-snapshot]) {
+  filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
+}
+
+/* Text layer của react-pdf: chữ vốn được vẽ transparent (chỉ để select).
+   Khi canvas bị invert sang nền đen, text layer phải tự "ẩn đi" — nhưng
+   vì transparent nên không cần filter. Giữ mặc định. */

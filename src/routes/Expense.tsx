@@ -65,8 +65,8 @@ export default function Expense() {
     );
   }
 
-  function handleDelete(date: string, itemId: string) {
-    if (!window.confirm('Xoá chi tiêu này?')) return;
+  async function handleDelete(date: string, itemId: string) {
+    if (!window.confirm('Delete expense?')) return;
     deleteExpense.mutate(
       { date, itemId },
       {

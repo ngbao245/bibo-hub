@@ -40,8 +40,8 @@ export default function QueryCacheTab({ refreshKey, onChange }: Props) {
 
     const totalSize = queries.reduce((s, q) => s + q.size, 0);
 
-    function clearAll() {
-        if (!window.confirm(`Xoá ${queries.length} query?`)) return;
+    async function clearAll() {
+        if (!window.confirm(`Clear ${queries.length} queries?`)) return;
         qc.clear();
         toast.success('Đã xoá tất cả queries');
         onChange();

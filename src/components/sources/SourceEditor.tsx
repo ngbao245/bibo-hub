@@ -99,9 +99,8 @@ export default function SourceEditor({ note, onDeleted }: SourceEditorProps) {
     });
   }
 
-  function handleDelete() {
-    const ok = window.confirm(`Xoá source "${note.title || 'Untitled'}"?`);
-    if (!ok) return;
+  async function handleDelete() {
+    if (!window.confirm(`Delete source "${note.title || 'Untitled'}"?`)) return;
     remove.mutate(note.id, {
       onSuccess: () => {
         toast.success('Đã xoá');

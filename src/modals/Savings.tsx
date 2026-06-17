@@ -174,8 +174,8 @@ function ActiveGoal({ goal }: { goal: SavingsGoal }) {
     });
   }
 
-  function handleReset() {
-    if (!window.confirm('Xoá mục tiêu hiện tại và tạo mới?')) return;
+  async function handleReset() {
+    if (!window.confirm('Reset goal? Removes the current goal and creates a new one.')) return;
     remove.mutate(goal.id, {
       onSuccess: () => toast.success('Đã xoá'),
       onError: () => toast.error('Không xoá được'),
@@ -410,4 +410,4 @@ function Field({
 }
 
 // Trash2 import giữ tránh "unused"
-void Trash2;
+void Trash2;

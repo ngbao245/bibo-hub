@@ -34,4 +34,4 @@ function decodeObfuscated(encoded: string): string {
 }
 
 /** Single app secret — dùng chung mọi chỗ cần passphrase mặc định. */
-export const APP_SECRET = decodeObfuscated(APP_SECRET_ENCODED);
+export const APP_SECRET = decodeObfuscated(APP_SECRET_ENCODED);

@@ -57,8 +57,8 @@ function Content() {
     <InputView
       history={history}
       onTrack={track}
-      onClearHistory={() => {
-        if (window.confirm('Xoá toàn bộ lịch sử tra cứu?')) {
+      onClearHistory={async () => {
+        if (window.confirm('Clear lookup history?')) {
           setHistory([]);
           toast.success('Đã xoá lịch sử');
         }
@@ -182,4 +182,4 @@ function timeAgo(date: Date): string {
   if (hours < 24) return `${hours} giờ trước`;
   if (days < 7) return `${days} ngày trước`;
   return date.toLocaleDateString('vi-VN');
-}
+}

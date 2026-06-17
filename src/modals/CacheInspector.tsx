@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Database, HardDrive, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Database, HardDrive, BookOpen, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
 
 import ToolModal from '@/components/ToolModal';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,8 @@ import { toast } from '@/components/ui/sonner';
 
 import QueryCacheTab from '@/components/cache/QueryCacheTab';
 import LocalStorageTab from '@/components/cache/LocalStorageTab';
+import IndexedDBTab from '@/components/cache/IndexedDBTab';
+import { clearStore, STORE_COVERS, STORE_FILES } from '@/lib/reader/blob-cache';
 
 // ============================================================
 // Cache Inspector Modal
@@ -34,10 +36,11 @@ function CacheContent() {
 
   const refresh = () => setRefreshKey((k) => k + 1);
 
-  function clearAll() {
-    if (!window.confirm('Xoá TOÀN BỘ cache (Query + LocalStorage) và reload trang?\n\nKhông thể hoàn tác.')) return;
+  async function clearAll() {
+    if (!window.confirm('Clear all cache? Removes Query cache, LocalStorage, and IndexedDB. The page will reload.')) return;
     qc.clear();
     localStorage.clear();
+    void Promise.all([clearStore(STORE_FILES), clearStore(STORE_COVERS)]);
     toast.success('Đã xoá hết cache. Đang reload...');
     setTimeout(() => window.location.reload(), 500);
   }
@@ -63,7 +66,7 @@ function CacheContent() {
       </div>
 
       <Tabs defaultValue="query">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="query" className="gap-1.5">
             <Database className="h-3.5 w-3.5" />
             Query Cache
@@ -71,6 +74,10 @@ function CacheContent() {
           <TabsTrigger value="local" className="gap-1.5">
             <HardDrive className="h-3.5 w-3.5" />
             LocalStorage
+          </TabsTrigger>
+          <TabsTrigger value="idb" className="gap-1.5">
+            <BookOpen className="h-3.5 w-3.5" />
+            Reader Cache
           </TabsTrigger>
         </TabsList>
 
@@ -81,7 +88,11 @@ function CacheContent() {
         <TabsContent value="local" className="mt-3">
           <LocalStorageTab refreshKey={refreshKey} onChange={refresh} />
         </TabsContent>
+
+        <TabsContent value="idb" className="mt-3">
+          <IndexedDBTab refreshKey={refreshKey} onChange={refresh} />
+        </TabsContent>
       </Tabs>
     </div>
   );
-}
+}

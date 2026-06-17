@@ -16,8 +16,6 @@ export default defineConfig(() => ({
     // có thể được pre-bundle với 1 bản React riêng → "Invalid hook call" runtime error.
     dedupe: ['react', 'react-dom'],
   },
-  // Pre-bundle các thư viện React-related với cùng 1 React instance,
-  // tránh trường hợp Vite pre-bundle nhiều bản React khác nhau.
   optimizeDeps: {
     include: [
       'react',
@@ -27,12 +25,32 @@ export default defineConfig(() => ({
       '@tanstack/react-query',
       '@tanstack/react-query-devtools',
       'zustand',
+      // Tiptap: pre-bundle để tránh "504 Outdated Optimize Dep" khi
+      // Notes.tsx lazy-load RichEditor lần đầu (Vite re-discover deps
+      // giữa request → invalidate chunk đang fetch).
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+      '@tiptap/extension-underline',
+      '@tiptap/extension-highlight',
+      '@tiptap/extension-placeholder',
+      '@tiptap/extension-code-block-lowlight',
+      // @tiptap/pm: chỉ có subpath exports (state/view/model...),
+      // pre-bundle các subpath mà StarterKit + extensions thực sự dùng.
+      '@tiptap/pm/state',
+      '@tiptap/pm/view',
+      '@tiptap/pm/model',
+      '@tiptap/pm/transform',
+      '@tiptap/pm/commands',
+      '@tiptap/pm/keymap',
+      '@tiptap/pm/schema-list',
+      'lowlight',
     ],
   },
   server: {
     port: 3000,
-    strictPort: false, // nếu 3000 bị chiếm → tự thử 3001, 3002...
+    strictPort: false,
     open: true,
   },
 }));
+
 
