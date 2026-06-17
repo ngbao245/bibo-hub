@@ -6,8 +6,8 @@ import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun } from 'lucide-
 import { toast } from 'sonner';
 
 import '@/lib/reader/pdfjs-setup';
-import { getBookFileUrl } from '@/api/reader/books';
-import { fetchThroughCache, STORE_FILES } from '@/lib/reader/blob-cache';
+import { downloadBookFile } from '@/api/reader/books';
+import { fetchBlobThroughCache, STORE_FILES } from '@/lib/reader/blob-cache';
 import { useProgress, useSaveProgress } from '@/api/reader/progress';
 import { useCreateHighlight, useHighlights } from '@/api/reader/highlights';
 import SelectionMenu from './SelectionMenu';
@@ -85,9 +85,10 @@ export default function PdfReader({ book }: { book: Book }) {
     let cancelled = false;
     (async () => {
       try {
-        // Cache hit → blob load IndexedDB rất nhanh; miss → sign + fetch network
-        const blob = await fetchThroughCache(STORE_FILES, book.file_path, () =>
-          getBookFileUrl(book.file_path),
+        // Cache hit → blob load IndexedDB rất nhanh; miss → SDK download
+        // (bypass CORS issues khi fetch signed URL trực tiếp từ JS)
+        const blob = await fetchBlobThroughCache(STORE_FILES, book.file_path, () =>
+          downloadBookFile(book.file_path),
         );
         if (cancelled) return;
         const buffer = await blob.arrayBuffer();
