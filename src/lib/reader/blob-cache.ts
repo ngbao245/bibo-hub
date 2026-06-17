@@ -223,9 +223,26 @@ export async function fetchThroughCache(
   const cached = await getCached(store, key);
   if (cached) return cached;
   const url = await urlProvider();
-  const res = await fetch(url);
+  const res = await fetch(url, { mode: 'cors', credentials: 'omit' });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const blob = await res.blob();
+  void putCached(store, key, blob);
+  return blob;
+}
+
+/**
+ * Cache layer với blob provider (thay vì URL).
+ * Dùng khi nguồn dữ liệu là Supabase SDK download() — bypass CORS issues
+ * khi fetch signed URL trực tiếp từ JS.
+ */
+export async function fetchBlobThroughCache(
+  store: string,
+  key: string,
+  blobProvider: () => Promise<Blob>,
+): Promise<Blob> {
+  const cached = await getCached(store, key);
+  if (cached) return cached;
+  const blob = await blobProvider();
   void putCached(store, key, blob);
   return blob;
 }
