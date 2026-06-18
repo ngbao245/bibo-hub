@@ -1,9 +1,19 @@
 // Configure pdfjs-dist worker for react-pdf.
-// Bundle worker local qua Vite `?url` thay vì CDN: tránh
-//  - Fake worker fallback ("Failed to resolve module specifier 'pdf.worker.mjs'")
-//    khi CDN bị chặn / CORS / proxy strip.
-//  - Version mismatch giữa pdfjs-dist root và bản nested trong react-pdf.
-import { pdfjs } from 'react-pdf';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+//
+
+// Worker được copy vào public/ bởi scripts/copy-pdf-worker.mjs (chạy
+
+// trong prebuild hook). Vercel serve thẳng từ public, MIME đúng, không
+
+// qua SPA rewrite — tránh fake-worker fallback khi rewrite nuốt path.
+
+//
+
+// base của Vite mặc định là '/', nên absolute path '/pdf.worker.min.mjs'
+
+// luôn resolve đúng cả ở dev (vite serve) lẫn prod.
+
+import { pdfjs } from 'react-pdf';
+
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
