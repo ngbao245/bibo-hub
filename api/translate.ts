@@ -4,7 +4,7 @@
 //
 // POST /api/translate { text, source, target } -> { translated, detected }
 
-import { parseGoogleResponse } from '../src/lib/reader/translate';
+import { parseGoogleResponse } from '../src/lib/reader/translate.js';
 
 export const config = { runtime: 'edge' };
 
