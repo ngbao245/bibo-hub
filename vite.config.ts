@@ -46,9 +46,8 @@ export default defineConfig(() => ({
       'lowlight',
       // PDF.js: pre-bundle để tránh worker load issues
       'pdfjs-dist',
+      'react-pdf',
     ],
-    // Exclude worker files khỏi optimization
-    exclude: ['pdfjs-dist/build/pdf.worker.min.mjs'],
   },
   worker: {
     format: 'es' as const,
