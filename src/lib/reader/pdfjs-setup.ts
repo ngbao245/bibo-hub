@@ -8,6 +8,10 @@ console.log(
   window.location.origin
 );
 
+console.log(
+  'pdfjs version',
+  pdfjs.version
+);
 
 console.log(
   'WORKER:',
