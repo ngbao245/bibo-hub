@@ -214,11 +214,15 @@ async function evictIfNeeded(store: string, budget: number): Promise<void> {
  * - Có blob trong store + key → trả blob (không gọi urlProvider).
  * - Không → gọi urlProvider() để lấy URL (lazy, để khỏi sign mạng khi không cần),
  *   fetch về, put vào store, trả blob.
+ *
+ * `onProgress` (optional): callback khi đang download từ network. Cache hit
+ * không gọi callback. `total` có thể là 0 nếu server không trả Content-Length.
  */
 export async function fetchThroughCache(
   store: string,
   key: string,
   urlProvider: () => Promise<string> | string,
+  onProgress?: (loaded: number, total: number) => void,
 ): Promise<Blob> {
   const cached = await getCached(store, key);
   if (cached) return cached;
@@ -250,7 +254,11 @@ export async function fetchThroughCache(
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
 
-      const blob = await res.blob();
+      // Stream + track progress nếu có callback. Total có thể 0 khi server
+      // không gửi Content-Length (Supabase Storage thường có).
+      const blob = onProgress
+        ? await readBlobWithProgress(res, onProgress)
+        : await res.blob();
 
       if (import.meta.env.DEV) {
         console.log(`[blob-cache] Successfully fetched ${key}, size: ${blob.size} bytes`);
@@ -277,4 +285,33 @@ export async function fetchThroughCache(
   }
 
   throw lastError || new Error('Failed to fetch after 3 attempts');
+}
+
+/**
+ * Đọc Response body qua ReadableStream để track progress.
+ * Fallback `res.blob()` nếu môi trường không hỗ trợ stream.
+ */
+async function readBlobWithProgress(
+  res: Response,
+  onProgress: (loaded: number, total: number) => void,
+): Promise<Blob> {
+  const total = Number(res.headers.get('Content-Length') || 0);
+  const reader = res.body?.getReader();
+  if (!reader) return res.blob();
+
+  const chunks: Uint8Array[] = [];
+  let loaded = 0;
+  // Báo progress=0 ngay để UI có thể chuyển từ "preparing" → "downloading"
+  onProgress(0, total);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    loaded += value.byteLength;
+    onProgress(loaded, total);
+  }
+
+  const type = res.headers.get('Content-Type') || 'application/octet-stream';
+  return new Blob(chunks as BlobPart[], { type });
 }
