@@ -1,19 +1,13 @@
 // Configure pdfjs-dist worker for react-pdf.
 
-//
+// Vite bundle worker qua ?url → emit vào dist/assets/ với hash.
 
-// Worker được copy vào public/ bởi scripts/copy-pdf-worker.mjs (chạy
+// Cần vercel.json rewrite exclude /assets/* để Vercel không SPA-redirect
 
-// trong prebuild hook). Vercel serve thẳng từ public, MIME đúng, không
-
-// qua SPA rewrite — tránh fake-worker fallback khi rewrite nuốt path.
-
-//
-
-// base của Vite mặc định là '/', nên absolute path '/pdf.worker.min.mjs'
-
-// luôn resolve đúng cả ở dev (vite serve) lẫn prod.
+// worker file về index.html.
 
 import { pdfjs } from 'react-pdf';
 
-pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
+import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
