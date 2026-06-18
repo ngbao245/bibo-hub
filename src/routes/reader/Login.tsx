@@ -17,6 +17,7 @@ export default function ReaderLogin() {
   const [submitting, setSubmitting] = useState(false);
   const [vaultLoading, setVaultLoading] = useState(false);
   const [vaultError, setVaultError] = useState<string | null>(null);
+  const [debugInfo, setDebugInfo] = useState<string>('');
   const triedAutoRef = useRef(false);
 
   // ================================================================
@@ -84,6 +85,35 @@ export default function ReaderLogin() {
     }
   }
 
+  // Debug: Test config API
+  async function testConfigAPI() {
+    setDebugInfo('Testing...');
+    try {
+      const { API } = await import('@/lib/config');
+      const { fetchJson } = await import('@/api/client');
+      const { parseSettingList } = await import('@/lib/setting');
+
+      const list = parseSettingList(await fetchJson<unknown>(API.CONFIGS));
+      const readest = list.find(
+        (s) =>
+          s.group.trim().toLowerCase() === 'readest' &&
+          s.type.trim().toLowerCase() === 'supabase',
+      );
+
+      if (!readest) {
+        setDebugInfo(
+          `❌ Không tìm thấy record Readest/Supabase.\nCó ${list.length} records: ${list.map((r) => `${r.group}/${r.type}`).join(', ')}`,
+        );
+      } else {
+        setDebugInfo(
+          `✅ Tìm thấy record!\nID: ${readest.id}\nGroup: ${readest.group}\nType: ${readest.type}\nConfig1 length: ${readest.config1?.length || 0}`,
+        );
+      }
+    } catch (err) {
+      setDebugInfo(`❌ Lỗi: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   return (
     <div className="flex h-full items-center justify-center bg-zinc-950 px-4 text-zinc-100">
       <div className="w-full max-w-sm space-y-6">
@@ -115,13 +145,27 @@ export default function ReaderLogin() {
               <span>{vaultError}</span>
             </div>
             <PassphrasePrompt onTry={runVault} />
-            <button
-              type="button"
-              onClick={() => runVault()}
-              className="w-full border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs text-primary hover:bg-primary/25"
-            >
-              Thử lại auto-login
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => runVault()}
+                className="flex-1 border border-primary/50 bg-primary/15 px-3 py-1.5 text-xs text-primary hover:bg-primary/25"
+              >
+                Thử lại auto-login
+              </button>
+              <button
+                type="button"
+                onClick={testConfigAPI}
+                className="border border-zinc-700 bg-zinc-800 px-3 py-1.5 text-xs text-zinc-300 hover:bg-zinc-700"
+              >
+                🔍 Test API
+              </button>
+            </div>
+            {debugInfo && (
+              <pre className="whitespace-pre-wrap border border-zinc-800 bg-zinc-900 px-2 py-2 text-[10px] text-zinc-400">
+                {debugInfo}
+              </pre>
+            )}
           </div>
         )}
 

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Reader Config</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #0f0;
+        }
+
+        pre {
+            background: #000;
+            padding: 10px;
+            overflow-x: auto;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+        }
+
+        .error {
+            color: #f00;
+        }
+
+        .success {
+            color: #0f0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 Test Reader Config from API</h1>
+
+    <button onclick="testFetchConfigs()">1. Test Fetch /configs</button>
+    <button onclick="testFindReadestConfig()">2. Test Find Readest Config</button>
+    <button onclick="testDecryptCredentials()">3. Test Decrypt Credentials</button>
+    <button onclick="testDecryptSupabase()">4. Test Decrypt Supabase</button>
+
+    <h2>Results:</h2>
+    <pre id="output">Click buttons above to test...</pre>
+
+    <script>
+        const APP_SECRET = atob('MzAwMkBvYmliYWJpQg=='); // From appSecret.ts
+        const API_URL = window.location.origin + '/api/configs';
+
+        const output = document.getElementById('output');
+
+        function log(msg, isError = false) {
+            const color = isError ? 'error' : 'success';
+            output.innerHTML += `<span class="${color}">${msg}</span>\n`;
+        }
+
+        async function testFetchConfigs() {
+            output.innerHTML = '';
+            log('Testing fetch /configs...');
+
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                log(`✅ Fetch OK! Got ${data.length || 0} configs`);
+                log('Raw data:', false);
+                log(JSON.stringify(data, null, 2), false);
+            } catch (err) {
+                log(`❌ Fetch failed: ${err.message}`, true);
+            }
+        }
+
+        async function testFindReadestConfig() {
+            output.innerHTML = '';
+            log('Testing find Readest/Supabase config...');
+
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                const readestConfig = data.find(item =>
+                    item.group?.toLowerCase() === 'readest' &&
+                    item.type?.toLowerCase() === 'supabase'
+                );
+
+                if (readestConfig) {
+                    log('✅ Found Readest/Supabase config!');
+                    log('Config details:');
+                    log(JSON.stringify(readestConfig, null, 2), false);
+                } else {
+                    log('❌ No config with group="Readest" and type="Supabase" found!', true);
+                    log('Available configs:', false);
+                    data.forEach(item => {
+                        log(`  - group="${item.group}" type="${item.type}"`, false);
+                    });
+                }
+            } catch (err) {
+                log(`❌ Error: ${err.message}`, true);
+            }
+        }
+
+        async function testDecryptCredentials() {
+            output.innerHTML = '';
+            log('Testing decrypt emailLogin and password...');
+
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                const readestConfig = data.find(item =>
+                    item.group?.toLowerCase() === 'readest' &&
+                    item.type?.toLowerCase() === 'supabase'
+                );
+
+                if (!readestConfig) {
+                    log('❌ No Readest config found!', true);
+                    return;
+                }
+
+                log('Found config1:', false);
+                log(readestConfig.config1, false);
+
+                // Parse config1
+                try {
+                    const entries = JSON.parse(readestConfig.config1);
+                    log(`\n✅ Parsed config1: ${entries.length} entries`);
+
+                    const emailEntry = entries.find(e => e.k.toLowerCase() === 'emaillogin');
+                    const passwordEntry = entries.find(e => e.k.toLowerCase() === 'password');
+
+                    if (emailEntry) {
+                        log(`✅ Found emailLogin entry (encrypted: ${emailEntry.e === 1})`);
+                        log(`   Value preview: ${emailEntry.v.substring(0, 50)}...`, false);
+                    } else {
+                        log('❌ No emailLogin entry found!', true);
+                    }
+
+                    if (passwordEntry) {
+                        log(`✅ Found password entry (encrypted: ${passwordEntry.e === 1})`);
+                        log(`   Value preview: ${passwordEntry.v.substring(0, 50)}...`, false);
+                    } else {
+                        log('❌ No password entry found!', true);
+                    }
+
+                    log('\n💡 To decrypt, you need to import cryptoFields.ts functions');
+                    log('   APP_SECRET = "' + APP_SECRET + '"', false);
+
+                } catch (parseErr) {
+                    log('❌ Failed to parse config1: ' + parseErr.message, true);
+                }
+
+            } catch (err) {
+                log(`❌ Error: ${err.message}`, true);
+            }
+        }
+
+        async function testDecryptSupabase() {
+            output.innerHTML = '';
+            log('Testing decrypt Supabase URL and Key...');
+
+            try {
+                const response = await fetch(API_URL);
+                const data = await response.json();
+
+                const readestConfig = data.find(item =>
+                    item.group?.toLowerCase() === 'readest' &&
+                    item.type?.toLowerCase() === 'supabase'
+                );
+
+                if (!readestConfig) {
+                    log('❌ No Readest config found!', true);
+                    return;
+                }
+
+                const entries = JSON.parse(readestConfig.config1);
+
+                const urlEntry = entries.find(e => e.k.toLowerCase() === 'supabaseurl');
+                const keyEntry = entries.find(e => e.k.toLowerCase() === 'supabaseanonymouskey');
+                const bucketEntry = entries.find(e => e.k.toLowerCase() === 'supabasebucket');
+
+                log('Supabase config entries:');
+                if (urlEntry) log(`✅ supabaseURL found (encrypted: ${urlEntry.e === 1})`);
+                if (keyEntry) log(`✅ supabaseAnonymousKey found (encrypted: ${keyEntry.e === 1})`);
+                if (bucketEntry) log(`✅ supabaseBucket found (encrypted: ${bucketEntry.e === 1})`);
+
+                if (!urlEntry || !keyEntry) {
+                    log('\n❌ Missing required Supabase fields!', true);
+                } else {
+                    log('\n✅ All required fields present!');
+                    log('💡 These will be decrypted using APP_SECRET in production', false);
+                }
+
+            } catch (err) {
+                log(`❌ Error: ${err.message}`, true);
+            }
+        }
+    </script>
+</body>
+
+</html>
