@@ -3,8 +3,10 @@
 // calling Google directly when the proxy is unavailable (e.g. local dev).
 //
 // POST /api/translate { text, source, target } -> { translated, detected }
-
-import { parseGoogleResponse } from '../src/lib/reader/translate.js';
+//
+// Self-contained: don't import from `../src` because Vercel's @vercel/node
+// builder uses its own tsconfig (moduleResolution: node16) and doesn't
+// resolve our path aliases or .ts→.js mapping.
 
 export const config = { runtime: 'edge' };
 
@@ -12,6 +14,21 @@ interface Body {
   text?: string;
   source?: string;
   target?: string;
+}
+
+interface TranslateResult {
+  translated: string;
+  detected: string | null;
+}
+
+function parseGoogleResponse(data: unknown): TranslateResult {
+  if (!Array.isArray(data)) throw new Error('Unexpected translate response');
+  const chunks = Array.isArray(data[0]) ? (data[0] as unknown[]) : [];
+  const translated = chunks
+    .map((c) => (Array.isArray(c) && typeof c[0] === 'string' ? c[0] : ''))
+    .join('');
+  const detected = typeof data[2] === 'string' ? (data[2] as string) : null;
+  return { translated, detected };
 }
 
 export default async function handler(req: Request): Promise<Response> {
