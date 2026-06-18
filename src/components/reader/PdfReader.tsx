@@ -52,6 +52,12 @@ export default function PdfReader({ book }: { book: Book }) {
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [docLoaded, setDocLoaded] = useState(false);
+  /** Tiến độ tải file: null = cache hit (skip), {loaded,total} = đang tải.
+   * total = 0 nếu server không trả Content-Length → UI fallback indeterminate. */
+  const [downloadProgress, setDownloadProgress] = useState<{
+    loaded: number;
+    total: number;
+  } | null>(null);
   const [scale, setScale] = useState<number>(() => {
     const v = localStorage.getItem(ZOOM_KEY);
     return v ? Number(v) : 1.2;
@@ -86,8 +92,14 @@ export default function PdfReader({ book }: { book: Book }) {
     (async () => {
       try {
         // Cache hit → blob load IndexedDB rất nhanh; miss → sign + fetch network
-        const blob = await fetchThroughCache(STORE_FILES, book.file_path, () =>
-          getBookFileUrl(book.file_path),
+        const blob = await fetchThroughCache(
+          STORE_FILES,
+          book.file_path,
+          () => getBookFileUrl(book.file_path),
+          (loaded, total) => {
+            if (cancelled) return;
+            setDownloadProgress({ loaded, total });
+          },
         );
         if (cancelled) return;
         const buffer = await blob.arrayBuffer();
@@ -511,7 +523,9 @@ export default function PdfReader({ book }: { book: Book }) {
         {/* Skeleton chỉ hiện khi document chưa parse xong. Page render sau
             đó tốc độ ~100-300ms — không cần skeleton, để render canvas đè
             page cũ tự nhiên hơn. */}
-        {!error && (!fileData || !docLoaded) && <ReaderSkeleton withHeader={false} />}
+        {!error && (!fileData || !docLoaded) && (
+          <ReaderSkeleton withHeader={false} progress={downloadProgress} />
+        )}
 
         <ReaderSidebar
           open={sidebarOpen}
