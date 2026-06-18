@@ -173,7 +173,7 @@ export default function PdfReader({ book }: { book: Book }) {
   const pageHighlights = useMemo(() => {
     if (!highlightsQuery.data) return [] as Highlight[];
     return highlightsQuery.data.filter(
-      (h) => h.location.type === 'pdf' && h.location.page === pageNumber,
+      (h: Highlight) => h.location.type === 'pdf' && h.location.page === pageNumber,
     );
   }, [highlightsQuery.data, pageNumber]);
 
@@ -576,10 +576,10 @@ function HighlightOverlay({ highlights }: { highlights: Highlight[] }) {
           h.color === 'blue'
             ? 'rgba(59, 130, 246, 0.35)'
             : h.color === 'green'
-            ? 'rgba(34, 197, 94, 0.35)'
-            : h.color === 'red'
-            ? 'rgba(239, 68, 68, 0.35)'
-            : 'rgba(250, 204, 21, 0.35)';
+              ? 'rgba(34, 197, 94, 0.35)'
+              : h.color === 'red'
+                ? 'rgba(239, 68, 68, 0.35)'
+                : 'rgba(250, 204, 21, 0.35)';
         return h.location.rects.map((r, i) => (
           <div
             key={`${h.id}-${i}`}
