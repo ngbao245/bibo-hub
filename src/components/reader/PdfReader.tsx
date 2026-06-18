@@ -1,11 +1,23 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
 import '@/lib/reader/pdfjs-setup';
+
+// Defensive check: ensure worker is properly configured
+const workerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
+console.log('WORKER BEFORE DOCUMENT:', workerSrc);
+if (!workerSrc || workerSrc === 'pdf.worker.mjs' || !workerSrc.startsWith('http')) {
+  console.error('❌ Worker URL invalid, re-initializing...');
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+  ).toString();
+  console.log('✅ Worker re-initialized:', pdfjs.GlobalWorkerOptions.workerSrc);
+}
 import { getBookFileUrl } from '@/api/reader/books';
 import { fetchThroughCache, getCached, STORE_FILES } from '@/lib/reader/blob-cache';
 import { useProgress, useSaveProgress } from '@/api/reader/progress';
