@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 
 import '@/lib/reader/pdfjs-setup';
 import { getBookFileUrl } from '@/api/reader/books';
-import { fetchThroughCache, STORE_FILES } from '@/lib/reader/blob-cache';
+import { fetchThroughCache, getCached, STORE_FILES } from '@/lib/reader/blob-cache';
 import { useProgress, useSaveProgress } from '@/api/reader/progress';
 import { useCreateHighlight, useHighlights } from '@/api/reader/highlights';
 import SelectionMenu from './SelectionMenu';
@@ -48,7 +48,17 @@ export default function PdfReader({ book }: { book: Book }) {
   const highlightsQuery = useHighlights(book.id);
   const createHighlight = useCreateHighlight();
 
-  const [fileData, setFileData] = useState<{ data: ArrayBuffer } | null>(null);
+  /**
+   * Source PDF cho react-pdf:
+   *  - 'data': cache hit → ArrayBuffer trực tiếp, load instant + offline.
+   *  - 'url': cache miss → streaming URL, pdfjs HTTP Range fetch trang đầu
+   *    trong vài trăm KB → render ngay, trang sau lazy. Sau khi load xong
+   *    kick prefetch ngầm để cache cho lần mở sau.
+   */
+  type PdfSource =
+    | { kind: 'data'; data: ArrayBuffer }
+    | { kind: 'url'; url: string };
+  const [fileData, setFileData] = useState<PdfSource | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [docLoaded, setDocLoaded] = useState(false);
@@ -91,22 +101,22 @@ export default function PdfReader({ book }: { book: Book }) {
     let cancelled = false;
     (async () => {
       try {
-        // Cache hit → blob load IndexedDB rất nhanh; miss → sign + fetch network
-        const blob = await fetchThroughCache(
-          STORE_FILES,
-          book.file_path,
-          () => getBookFileUrl(book.file_path),
-          (loaded, total) => {
-            if (cancelled) return;
-            setDownloadProgress({ loaded, total });
-          },
-        );
+        // 1. Cache hit → load buffer trực tiếp (offline friendly, instant).
+        const cached = await getCached(STORE_FILES, book.file_path);
         if (cancelled) return;
-        const buffer = await blob.arrayBuffer();
+        if (cached) {
+          const buffer = await cached.arrayBuffer();
+          if (cancelled) return;
+          setFileData({ kind: 'data', data: buffer });
+          return;
+        }
+        // 2. Cache miss → streaming. Sign URL rồi giao pdfjs fetch range trực tiếp.
+        //    Pdfjs đọc xref + trang đầu trong vài trăm KB → user thấy nội dung
+        //    chỉ sau 1-2s kể cả file 50MB. Trang sau lazy fetch khi lật.
+        //    Tiến độ tải qua onLoadProgress của react-pdf (set ở Document).
+        const url = await getBookFileUrl(book.file_path);
         if (cancelled) return;
-        // react-pdf nhận object `{ data: ArrayBuffer }` để đọc trực tiếp
-        // không qua mạng nữa.
-        setFileData({ data: buffer });
+        setFileData({ kind: 'url', url });
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load file');
       }
@@ -115,6 +125,32 @@ export default function PdfReader({ book }: { book: Book }) {
       cancelled = true;
     };
   }, [book.file_path]);
+
+  /**
+   * Background prefetch: sau khi user mở file lần đầu (streaming), tải full
+   * file ngầm + cache vào IndexedDB → lần sau mở instant + offline được.
+   * Delay 3s để không đua bandwidth với pdfjs đang fetch trang đầu.
+   * Chỉ chạy khi đang ở mode streaming (cache miss).
+   */
+  useEffect(() => {
+    if (!docLoaded) return;
+    if (fileData?.kind !== 'url') return;
+    let cancelled = false;
+    const id = setTimeout(() => {
+      if (cancelled) return;
+      void fetchThroughCache(
+        STORE_FILES,
+        book.file_path,
+        () => getBookFileUrl(book.file_path),
+      ).catch(() => {
+        // best-effort, fail im lặng
+      });
+    }, 3000);
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [docLoaded, fileData, book.file_path]);
 
   useEffect(() => {
     if (restoredRef.current) return;
@@ -188,6 +224,18 @@ export default function PdfReader({ book }: { book: Book }) {
       (h: Highlight) => h.location.type === 'pdf' && h.location.page === pageNumber,
     );
   }, [highlightsQuery.data, pageNumber]);
+
+  /**
+   * Object truyền vào react-pdf <Document file={...}>. Memo theo `fileData`
+   * để pdfjs không re-create document mỗi render (rất tốn — re-parse PDF).
+   * - data mode: pass ArrayBuffer.
+   * - url mode: pass URL → pdfjs HTTP Range fetch lazy theo trang.
+   */
+  const documentFile = useMemo(() => {
+    if (!fileData) return null;
+    if (fileData.kind === 'data') return { data: fileData.data };
+    return { url: fileData.url };
+  }, [fileData]);
 
   const captureSelection = useCallback(() => {
     const sel = window.getSelection();
@@ -470,7 +518,12 @@ export default function PdfReader({ book }: { book: Book }) {
           {fileData && (
             <div className="flex justify-center">
               <Document
-                file={fileData}
+                file={documentFile}
+                onLoadProgress={({ loaded, total }) => {
+                  // Chỉ track khi streaming (cache miss). Cache hit = data → bỏ qua.
+                  if (fileData.kind !== 'url') return;
+                  setDownloadProgress({ loaded, total });
+                }}
                 onLoadSuccess={async (pdf) => {
                   setNumPages(pdf.numPages);
                   setDocLoaded(true);
