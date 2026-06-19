@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Languages, Loader2, X } from 'lucide-react';
 import { translate } from '@/lib/reader/translate';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface Props {
   text: string;
@@ -8,35 +9,84 @@ interface Props {
 }
 
 const TARGET_KEY = 'reader_translate_target';
+const REMOVE_LINEBREAK_KEY = 'reader_translate_remove_linebreak';
 
 export default function TranslatePopover({ text, onClose }: Props) {
   const [target, setTarget] = useState(() => localStorage.getItem(TARGET_KEY) || 'vi');
+  const [removeLinebreak, setRemoveLinebreak] = useState(
+    () => localStorage.getItem(REMOVE_LINEBREAK_KEY) === 'true'
+  );
+  const [editedText, setEditedText] = useState(text);
   const [result, setResult] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastTranslated, setLastTranslated] = useState<{
+    text: string;
+    target: string;
+    removeLinebreak: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    setEditedText(text);
+  }, [text]);
 
   useEffect(() => {
     localStorage.setItem(TARGET_KEY, target);
   }, [target]);
 
   useEffect(() => {
+    localStorage.setItem(REMOVE_LINEBREAK_KEY, String(removeLinebreak));
+  }, [removeLinebreak]);
+
+  useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    translate({ text, source: 'auto', target })
-      .then((r) => {
-        if (cancelled) return;
-        setResult(r.translated);
-      })
-      .catch((e: unknown) => {
-        if (cancelled) return;
-        setError(e instanceof Error ? e.message : 'Translate failed');
-      })
-      .finally(() => !cancelled && setLoading(false));
+    let timeoutId: number | undefined;
+
+    const doTranslate = () => {
+      let cleanText = removeLinebreak ? editedText.replace(/\n+/g, ' ') : editedText;
+      cleanText = cleanText.trim();
+
+      // Skip nếu text rỗng
+      if (!cleanText) {
+        setResult(null);
+        setError(null);
+        setLastTranslated(null); // Clear cache khi xóa hết text
+        return;
+      }
+
+      // Check nếu đã dịch rồi thì skip
+      if (
+        lastTranslated &&
+        lastTranslated.text === cleanText &&
+        lastTranslated.target === target &&
+        lastTranslated.removeLinebreak === removeLinebreak
+      ) {
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      translate({ text: cleanText, source: 'auto', target })
+        .then((r) => {
+          if (cancelled) return;
+          setResult(r.translated);
+          setLastTranslated({ text: cleanText, target, removeLinebreak });
+        })
+        .catch((e: unknown) => {
+          if (cancelled) return;
+          setError(e instanceof Error ? e.message : 'Translate failed');
+        })
+        .finally(() => !cancelled && setLoading(false));
+    };
+
+    // Debounce 1 giây
+    timeoutId = window.setTimeout(doTranslate, 1000);
+
     return () => {
       cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
     };
-  }, [text, target]);
+  }, [editedText, target, removeLinebreak, lastTranslated]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 border border-zinc-700 bg-zinc-900 shadow-2xl">
@@ -58,13 +108,26 @@ export default function TranslatePopover({ text, onClose }: Props) {
             <option value="de">German</option>
             <option value="es">Spanish</option>
           </select>
+          <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-400">
+            <Checkbox
+              checked={removeLinebreak}
+              onCheckedChange={(checked) => setRemoveLinebreak(checked === true)}
+              className="h-3.5 w-3.5"
+            />
+            <span>Unwrap</span>
+          </label>
         </div>
         <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200">
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
       <div className="space-y-2 p-3 text-sm">
-        <p className="line-clamp-3 text-xs text-zinc-500">{text}</p>
+        <textarea
+          value={editedText}
+          onChange={(e) => setEditedText(e.target.value)}
+          className="w-full resize-none border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-200 outline-none focus:border-primary"
+          rows={3}
+        />
         <div className="border-t border-zinc-800 pt-2">
           {loading ? (
             <div className="flex items-center gap-2 text-xs text-zinc-500">

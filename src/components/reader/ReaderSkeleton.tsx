@@ -19,15 +19,20 @@ interface Props {
   title?: string;
   /** Mặc định true. False = chỉ render content (cho dùng nested khi đã có header thật) */
   withHeader?: boolean;
+  /** Tiến độ tải file (chỉ áp dụng khi đang download). null = cache hit/đã load. */
+  progress?: { loaded: number; total: number } | null;
 }
 
-export default function ReaderSkeleton({ title, withHeader = true }: Props) {
+export default function ReaderSkeleton({ title, withHeader = true, progress }: Props) {
   return (
     <div className="absolute inset-0 z-10 flex flex-col bg-zinc-950">
       {withHeader && <DummyHeader title={title} />}
 
       <div className="flex flex-1 items-start justify-center overflow-hidden p-8">
         <div className="flex w-full max-w-prose flex-col gap-3 px-4">
+          {/* ⭐ PROGRESS BAR (chỉ render khi progress !== null) */}
+          {progress && <DownloadProgress {...progress} />}
+
           <div className="mb-3 h-7 w-2/3 animate-pulse bg-zinc-800" />
           {LINE_LENGTHS.map((w, i) => (
             <div
@@ -45,6 +50,40 @@ export default function ReaderSkeleton({ title, withHeader = true }: Props) {
             />
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Progress bar cho lúc tải file lớn. `total = 0` (server không trả
+ * Content-Length) → fallback indeterminate (thanh chạy vô định).
+ */
+function DownloadProgress({ loaded, total }: { loaded: number; total: number }) {
+  const indeterminate = total <= 0;
+  const percent = indeterminate ? 0 : Math.min(100, Math.round((loaded / total) * 100));
+  const loadedMb = (loaded / 1024 / 1024).toFixed(1);
+  const totalMb = total > 0 ? (total / 1024 / 1024).toFixed(1) : null;
+
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      <div className="flex items-center justify-between text-xs text-zinc-400">
+        <span>Đang tải sách...</span>
+        <span className="font-mono tabular-nums">
+          {indeterminate
+            ? `${loadedMb} MB`
+            : `${loadedMb} / ${totalMb} MB · ${percent}%`}
+        </span>
+      </div>
+      <div className="h-1 overflow-hidden rounded-full bg-zinc-800">
+        {indeterminate ? (
+          <div className="h-full w-1/3 animate-indeterminate bg-zinc-400" />
+        ) : (
+          <div
+            className="h-full bg-zinc-300 transition-[width] duration-150 ease-out"
+            style={{ width: `${percent}%` }}
+          />
+        )}
       </div>
     </div>
   );

@@ -18,19 +18,25 @@ const GOOGLE_ENDPOINT = 'https://translate.googleapis.com/translate_a/single';
 
 export async function translate(input: TranslateInput): Promise<TranslateResult> {
   try {
+    console.log('[Translate] Trying /api/translate (Vercel edge function)...');
     const res = await fetch('/api/translate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(input),
     });
-    if (res.ok) return (await res.json()) as TranslateResult;
-  } catch {
-    // fallthrough
+    if (res.ok) {
+      console.log('[Translate] ✓ Used /api/translate');
+      return (await res.json()) as TranslateResult;
+    }
+    console.log(`[Translate] /api/translate failed (${res.status}), falling back to Google direct`);
+  } catch (e) {
+    console.log('[Translate] /api/translate error:', e, '→ falling back to Google direct');
   }
   return translateDirect(input);
 }
 
 export async function translateDirect(input: TranslateInput): Promise<TranslateResult> {
+  console.log('[Translate] Using Google API direct:', GOOGLE_ENDPOINT);
   const url = new URL(GOOGLE_ENDPOINT);
   url.searchParams.set('client', 'gtx');
   url.searchParams.set('sl', input.source);
@@ -41,6 +47,7 @@ export async function translateDirect(input: TranslateInput): Promise<TranslateR
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error(`Translate failed: HTTP ${res.status}`);
   const data = (await res.json()) as unknown;
+  console.log('[Translate] ✓ Google API direct success');
   return parseGoogleResponse(data);
 }
 

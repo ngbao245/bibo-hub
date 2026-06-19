@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun } from 'lucide-
 import { toast } from 'sonner';
 
 import { getBookFileUrl } from '@/api/reader/books';
-import { fetchThroughCache, STORE_FILES } from '@/lib/reader/blob-cache';
+import { fetchThroughCache, getCached, STORE_FILES } from '@/lib/reader/blob-cache';
 import { useProgress, useSaveProgress } from '@/api/reader/progress';
 import { useCreateHighlight, useHighlights } from '@/api/reader/highlights';
 import SelectionMenu from './SelectionMenu';
@@ -63,10 +63,18 @@ export default function PdfReader({ book }: { book: Book }) {
   const highlightsQuery = useHighlights(book.id);
   const createHighlight = useCreateHighlight();
 
-  const [fileData, setFileData] = useState<{ data: ArrayBuffer } | null>(null);
+  type PdfSource =
+    | { kind: 'data'; data: ArrayBuffer }
+    | { kind: 'url'; url: string };
+
+  const [fileData, setFileData] = useState<PdfSource | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [docLoaded, setDocLoaded] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState<{
+    loaded: number;
+    total: number;
+  } | null>(null);
   const [scale, setScale] = useState<number>(() => {
     const v = localStorage.getItem(ZOOM_KEY);
     return v ? Number(v) : 1.2;
@@ -100,16 +108,23 @@ export default function PdfReader({ book }: { book: Book }) {
     let cancelled = false;
     (async () => {
       try {
-        // Cache hit → blob load IndexedDB rất nhanh; miss → sign + fetch network
-        const blob = await fetchThroughCache(STORE_FILES, book.file_path, () =>
-          getBookFileUrl(book.file_path),
-        );
+        // 1. Check cache hit
+        const cached = await getCached(STORE_FILES, book.file_path);
         if (cancelled) return;
-        const buffer = await blob.arrayBuffer();
+
+        if (cached) {
+          // ✅ CACHE HIT: load instant từ IndexedDB
+          const buffer = await cached.arrayBuffer();
+          if (cancelled) return;
+          setFileData({ kind: 'data', data: buffer });
+          return;
+        }
+
+        // 2. CACHE MISS: streaming URL mode
+        const url = await getBookFileUrl(book.file_path);
         if (cancelled) return;
-        // react-pdf nhận object `{ data: ArrayBuffer }` để đọc trực tiếp
-        // không qua mạng nữa.
-        setFileData({ data: buffer });
+        setFileData({ kind: 'url', url });
+
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : 'Failed to load file');
       }
@@ -128,6 +143,30 @@ export default function PdfReader({ book }: { book: Book }) {
     const n = Number(loc);
     if (Number.isFinite(n) && n >= 1) setPageNumber(n);
   }, [progressQuery.data]);
+
+  // Background prefetch: sau khi load xong lần đầu (streaming mode),
+  // tải full file ngầm + cache → lần sau instant load
+  useEffect(() => {
+    if (!docLoaded) return;
+    if (fileData?.kind !== 'url') return;
+
+    let cancelled = false;
+    const id = setTimeout(() => {
+      if (cancelled) return;
+      void fetchThroughCache(
+        STORE_FILES,
+        book.file_path,
+        () => getBookFileUrl(book.file_path),
+      ).catch(() => {
+        // best-effort, fail im lặng
+      });
+    }, 3000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(id);
+    };
+  }, [docLoaded, fileData, book.file_path]);
 
   useEffect(() => {
     localStorage.setItem(ZOOM_KEY, String(scale));
@@ -191,6 +230,12 @@ export default function PdfReader({ book }: { book: Book }) {
       (h: Highlight) => h.location.type === 'pdf' && h.location.page === pageNumber,
     );
   }, [highlightsQuery.data, pageNumber]);
+
+  const documentFile = useMemo(() => {
+    if (!fileData) return null;
+    if (fileData.kind === 'data') return { data: fileData.data };
+    return { url: fileData.url };
+  }, [fileData]);
 
   const captureSelection = useCallback(() => {
     const sel = window.getSelection();
@@ -473,7 +518,12 @@ export default function PdfReader({ book }: { book: Book }) {
           {fileData && (
             <div className="flex justify-center">
               <Document
-                file={fileData}
+                file={documentFile}
+                onLoadProgress={({ loaded, total }) => {
+                  // Chỉ track khi streaming (cache miss)
+                  if (fileData?.kind !== 'url') return;
+                  setDownloadProgress({ loaded, total });
+                }}
                 onLoadSuccess={async (pdf) => {
                   setNumPages(pdf.numPages);
                   setDocLoaded(true);
@@ -526,7 +576,9 @@ export default function PdfReader({ book }: { book: Book }) {
         {/* Skeleton chỉ hiện khi document chưa parse xong. Page render sau
             đó tốc độ ~100-300ms — không cần skeleton, để render canvas đè
             page cũ tự nhiên hơn. */}
-        {!error && (!fileData || !docLoaded) && <ReaderSkeleton withHeader={false} />}
+        {!error && (!fileData || !docLoaded) && (
+          <ReaderSkeleton withHeader={false} progress={downloadProgress} />
+        )}
 
         <ReaderSidebar
           open={sidebarOpen}
