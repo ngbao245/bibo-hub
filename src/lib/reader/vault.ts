@@ -26,6 +26,11 @@ export interface ReaderCreds {
   password: string;
 }
 
+export interface ReaderConfig {
+  url: string;
+  anonKey: string;
+}
+
 export class VaultError extends Error {
   code:
     | 'fetch_failed'
@@ -37,6 +42,90 @@ export class VaultError extends Error {
     super(message);
     this.code = code;
   }
+}
+
+/**
+ * Load Supabase config (URL và anon key) từ vault.
+ * Throw VaultError nếu lỗi.
+ */
+export async function loadReaderConfig(passphrase?: string): Promise<ReaderConfig> {
+  const sessionKey = useCryptoStore.getState().passphrase;
+  const persistedKey = readPersistedKey();
+  const candidates = uniqStrings([
+    passphrase,
+    APP_SECRET,
+    persistedKey,
+    sessionKey,
+  ]);
+  if (candidates.length === 0) {
+    throw new VaultError('decrypt_failed', 'No passphrase available');
+  }
+
+  let list;
+  try {
+    list = parseSettingList(await fetchJson<unknown>(API.CONFIGS));
+  } catch (err) {
+    throw new VaultError(
+      'fetch_failed',
+      `Cannot fetch Setting records: ${err instanceof Error ? err.message : 'unknown'}`,
+    );
+  }
+
+  const record = list.find(
+    (s) => s.group.trim().toLowerCase() === VAULT_GROUP.toLowerCase()
+      && s.type.trim().toLowerCase() === VAULT_TYPE.toLowerCase(),
+  );
+  if (!record) {
+    throw new VaultError(
+      'no_record',
+      `No Setting record with group="${VAULT_GROUP}" type="${VAULT_TYPE}"`,
+    );
+  }
+
+  const entries = CONFIG_KEYS.flatMap((k) => decodeFieldSlots(record[k] ?? '', k));
+
+  const find = (name: string) =>
+    entries.find((e) => e.k.toLowerCase() === name.toLowerCase());
+  const urlEntry = find('supabaseURL') ?? find('supabaseUrl') ?? find('url');
+  const keyEntry = find('supabaseAnonymousKey') ?? find('supabaseKey') ?? find('anonKey');
+
+  if (!urlEntry || !keyEntry) {
+    throw new VaultError(
+      'no_fields',
+      'Vault thiếu field "supabaseURL" hoặc "supabaseAnonymousKey"',
+    );
+  }
+
+  let url: string | null = null;
+  let anonKey: string | null = null;
+  let lastErr: unknown = null;
+
+  for (const key of candidates) {
+    try {
+      url = urlEntry.e === 1 || isEncrypted(urlEntry.v)
+        ? await decryptText(urlEntry.v, key)
+        : urlEntry.v;
+      anonKey = keyEntry.e === 1 || isEncrypted(keyEntry.v)
+        ? await decryptText(keyEntry.v, key)
+        : keyEntry.v;
+      break;
+    } catch (err) {
+      lastErr = err;
+      url = null;
+      anonKey = null;
+    }
+  }
+
+  if (url === null || anonKey === null) {
+    throw new VaultError(
+      'decrypt_failed',
+      `Decrypt failed with ${candidates.length} passphrase(s). Last error: ${lastErr instanceof Error ? lastErr.message : 'unknown'}`,
+    );
+  }
+  if (!url || !anonKey) {
+    throw new VaultError('empty_value', 'Decrypted URL/key is empty');
+  }
+  return { url, anonKey };
 }
 
 /**
