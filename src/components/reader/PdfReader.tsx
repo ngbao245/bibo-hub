@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { Document, Page } from 'react-pdf';
+import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun } from 'lucide-react';
 import { toast } from 'sonner';
 
-import '@/lib/reader/pdfjs-setup';
 import { getBookFileUrl } from '@/api/reader/books';
 import { fetchThroughCache, STORE_FILES } from '@/lib/reader/blob-cache';
 import { useProgress, useSaveProgress } from '@/api/reader/progress';
@@ -43,6 +42,22 @@ const THEME_BG: Record<ReaderTheme, string> = {
 };
 
 export default function PdfReader({ book }: { book: Book }) {
+  // Defensive check: ensure worker is configured
+  useEffect(() => {
+    const workerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
+    if (
+      !workerSrc ||
+      workerSrc === 'pdf.worker.mjs' ||
+      typeof workerSrc === 'string' && !workerSrc.startsWith('http') && !workerSrc.startsWith('/')
+    ) {
+      console.warn('⚠️ PDF.js worker invalid, re-initializing...');
+      pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+        'pdfjs-dist/build/pdf.worker.min.mjs',
+        import.meta.url
+      ).toString();
+    }
+  }, []);
+
   const progressQuery = useProgress(book.id);
   const saveProgress = useSaveProgress();
   const highlightsQuery = useHighlights(book.id);
@@ -173,7 +188,7 @@ export default function PdfReader({ book }: { book: Book }) {
   const pageHighlights = useMemo(() => {
     if (!highlightsQuery.data) return [] as Highlight[];
     return highlightsQuery.data.filter(
-      (h) => h.location.type === 'pdf' && h.location.page === pageNumber,
+      (h: Highlight) => h.location.type === 'pdf' && h.location.page === pageNumber,
     );
   }, [highlightsQuery.data, pageNumber]);
 
@@ -576,10 +591,10 @@ function HighlightOverlay({ highlights }: { highlights: Highlight[] }) {
           h.color === 'blue'
             ? 'rgba(59, 130, 246, 0.35)'
             : h.color === 'green'
-            ? 'rgba(34, 197, 94, 0.35)'
-            : h.color === 'red'
-            ? 'rgba(239, 68, 68, 0.35)'
-            : 'rgba(250, 204, 21, 0.35)';
+              ? 'rgba(34, 197, 94, 0.35)'
+              : h.color === 'red'
+                ? 'rgba(239, 68, 68, 0.35)'
+                : 'rgba(250, 204, 21, 0.35)';
         return h.location.rects.map((r, i) => (
           <div
             key={`${h.id}-${i}`}

@@ -2,7 +2,6 @@
 // Best-effort: trả null nếu fail.
 
 import { pdfjs } from 'react-pdf';
-import '@/lib/reader/pdfjs-setup';
 
 export interface CoverResult {
   blob: Blob;
