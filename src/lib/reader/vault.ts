@@ -31,6 +31,60 @@ export interface ReaderConfig {
   anonKey: string;
 }
 
+interface CachedConfig extends ReaderConfig {
+  cachedAt: number;
+}
+
+const CONFIG_CACHE_KEY = 'reader_supabase_config_v1';
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+/**
+ * Get cached Supabase config từ localStorage.
+ * Return null nếu không có hoặc expired.
+ */
+export function getCachedConfig(): ReaderConfig | null {
+  try {
+    const raw = localStorage.getItem(CONFIG_CACHE_KEY);
+    if (!raw) return null;
+    const cached = JSON.parse(raw) as CachedConfig;
+    if (!cached.url || !cached.anonKey || !cached.cachedAt) return null;
+    // Check expiry
+    if (Date.now() - cached.cachedAt > CACHE_TTL_MS) {
+      localStorage.removeItem(CONFIG_CACHE_KEY);
+      return null;
+    }
+    return { url: cached.url, anonKey: cached.anonKey };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cache Supabase config vào localStorage với timestamp.
+ */
+export function cacheConfig(config: ReaderConfig): void {
+  try {
+    const cached: CachedConfig = {
+      ...config,
+      cachedAt: Date.now(),
+    };
+    localStorage.setItem(CONFIG_CACHE_KEY, JSON.stringify(cached));
+  } catch {
+    // Ignore quota errors
+  }
+}
+
+/**
+ * Clear cached config (khi user logout hoặc config thay đổi)
+ */
+export function clearCachedConfig(): void {
+  try {
+    localStorage.removeItem(CONFIG_CACHE_KEY);
+  } catch {
+    // Ignore
+  }
+}
+
 export class VaultError extends Error {
   code:
     | 'fetch_failed'

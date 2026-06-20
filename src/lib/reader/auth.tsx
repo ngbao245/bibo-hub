@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { clearCachedConfig } from './vault';
 
 interface AuthState {
   user: User | null;
@@ -52,4 +53,6 @@ export async function signUpWithEmail(email: string, password: string) {
 
 export async function signOut() {
   await supabase.auth.signOut();
+  // Clear cached config khi logout để force re-fetch lần sau
+  clearCachedConfig();
 }

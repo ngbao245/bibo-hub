@@ -85,13 +85,31 @@ Dùng **Crypto tool** trong app:
 
 ## Flow hoạt động
 
+### First Login (Cold Start - No Cache):
 1. User vào `/reader/login`
-2. Component tự động gọi `loadReaderConfig()` và `loadReaderCreds()`
-3. Fetch record từ MockAPI `/Config` với `group="Readest"` và `type="Supabase"`
-4. Decrypt fields bằng passphrase (thử theo thứ tự: user input → APP_SECRET → localStorage → session)
-5. Re-initialize Supabase client với URL và anon key thực
-6. Sign in với email/password
-7. Navigate vào `/reader` (library)
+2. `useAuth()` check session → không có (client vẫn dùng placeholder)
+3. Component tự động gọi `loadReaderConfig()` và `loadReaderCreds()`
+4. Fetch record từ MockAPI `/Config` với `group="Readest"` và `type="Supabase"`
+5. Decrypt fields bằng passphrase (thử theo thứ tự: user input → APP_SECRET → localStorage → session)
+6. Re-initialize Supabase client với URL và anon key thực
+7. **Cache config vào localStorage** (TTL: 7 ngày)
+8. Sign in với email/password
+9. Navigate vào `/reader` (library)
+
+### Subsequent Visits (Warm Start - With Cache):
+1. Browser load → `supabase.ts` check `localStorage` for cached config
+2. ✅ Cache hit → khởi tạo client với URL/key thực ngay lập tức
+3. `useAuth()` gọi `getSession()` → ✅ Session restored từ localStorage
+4. User đã logged in → navigate thẳng vào `/reader`
+5. **Không cần fetch vault, không cần re-initialize, không cần re-login!**
+
+### Cache Invalidation:
+- **Manual logout**: Clear cache khi user sign out
+- **Auto expiry**: Cache tự expired sau 7 ngày
+- **Config change**: Nếu Supabase URL/key thay đổi, clear cache thủ công:
+  ```javascript
+  localStorage.removeItem('reader_supabase_config_v1');
+  ```
 
 ## Passphrase priority
 
@@ -119,26 +137,58 @@ Hệ thống thử decrypt theo thứ tự:
 - Check Console logs xem có `[reader-supabase] ✅ Reinitializing client` không
 - Nếu không thấy → vault load fail, xem error phía trên
 
+### Refresh trang vẫn phải login lại
+**✅ Đã fix!** Giờ session persist hoạt động tự nhiên:
+- Lần đầu login → config được cache trong localStorage (TTL: 7 ngày)
+- Refresh trang → client khởi tạo với cached config → session restore tự động
+- Chỉ cần login lại khi:
+  - Cache expired (sau 7 ngày)
+  - Logout thủ công
+  - Token Supabase expired (mặc định: 1 giờ, auto-refresh nếu còn refresh_token)
+
 ## Dev vs Production
 
 **Development (có .env.local):**
 - Supabase client dùng `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY` từ env
+- Session persist hoạt động bình thường
 - Không cần vault (nhưng vẫn hoạt động nếu có)
 
 **Production (không có .env):**
-- Client khởi tạo với placeholder `http://invalid`
-- **BẮT BUỘC** load config từ vault trước khi dùng
-- Login component tự động làm việc này
+- **First visit**: Client khởi tạo với placeholder `http://invalid`
+- Login component load config từ vault → cache vào localStorage
+- **Subsequent visits**: Client khởi tạo với cached config → session restore tự động
+- ✅ User chỉ cần login 1 lần, không cần login lại mỗi lần refresh!
 
 ## Kiểm tra
 
-Console logs khi login thành công:
+### First login (cold start):
+Console logs:
 ```
-[reader-supabase] ✅ Reinitializing client with dynamic config
-[reader] vault sign-in: success
+[reader-supabase] No cache or env vars — will load config from vault at runtime
+[reader-supabase] 🔄 Reinitializing client with new config
 ✅ Auto-signed in via vault
 ```
 
+localStorage sau login:
+```javascript
+// Config cache (new!)
+localStorage.getItem('reader_supabase_config_v1')
+// → {"url":"https://xxx.supabase.co","anonKey":"eyJ...","cachedAt":1234567890}
+
+// Supabase session (existing)
+localStorage.getItem('sb-xxx-auth-token')
+// → {"access_token":"...","refresh_token":"...","expires_at":...}
+```
+
+### Subsequent visits (warm start):
+Console logs:
+```
+[reader-supabase] ✅ Using cached config for instant session restore
+// Không còn "Reinitializing" message
+// Session tự động restore, không cần vault fetch
+```
+
 Network tab:
-- ✅ Request đi tới `https://xxx.supabase.co/auth/v1/token`
+- ✅ Không có request tới MockAPI `/Config` (vì dùng cache)
+- ✅ Request đi tới `https://xxx.supabase.co/auth/v1/token` (refresh token nếu cần)
 - ❌ Không còn request tới `http://invalid`

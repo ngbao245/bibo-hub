@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, BookOpen, KeyRound, Loader2 } from 'lucide-react';
 
 import { signInWithEmail, signUpWithEmail, useAuth } from '@/lib/reader/auth';
-import { loadReaderCreds, loadReaderConfig, persistKey, VaultError } from '@/lib/reader/vault';
+import { loadReaderCreds, loadReaderConfig, persistKey, VaultError, cacheConfig } from '@/lib/reader/vault';
 import { reinitializeSupabase } from '@/lib/reader/supabase';
 import { useCryptoStore } from '@/stores/cryptoStore';
 
@@ -41,9 +41,12 @@ export default function ReaderLogin() {
     try {
       // 1. Load Supabase config trước
       const config = await loadReaderConfig(opts.passphrase);
-      reinitializeSupabase(config.url, config.anonKey);
+      await reinitializeSupabase(config.url, config.anonKey);
 
-      // 2. Load credentials và sign in
+      // 2. Cache config để lần sau không cần fetch lại
+      cacheConfig(config);
+
+      // 3. Load credentials và sign in
       const creds = await loadReaderCreds(opts.passphrase);
       setEmail(creds.email);
       setPassword(creds.password);
