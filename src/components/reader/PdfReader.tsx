@@ -561,6 +561,7 @@ export default function PdfReader({ book }: { book: Book }) {
         {/* Edge zones — đặt ngoài scroll container để cố định theo viewport
             reader, không bị đẩy khuất khi user zoom rồi scroll xuống */}
         <EdgeClickZones
+          sidebarOpen={sidebarOpen}
           onPrev={() => {
             if (pageNumber <= 1) return;
             changePage((p) => Math.max(1, p - 1));
@@ -589,7 +590,7 @@ export default function PdfReader({ book }: { book: Book }) {
               activeTarget={pageNumber}
               onJump={(target) => {
                 if (typeof target === 'number') goToPage(target);
-                setSidebarOpen(false);
+                // setSidebarOpen(false);
               }}
             />
           )}
@@ -599,7 +600,7 @@ export default function PdfReader({ book }: { book: Book }) {
               onJump={(h: Highlight) => {
                 if (h.location.type !== 'pdf') return;
                 goToPage(h.location.page);
-                setSidebarOpen(false);
+                // setSidebarOpen(false);
               }}
             />
           )}
@@ -608,7 +609,7 @@ export default function PdfReader({ book }: { book: Book }) {
               doc={pdfDocRef.current}
               onJump={(page) => {
                 goToPage(page);
-                setSidebarOpen(false);
+                // setSidebarOpen(false);
               }}
             />
           )}
