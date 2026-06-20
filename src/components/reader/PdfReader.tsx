@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
-import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { getBookFileUrl } from '@/api/reader/books';
@@ -27,6 +27,14 @@ interface SelectionState {
   rectsNorm: Array<{ x: number; y: number; w: number; h: number }>;
   menuRect: { top: number; left: number; width: number; height: number };
 }
+
+interface SelectionMask {
+  top: number;    // % from top
+  bottom: number; // % from bottom
+  enabled: boolean;
+}
+
+const SELECTION_MASK_KEY = 'reader_selection_mask';
 
 const ZOOM_KEY = 'reader_pdf_zoom';
 const THEME_KEY = 'reader_pdf_theme';
@@ -89,6 +97,18 @@ export default function PdfReader({ book }: { book: Book }) {
   const [translateText, setTranslateText] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toc, setToc] = useState<TocItem[]>([]);
+  const [selectionMask, setSelectionMask] = useState<SelectionMask>(() => {
+    const stored = localStorage.getItem(SELECTION_MASK_KEY);
+    if (stored) {
+      try {
+        return JSON.parse(stored) as SelectionMask;
+      } catch {
+        // ignore
+      }
+    }
+    return { top: 5, bottom: 5, enabled: false };
+  });
+  const [showMaskBorders, setShowMaskBorders] = useState(false);
   /** Snapshot canvas trang trước → đè lên trong lúc react-pdf render
    * trang mới, tránh flicker nền tối. Tái sử dụng 1 offscreen canvas
    * và copy bitmap bằng drawImage — gần như free, không cần encode PNG. */
@@ -175,6 +195,10 @@ export default function PdfReader({ book }: { book: Book }) {
   useEffect(() => {
     localStorage.setItem(THEME_KEY, theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem(SELECTION_MASK_KEY, JSON.stringify(selectionMask));
+  }, [selectionMask]);
 
   const cycleTheme = useCallback(() => {
     setTheme((t) => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length]);
@@ -504,6 +528,46 @@ export default function PdfReader({ book }: { book: Book }) {
             <Sun className="h-4 w-4" />
           )}
         </button>
+        <span className="mx-1 h-4 w-px bg-zinc-800" />
+        <button
+          onClick={() => setSelectionMask((m) => ({ ...m, enabled: !m.enabled }))}
+          className="p-1.5 text-zinc-400 hover:text-zinc-100"
+          title={selectionMask.enabled ? 'Selection mask ON (click to disable)' : 'Selection mask OFF (click to enable)'}
+        >
+          {selectionMask.enabled ? (
+            <Eye className="h-4 w-4 text-blue-400" />
+          ) : (
+            <EyeOff className="h-4 w-4" />
+          )}
+        </button>
+        {selectionMask.enabled && (
+          <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+            <span>T:</span>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              step={1}
+              value={selectionMask.top}
+              onChange={(e) => setSelectionMask((m) => ({ ...m, top: Number(e.target.value) }))}
+              onFocus={() => setShowMaskBorders(true)}
+              onBlur={() => setShowMaskBorders(false)}
+              className="w-10 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center"
+            />
+            <span>B:</span>
+            <input
+              type="number"
+              min={0}
+              max={20}
+              step={1}
+              value={selectionMask.bottom}
+              onChange={(e) => setSelectionMask((m) => ({ ...m, bottom: Number(e.target.value) }))}
+              onFocus={() => setShowMaskBorders(true)}
+              onBlur={() => setShowMaskBorders(false)}
+              className="w-10 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center"
+            />
+          </div>
+        )}
       </ReaderHeader>
 
       <ProgressBar current={pageNumber} total={numPages} onJump={(p) => goToPage(p)} />
@@ -552,6 +616,13 @@ export default function PdfReader({ book }: { book: Book }) {
                     onRenderSuccess={clearSnapshot}
                   />
                   <HighlightOverlay highlights={pageHighlights} />
+                  {selectionMask.enabled && (
+                    <SelectionMaskOverlay
+                      top={selectionMask.top}
+                      bottom={selectionMask.bottom}
+                      showBorders={showMaskBorders}
+                    />
+                  )}
                 </div>
               </Document>
             </div>
@@ -664,6 +735,47 @@ function HighlightOverlay({ highlights }: { highlights: Highlight[] }) {
           />
         ));
       })}
+    </div>
+  );
+}
+
+/**
+ * SelectionMaskOverlay - Block text selection ở header/footer của PDF.
+ * User có thể adjust top/bottom percentage để skip page numbers, running headers, etc.
+ */
+function SelectionMaskOverlay({
+  top,
+  bottom,
+  showBorders,
+}: {
+  top: number;
+  bottom: number;
+  showBorders: boolean;
+}) {
+  return (
+    <div className="pointer-events-none absolute inset-0">
+      {/* Top mask */}
+      <div
+        className="absolute left-0 right-0 top-0 pointer-events-auto transition-all"
+        style={{
+          height: `${top}%`,
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          backgroundColor: showBorders ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+          borderBottom: showBorders ? '2px dashed rgba(59, 130, 246, 0.6)' : 'none',
+        }}
+      />
+      {/* Bottom mask */}
+      <div
+        className="absolute bottom-0 left-0 right-0 pointer-events-auto transition-all"
+        style={{
+          height: `${bottom}%`,
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+          backgroundColor: showBorders ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
+          borderTop: showBorders ? '2px dashed rgba(59, 130, 246, 0.6)' : 'none',
+        }}
+      />
     </div>
   );
 }
