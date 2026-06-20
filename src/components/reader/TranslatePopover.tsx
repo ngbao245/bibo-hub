@@ -1,7 +1,10 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Languages, Loader2, X } from 'lucide-react';
-import { translate } from '@/lib/reader/translate';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  translate,
+  type TranslateResult,
+} from '@/lib/reader/translate';
 
 interface Props {
   text: string;
@@ -11,25 +14,61 @@ interface Props {
 const TARGET_KEY = 'reader_translate_target';
 const REMOVE_LINEBREAK_KEY = 'reader_translate_remove_linebreak';
 
+function normalizeText(text: string, removeLinebreak: boolean) {
+  if (!removeLinebreak) return text;
+
+  return text
+    .replace(/[ \t]*(?:\r\n|\r|\n)+[ \t]*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function isAbortError(error: unknown) {
+  return error instanceof DOMException && error.name === 'AbortError';
+}
+
 export default function TranslatePopover({ text, onClose }: Props) {
-  const [target, setTarget] = useState(() => localStorage.getItem(TARGET_KEY) || 'vi');
-  const [removeLinebreak, setRemoveLinebreak] = useState(
-    () => localStorage.getItem(REMOVE_LINEBREAK_KEY) !== 'false' // Default true
+  const [target, setTarget] = useState(
+    () => localStorage.getItem(TARGET_KEY) || 'vi',
   );
-  const [editedText, setEditedText] = useState(text);
-  const [result, setResult] = useState<string | null>(null);
+
+  const [removeLinebreak, setRemoveLinebreak] = useState(() => {
+    const stored = localStorage.getItem(REMOVE_LINEBREAK_KEY);
+    return stored !== 'false';
+  });
+
+  const [editedText, setEditedText] = useState(() =>
+    normalizeText(
+      text,
+      localStorage.getItem(REMOVE_LINEBREAK_KEY) !== 'false',
+    ),
+  );
+
+  const [result, setResult] = useState<TranslateResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastTranslated, setLastTranslated] = useState<{
-    text: string;
-    target: string;
-  } | null>(null);
 
-  // Track xem đã mount chưa để tránh auto-fix lúc init
-  const isFirstMount = useRef(true);
+  const removeLinebreakRef = useRef(removeLinebreak);
+  const cacheRef = useRef(new Map<string, TranslateResult>());
 
+  const wordCount = editedText.trim().split(/\s+/).filter(Boolean).length;
+  const shouldShowDictionary = wordCount > 0 && wordCount <= 4;
+
+  // Khi user select text mới từ Reader:
+  // Nếu Unwrap đang bật thì tự nối line breaks trước khi hiển thị.
   useEffect(() => {
-    setEditedText(text);
+    const nextText = normalizeText(
+      text,
+      removeLinebreakRef.current,
+    );
+
+    setEditedText((previous) => {
+      if (previous === nextText) return previous;
+      return nextText;
+    });
+
+    setResult(null);
+    setError(null);
   }, [text]);
 
   useEffect(() => {
@@ -37,90 +76,154 @@ export default function TranslatePopover({ text, onClose }: Props) {
   }, [target]);
 
   useEffect(() => {
-    localStorage.setItem(REMOVE_LINEBREAK_KEY, String(removeLinebreak));
+    localStorage.setItem(
+      REMOVE_LINEBREAK_KEY,
+      String(removeLinebreak),
+    );
   }, [removeLinebreak]);
 
-  // Khi toggle Unwrap ON → fix text hiện tại nếu có newlines
-  // Skip lần đầu mount để không giựt
   useEffect(() => {
-    if (isFirstMount.current) {
-      isFirstMount.current = false;
-      return;
-    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
 
-    if (removeLinebreak) {
-      setEditedText((prev) => prev.includes('\n') ? prev.replace(/\n+/g, ' ') : prev);
-    }
-  }, [removeLinebreak]);
+    window.addEventListener('keydown', handleKeyDown);
 
-  // Handle textarea change với auto-fix
-  const handleTextChange = (newText: string) => {
-    // Nếu removeLinebreak ON và text có newlines → tự động fix
-    if (removeLinebreak && newText.includes('\n')) {
-      setEditedText(newText.replace(/\n+/g, ' '));
-    } else {
-      setEditedText(newText);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  const handleUnwrapChange = (
+    checked: boolean | 'indeterminate',
+  ) => {
+    const nextValue = checked === true;
+
+    removeLinebreakRef.current = nextValue;
+    setRemoveLinebreak(nextValue);
+
+    // Chỉ khi BẬT Unwrap mới sửa textarea.
+    // Khi TẮT: giữ nguyên textarea + giữ nguyên kết quả dịch.
+    if (nextValue) {
+      setEditedText((previous) => {
+        const normalized = normalizeText(previous, true);
+
+        return normalized === previous ? previous : normalized;
+      });
     }
   };
 
+  const handleTextChange = (value: string) => {
+    const nextText = normalizeText(
+      value,
+      removeLinebreakRef.current,
+    );
+
+    setEditedText(nextText);
+    setResult(null);
+    setError(null);
+  };
+
   useEffect(() => {
-    let cancelled = false;
-    let timeoutId: number | undefined;
+    const cleanText = editedText.trim();
 
-    const doTranslate = () => {
-      let cleanText = removeLinebreak ? editedText.replace(/\n+/g, ' ') : editedText;
-      cleanText = cleanText.trim();
-
-      // Skip nếu text rỗng
-      if (!cleanText) {
-        setResult(null);
-        setError(null);
-        setLastTranslated(null); // Clear cache khi xóa hết text
-        return;
-      }
-
-      // Check nếu đã dịch rồi thì skip
-      if (
-        lastTranslated &&
-        lastTranslated.text === cleanText &&
-        lastTranslated.target === target
-      ) {
-        return;
-      }
-
-      setLoading(true);
+    if (!cleanText) {
+      setResult(null);
       setError(null);
-      translate({ text: cleanText, source: 'auto', target })
-        .then((r) => {
-          if (cancelled) return;
-          setResult(r.translated);
-          setLastTranslated({ text: cleanText, target });
-        })
-        .catch((e: unknown) => {
-          if (cancelled) return;
-          setError(e instanceof Error ? e.message : 'Translate failed');
-        })
-        .finally(() => !cancelled && setLoading(false));
-    };
+      setLoading(false);
+      return;
+    }
 
-    // Debounce 1 giây
-    timeoutId = window.setTimeout(doTranslate, 1000);
+    if (cleanText.length > 4000) {
+      setResult(null);
+      setLoading(false);
+      setError(
+        'Please translate fewer than 4,000 characters at a time.',
+      );
+      return;
+    }
+
+    const cacheKey = `${target}::${cleanText}`;
+    const cachedResult = cacheRef.current.get(cacheKey);
+
+    if (cachedResult) {
+      setResult(cachedResult);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const translatedResult = await translate(
+          {
+            text: cleanText,
+            source: 'auto',
+            target,
+          },
+          controller.signal,
+        );
+
+        if (controller.signal.aborted) return;
+
+        if (cacheRef.current.size >= 30) {
+          const oldestKey = cacheRef.current
+            .keys()
+            .next()
+            .value as string | undefined;
+
+          if (oldestKey) {
+            cacheRef.current.delete(oldestKey);
+          }
+        }
+
+        cacheRef.current.set(cacheKey, translatedResult);
+        setResult(translatedResult);
+      } catch (err) {
+        if (controller.signal.aborted || isAbortError(err)) {
+          return;
+        }
+
+        setError(
+          err instanceof Error
+            ? err.message
+            : 'Translation failed',
+        );
+      } finally {
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
+      }
+    }, 450);
 
     return () => {
-      cancelled = true;
-      if (timeoutId) clearTimeout(timeoutId);
+      window.clearTimeout(timeoutId);
+      controller.abort();
     };
-  }, [editedText, target, removeLinebreak, lastTranslated]);
+  }, [editedText, target]);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-80 border border-zinc-700 bg-zinc-900 shadow-2xl">
       <div className="flex items-center justify-between border-b border-zinc-800 px-3 py-2">
         <div className="flex items-center gap-2 text-xs text-zinc-300">
           <Languages className="h-3.5 w-3.5" />
+
           <span>Translate</span>
+
           <select
             value={target}
-            onChange={(e) => setTarget(e.target.value)}
+            onChange={(event) => {
+              setTarget(event.target.value);
+              setResult(null);
+              setError(null);
+            }}
             className="border border-zinc-700 bg-zinc-800 px-1 py-0.5 text-[11px] outline-none"
           >
             <option value="vi">Vietnamese</option>
@@ -132,26 +235,37 @@ export default function TranslatePopover({ text, onClose }: Props) {
             <option value="de">German</option>
             <option value="es">Spanish</option>
           </select>
+
           <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-zinc-400">
             <Checkbox
               checked={removeLinebreak}
-              onCheckedChange={(checked) => setRemoveLinebreak(checked === true)}
+              onCheckedChange={handleUnwrapChange}
               className="h-3.5 w-3.5"
             />
+
             <span>Unwrap</span>
           </label>
         </div>
-        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200">
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="text-zinc-500 hover:text-zinc-200"
+          aria-label="Close translation popup"
+        >
           <X className="h-3.5 w-3.5" />
         </button>
       </div>
-      <div className="space-y-2 p-3 text-sm">
+
+      <div className="max-h-[70vh] space-y-2 overflow-y-auto p-3 text-sm">
         <textarea
           value={editedText}
-          onChange={(e) => handleTextChange(e.target.value)}
-          className="w-full resize-none border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-200 outline-none focus:border-primary"
+          onChange={(event) => handleTextChange(event.target.value)}
+          placeholder="Enter text to translate..."
+          className="w-full resize-none border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-200 outline-none placeholder:text-zinc-600 focus:border-primary"
           rows={3}
         />
+
         <div className="border-t border-zinc-800 pt-2">
           {loading ? (
             <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -160,11 +274,64 @@ export default function TranslatePopover({ text, onClose }: Props) {
             </div>
           ) : error ? (
             <p className="text-xs text-red-400">{error}</p>
-          ) : (
-            <p className="whitespace-pre-wrap text-zinc-100">{result}</p>
-          )}
+          ) : result ? (
+            <>
+              <p className="whitespace-pre-wrap text-zinc-100">
+                {result.translated}
+              </p>
+
+              {shouldShowDictionary &&
+                result.dictionary &&
+                result.dictionary.length > 0 && (
+                  <div className="hidden md:block">
+                    <DictionaryView result={result} />
+                  </div>
+                )}
+            </>
+          ) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+function DictionaryView({ result }: { result: TranslateResult }) {
+  return (
+    <div className="mt-3 space-y-3">
+      {result.dictionary?.map((entry) => (
+        <div key={entry.partOfSpeech} className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-400">
+            {entry.partOfSpeech}
+          </p>
+
+          {entry.translations.length > 0 && (
+            <p className="text-xs leading-relaxed text-zinc-400">
+              {entry.translations.slice(0, 8).join(', ')}
+            </p>
+          )}
+
+          {entry.definitions.length > 0 && (
+            <div className="space-y-2 border-l-2 border-zinc-700 pl-3">
+              {entry.definitions.slice(0, 3).map((item, index) => (
+                <div
+                  key={`${item.definition}-${index}`}
+                  className="space-y-1"
+                >
+                  <p className="text-xs leading-relaxed text-zinc-300">
+                    {item.definition}
+                  </p>
+
+                  {item.example && (
+                    <p className="text-xs italic text-zinc-500">
+                      “{item.example}”
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
