@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Languages, Loader2, X } from 'lucide-react';
 import { translate } from '@/lib/reader/translate';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -14,7 +14,7 @@ const REMOVE_LINEBREAK_KEY = 'reader_translate_remove_linebreak';
 export default function TranslatePopover({ text, onClose }: Props) {
   const [target, setTarget] = useState(() => localStorage.getItem(TARGET_KEY) || 'vi');
   const [removeLinebreak, setRemoveLinebreak] = useState(
-    () => localStorage.getItem(REMOVE_LINEBREAK_KEY) === 'true'
+    () => localStorage.getItem(REMOVE_LINEBREAK_KEY) !== 'false' // Default true
   );
   const [editedText, setEditedText] = useState(text);
   const [result, setResult] = useState<string | null>(null);
@@ -23,8 +23,10 @@ export default function TranslatePopover({ text, onClose }: Props) {
   const [lastTranslated, setLastTranslated] = useState<{
     text: string;
     target: string;
-    removeLinebreak: boolean;
   } | null>(null);
+
+  // Track xem đã mount chưa để tránh auto-fix lúc init
+  const isFirstMount = useRef(true);
 
   useEffect(() => {
     setEditedText(text);
@@ -37,6 +39,29 @@ export default function TranslatePopover({ text, onClose }: Props) {
   useEffect(() => {
     localStorage.setItem(REMOVE_LINEBREAK_KEY, String(removeLinebreak));
   }, [removeLinebreak]);
+
+  // Khi toggle Unwrap ON → fix text hiện tại nếu có newlines
+  // Skip lần đầu mount để không giựt
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+
+    if (removeLinebreak) {
+      setEditedText((prev) => prev.includes('\n') ? prev.replace(/\n+/g, ' ') : prev);
+    }
+  }, [removeLinebreak]);
+
+  // Handle textarea change với auto-fix
+  const handleTextChange = (newText: string) => {
+    // Nếu removeLinebreak ON và text có newlines → tự động fix
+    if (removeLinebreak && newText.includes('\n')) {
+      setEditedText(newText.replace(/\n+/g, ' '));
+    } else {
+      setEditedText(newText);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -58,8 +83,7 @@ export default function TranslatePopover({ text, onClose }: Props) {
       if (
         lastTranslated &&
         lastTranslated.text === cleanText &&
-        lastTranslated.target === target &&
-        lastTranslated.removeLinebreak === removeLinebreak
+        lastTranslated.target === target
       ) {
         return;
       }
@@ -70,7 +94,7 @@ export default function TranslatePopover({ text, onClose }: Props) {
         .then((r) => {
           if (cancelled) return;
           setResult(r.translated);
-          setLastTranslated({ text: cleanText, target, removeLinebreak });
+          setLastTranslated({ text: cleanText, target });
         })
         .catch((e: unknown) => {
           if (cancelled) return;
@@ -124,7 +148,7 @@ export default function TranslatePopover({ text, onClose }: Props) {
       <div className="space-y-2 p-3 text-sm">
         <textarea
           value={editedText}
-          onChange={(e) => setEditedText(e.target.value)}
+          onChange={(e) => handleTextChange(e.target.value)}
           className="w-full resize-none border border-zinc-700 bg-zinc-800 p-2 text-xs text-zinc-200 outline-none focus:border-primary"
           rows={3}
         />
