@@ -110,6 +110,7 @@ export default function PdfReader({ book }: { book: Book }) {
     return { top: 5, bottom: 5, enabled: false };
   });
   const [showMaskBorders, setShowMaskBorders] = useState(false);
+  const [mobilePageInputOpen, setMobilePageInputOpen] = useState(false);
   /** Snapshot canvas trang trước → đè lên trong lúc react-pdf render
    * trang mới, tránh flicker nền tối. Tái sử dụng 1 offscreen canvas
    * và copy bitmap bằng drawImage — gần như free, không cần encode PNG. */
@@ -466,14 +467,15 @@ export default function PdfReader({ book }: { book: Book }) {
           Chỉ enable lại cho PDF content (pageWrapRef có select-text).
           Selection mask sẽ block thêm header/footer của PDF page. */}
       <ReaderHeader title={book.title}>
+        {/* Desktop: Menu button always visible */}
         <button
           onClick={() => setSidebarOpen((v) => !v)}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100"
+          className="hidden md:block p-1.5 text-zinc-400 hover:text-zinc-100"
           title="Mục lục / Highlights"
         >
           <Menu className="h-4 w-4" />
         </button>
-        <span className="mx-1 h-4 w-px bg-zinc-800" />
+        <span className="mx-1 h-4 w-px bg-zinc-800 hidden md:block" />
         
         {/* Mobile: Compact controls */}
         <div className="flex items-center gap-1 md:hidden">
@@ -485,7 +487,47 @@ export default function PdfReader({ book }: { book: Book }) {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          <span className="text-xs text-zinc-500 min-w-[3rem] text-center">{pageNumber}/{numPages || '?'}</span>
+          
+          {/* Page counter - clickable to open input */}
+          {mobilePageInputOpen ? (
+            <input
+              type="number"
+              min={1}
+              max={numPages || 1}
+              placeholder={String(pageNumber)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const value = e.currentTarget.value.trim();
+                  const n = value === '' ? pageNumber : Number(value);
+                  if (Number.isFinite(n) && n >= 1 && n <= (numPages || n)) {
+                    changePage(n);
+                  }
+                  setMobilePageInputOpen(false);
+                } else if (e.key === 'Escape') {
+                  setMobilePageInputOpen(false);
+                }
+              }}
+              onBlur={(e) => {
+                const value = e.currentTarget.value.trim();
+                const n = value === '' ? pageNumber : Number(value);
+                if (Number.isFinite(n) && n >= 1 && n <= (numPages || n)) {
+                  changePage(n);
+                }
+                setMobilePageInputOpen(false);
+              }}
+              autoFocus
+              className="w-16 border border-zinc-700 bg-zinc-800 px-2 py-0.5 text-center text-xs text-zinc-200 rounded"
+            />
+          ) : (
+            <button
+              onClick={() => setMobilePageInputOpen(true)}
+              className="text-xs text-zinc-500 min-w-[3rem] text-center hover:text-zinc-300 transition-colors px-1 py-0.5 rounded hover:bg-zinc-800"
+              title="Click to jump to page"
+            >
+              {pageNumber}/{numPages || '?'}
+            </button>
+          )}
+          
           <button
             onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
             disabled={pageNumber >= numPages}
@@ -495,6 +537,13 @@ export default function PdfReader({ book }: { book: Book }) {
             <ChevronRight className="h-4 w-4" />
           </button>
           <span className="mx-1 h-4 w-px bg-zinc-800" />
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100"
+            title="Mục lục / Highlights"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
           <SettingsDropdown
             theme={theme}
             onThemeChange={cycleTheme}
