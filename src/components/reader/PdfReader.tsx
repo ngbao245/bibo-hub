@@ -18,6 +18,7 @@ import HighlightList from './sidebar/HighlightList';
 import TocList, { type TocItem } from './sidebar/TocList';
 import PdfSearchTab from './sidebar/PdfSearchTab';
 import ProgressBar from './ProgressBar';
+import SettingsDropdown from './SettingsDropdown';
 import type { Book, Highlight } from '@/lib/reader/types';
 import { ReaderHeader } from './ReaderHeader';
 
@@ -460,7 +461,10 @@ export default function PdfReader({ book }: { book: Book }) {
   }, [numPages, changePage]);
 
   return (
-    <div className="flex h-full flex-col bg-zinc-950 text-zinc-100">
+    <div className="flex h-full flex-col bg-zinc-950 text-zinc-100 select-none">
+      {/* Disable text selection cho toàn bộ UI.
+          Chỉ enable lại cho PDF content (pageWrapRef có select-text).
+          Selection mask sẽ block thêm header/footer của PDF page. */}
       <ReaderHeader title={book.title}>
         <button
           onClick={() => setSidebarOpen((v) => !v)}
@@ -470,104 +474,143 @@ export default function PdfReader({ book }: { book: Book }) {
           <Menu className="h-4 w-4" />
         </button>
         <span className="mx-1 h-4 w-px bg-zinc-800" />
-        <button
-          onClick={() => changePage((p) => Math.max(1, p - 1))}
-          disabled={pageNumber <= 1}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
-          title="Previous page (←)"
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
-        <input
-          type="number"
-          min={1}
-          max={numPages || 1}
-          value={pageNumber}
-          onChange={(e) => {
-            const n = Number(e.target.value);
-            if (Number.isFinite(n)) changePage(n);
-          }}
-          className="w-12 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center text-xs"
-        />
-        <span className="text-xs text-zinc-500">/ {numPages || '?'}</span>
-        <button
-          onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
-          disabled={pageNumber >= numPages}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
-          title="Next page (→)"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
-        <span className="mx-1 h-4 w-px bg-zinc-800" />
-        <button
-          onClick={() => changeScale((s) => s - 0.1)}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100"
-          title="Zoom out"
-        >
-          <Minus className="h-4 w-4" />
-        </button>
-        <span className="text-xs font-mono text-zinc-500">{Math.round(scale * 100)}%</span>
-        <button
-          onClick={() => changeScale((s) => s + 0.1)}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100"
-          title="Zoom in"
-        >
-          <Plus className="h-4 w-4" />
-        </button>
-        <span className="mx-1 h-4 w-px bg-zinc-800" />
-        <button
-          onClick={cycleTheme}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100"
-          title={`Theme: ${theme} (click to switch)`}
-        >
-          {theme === 'dark' ? (
-            <Moon className="h-4 w-4" />
-          ) : theme === 'sepia' ? (
-            <Sun className="h-4 w-4 text-amber-400" />
-          ) : (
-            <Sun className="h-4 w-4" />
+        
+        {/* Mobile: Compact controls */}
+        <div className="flex items-center gap-1 md:hidden">
+          <button
+            onClick={() => changePage((p) => Math.max(1, p - 1))}
+            disabled={pageNumber <= 1}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
+            title="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <span className="text-xs text-zinc-500 min-w-[3rem] text-center">{pageNumber}/{numPages || '?'}</span>
+          <button
+            onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
+            disabled={pageNumber >= numPages}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
+            title="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <span className="mx-1 h-4 w-px bg-zinc-800" />
+          <SettingsDropdown
+            theme={theme}
+            onThemeChange={cycleTheme}
+            selectionMaskEnabled={selectionMask.enabled}
+            onToggleSelectionMask={() => setSelectionMask((m) => ({ ...m, enabled: !m.enabled }))}
+            selectionMaskTop={selectionMask.top}
+            selectionMaskBottom={selectionMask.bottom}
+            onMaskTopChange={(value) => setSelectionMask((m) => ({ ...m, top: value }))}
+            onMaskBottomChange={(value) => setSelectionMask((m) => ({ ...m, bottom: value }))}
+            scale={scale}
+            onZoomIn={() => changeScale((s) => s + 0.1)}
+            onZoomOut={() => changeScale((s) => s - 0.1)}
+          />
+        </div>
+
+        {/* Desktop: Full controls */}
+        <div className="hidden md:flex items-center gap-1">
+          <button
+            onClick={() => changePage((p) => Math.max(1, p - 1))}
+            disabled={pageNumber <= 1}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
+            title="Previous page (←)"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <input
+            type="number"
+            min={1}
+            max={numPages || 1}
+            value={pageNumber}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isFinite(n)) changePage(n);
+            }}
+            className="w-12 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center text-xs"
+          />
+          <span className="text-xs text-zinc-500">/ {numPages || '?'}</span>
+          <button
+            onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
+            disabled={pageNumber >= numPages}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
+            title="Next page (→)"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <span className="mx-1 h-4 w-px bg-zinc-800" />
+          <button
+            onClick={() => changeScale((s) => s - 0.1)}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100"
+            title="Zoom out"
+          >
+            <Minus className="h-4 w-4" />
+          </button>
+          <span className="text-xs font-mono text-zinc-500">{Math.round(scale * 100)}%</span>
+          <button
+            onClick={() => changeScale((s) => s + 0.1)}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100"
+            title="Zoom in"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+          <span className="mx-1 h-4 w-px bg-zinc-800" />
+          <button
+            onClick={cycleTheme}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100"
+            title={`Theme: ${theme} (click to switch)`}
+          >
+            {theme === 'dark' ? (
+              <Moon className="h-4 w-4" />
+            ) : theme === 'sepia' ? (
+              <Sun className="h-4 w-4 text-amber-400" />
+            ) : (
+              <Sun className="h-4 w-4" />
+            )}
+          </button>
+          <span className="mx-1 h-4 w-px bg-zinc-800" />
+          <button
+            onClick={() => setSelectionMask((m) => ({ ...m, enabled: !m.enabled }))}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100"
+            title={selectionMask.enabled ? 'Selection mask ON (click to disable)' : 'Selection mask OFF (click to enable)'}
+          >
+            {selectionMask.enabled ? (
+              <Eye className="h-4 w-4 text-blue-400" />
+            ) : (
+              <EyeOff className="h-4 w-4" />
+            )}
+          </button>
+          {selectionMask.enabled && (
+            <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+              <span>T:</span>
+              <input
+                type="number"
+                min={0}
+                max={20}
+                step={1}
+                value={selectionMask.top}
+                onChange={(e) => setSelectionMask((m) => ({ ...m, top: Number(e.target.value) }))}
+                onFocus={() => setShowMaskBorders(true)}
+                onBlur={() => setShowMaskBorders(false)}
+                className="w-10 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center"
+              />
+              <span>B:</span>
+              <input
+                type="number"
+                min={0}
+                max={20}
+                step={1}
+                value={selectionMask.bottom}
+                onChange={(e) => setSelectionMask((m) => ({ ...m, bottom: Number(e.target.value) }))}
+                onFocus={() => setShowMaskBorders(true)}
+                onBlur={() => setShowMaskBorders(false)}
+                className="w-10 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center"
+              />
+            </div>
           )}
-        </button>
-        <span className="mx-1 h-4 w-px bg-zinc-800" />
-        <button
-          onClick={() => setSelectionMask((m) => ({ ...m, enabled: !m.enabled }))}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100"
-          title={selectionMask.enabled ? 'Selection mask ON (click to disable)' : 'Selection mask OFF (click to enable)'}
-        >
-          {selectionMask.enabled ? (
-            <Eye className="h-4 w-4 text-blue-400" />
-          ) : (
-            <EyeOff className="h-4 w-4" />
-          )}
-        </button>
-        {selectionMask.enabled && (
-          <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-            <span>T:</span>
-            <input
-              type="number"
-              min={0}
-              max={20}
-              step={1}
-              value={selectionMask.top}
-              onChange={(e) => setSelectionMask((m) => ({ ...m, top: Number(e.target.value) }))}
-              onFocus={() => setShowMaskBorders(true)}
-              onBlur={() => setShowMaskBorders(false)}
-              className="w-10 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center"
-            />
-            <span>B:</span>
-            <input
-              type="number"
-              min={0}
-              max={20}
-              step={1}
-              value={selectionMask.bottom}
-              onChange={(e) => setSelectionMask((m) => ({ ...m, bottom: Number(e.target.value) }))}
-              onFocus={() => setShowMaskBorders(true)}
-              onBlur={() => setShowMaskBorders(false)}
-              className="w-10 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center"
-            />
-          </div>
-        )}
+        </div>
       </ReaderHeader>
 
       <ProgressBar current={pageNumber} total={numPages} onJump={(p) => goToPage(p)} />
@@ -606,7 +649,7 @@ export default function PdfReader({ book }: { book: Book }) {
                 loading={null}
                 className="shadow-2xl"
               >
-                <div ref={pageWrapRef} className="relative" data-pdf-theme={theme}>
+                <div ref={pageWrapRef} className="relative select-text" data-pdf-theme={theme}>
                   <Page
                     pageNumber={pageNumber}
                     scale={scale}
@@ -632,18 +675,18 @@ export default function PdfReader({ book }: { book: Book }) {
         {/* Edge zones — đặt ngoài scroll container để cố định theo viewport
             reader, không bị đẩy khuất khi user zoom rồi scroll xuống */}
         <EdgeClickZones
-          sidebarOpen={sidebarOpen}
-          onPrev={() => {
-            if (pageNumber <= 1) return;
-            changePage((p) => Math.max(1, p - 1));
-            if (containerRef.current) containerRef.current.scrollTop = 0;
-          }}
-          onNext={() => {
-            if (numPages && pageNumber >= numPages) return;
-            changePage((p) => Math.min(numPages || p, p + 1));
-            if (containerRef.current) containerRef.current.scrollTop = 0;
-          }}
-        />
+            sidebarOpen={sidebarOpen}
+            onPrev={() => {
+              if (pageNumber <= 1) return;
+              changePage((p) => Math.max(1, p - 1));
+              if (containerRef.current) containerRef.current.scrollTop = 0;
+            }}
+            onNext={() => {
+              if (numPages && pageNumber >= numPages) return;
+              changePage((p) => Math.min(numPages || p, p + 1));
+              if (containerRef.current) containerRef.current.scrollTop = 0;
+            }}
+          />
 
         {/* Skeleton chỉ hiện khi document chưa parse xong. Page render sau
             đó tốc độ ~100-300ms — không cần skeleton, để render canvas đè
@@ -753,28 +796,34 @@ function SelectionMaskOverlay({
   showBorders: boolean;
 }) {
   return (
-    <div className="pointer-events-none absolute inset-0">
+    <div className="pointer-events-none absolute inset-0 z-20">
       {/* Top mask */}
       <div
-        className="absolute left-0 right-0 top-0 pointer-events-auto transition-all"
+        className="absolute left-0 right-0 top-0 pointer-events-auto transition-all cursor-not-allowed"
         style={{
           height: `${top}%`,
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
           backgroundColor: showBorders ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
           borderBottom: showBorders ? '2px dashed rgba(59, 130, 246, 0.6)' : 'none',
         }}
+        onMouseDown={(e) => e.preventDefault()}
       />
       {/* Bottom mask */}
       <div
-        className="absolute bottom-0 left-0 right-0 pointer-events-auto transition-all"
+        className="absolute bottom-0 left-0 right-0 pointer-events-auto transition-all cursor-not-allowed"
         style={{
           height: `${bottom}%`,
           userSelect: 'none',
           WebkitUserSelect: 'none',
+          MozUserSelect: 'none',
+          msUserSelect: 'none',
           backgroundColor: showBorders ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
           borderTop: showBorders ? '2px dashed rgba(59, 130, 246, 0.6)' : 'none',
         }}
+        onMouseDown={(e) => e.preventDefault()}
       />
     </div>
   );
