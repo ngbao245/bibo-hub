@@ -478,13 +478,13 @@ export default function PdfReader({ book }: { book: Book }) {
       <ReaderHeader title={book.title}>
         <button
           onClick={() => setSidebarOpen((v) => !v)}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100"
+          className="hidden md:flex p-1.5 text-zinc-400 hover:text-zinc-100"
           title="Mục lục / Highlights"
         >
           <Menu className="h-4 w-4" />
         </button>
-        <span className="mx-1 h-4 w-px bg-zinc-800" />
-        
+        <span className="hidden md:block mx-1 h-4 w-px bg-zinc-800" />
+
         {/* Mobile: Compact controls */}
         <div className="flex items-center gap-1 md:hidden">
           <button
@@ -495,7 +495,7 @@ export default function PdfReader({ book }: { book: Book }) {
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          
+
           {/* Page counter - clickable to open input */}
           {mobilePageInputOpen ? (
             <input
@@ -535,7 +535,7 @@ export default function PdfReader({ book }: { book: Book }) {
               {pageNumber}/{numPages || '?'}
             </button>
           )}
-          
+
           <button
             onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
             disabled={pageNumber >= numPages}
@@ -545,6 +545,13 @@ export default function PdfReader({ book }: { book: Book }) {
             <ChevronRight className="h-4 w-4" />
           </button>
           <span className="mx-1 h-4 w-px bg-zinc-800" />
+          <button
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="p-1.5 text-zinc-400 hover:text-zinc-100"
+            title="Mục lục / Highlights"
+          >
+            <Menu className="h-4 w-4" />
+          </button>
           <SettingsDropdown
             theme={theme}
             onThemeChange={cycleTheme}
@@ -701,9 +708,9 @@ export default function PdfReader({ book }: { book: Book }) {
                 loading={null}
                 className="shadow-2xl"
               >
-                <div 
-                  ref={pageWrapRef} 
-                  className="relative select-text" 
+                <div
+                  ref={pageWrapRef}
+                  className="relative select-text"
                   data-pdf-theme={theme}
                   style={disableIosCallout ? { WebkitTouchCallout: 'none' } as React.CSSProperties : undefined}
                 >
@@ -732,18 +739,18 @@ export default function PdfReader({ book }: { book: Book }) {
         {/* Edge zones — đặt ngoài scroll container để cố định theo viewport
             reader, không bị đẩy khuất khi user zoom rồi scroll xuống */}
         <EdgeClickZones
-            sidebarOpen={sidebarOpen}
-            onPrev={() => {
-              if (pageNumber <= 1) return;
-              changePage((p) => Math.max(1, p - 1));
-              if (containerRef.current) containerRef.current.scrollTop = 0;
-            }}
-            onNext={() => {
-              if (numPages && pageNumber >= numPages) return;
-              changePage((p) => Math.min(numPages || p, p + 1));
-              if (containerRef.current) containerRef.current.scrollTop = 0;
-            }}
-          />
+          sidebarOpen={sidebarOpen}
+          onPrev={() => {
+            if (pageNumber <= 1) return;
+            changePage((p) => Math.max(1, p - 1));
+            if (containerRef.current) containerRef.current.scrollTop = 0;
+          }}
+          onNext={() => {
+            if (numPages && pageNumber >= numPages) return;
+            changePage((p) => Math.min(numPages || p, p + 1));
+            if (containerRef.current) containerRef.current.scrollTop = 0;
+          }}
+        />
 
         {/* Skeleton chỉ hiện khi document chưa parse xong. Page render sau
             đó tốc độ ~100-300ms — không cần skeleton, để render canvas đè
