@@ -119,17 +119,30 @@ input[type='number'] {
 }
 
 /* ============================================================
-   PDF Reader theme — chỉ filter canvas (bitmap), giữ text layer
-   nguyên gốc để chữ không bị mất subpixel anti-aliasing.
-   Snapshot canvas trang trước cũng theo filter để khớp dark/sepia.
+   PDF Reader theme — Apply filter lên toàn bộ page container
+   để canvas và text layer cùng bị transform, tránh misalignment.
    ============================================================ */
-[data-pdf-theme='dark'] :is(.react-pdf__Page__canvas, [data-pdf-snapshot]) {
+[data-pdf-theme='dark'] .react-pdf__Page {
   filter: invert(1) hue-rotate(180deg);
 }
-[data-pdf-theme='sepia'] :is(.react-pdf__Page__canvas, [data-pdf-snapshot]) {
+[data-pdf-theme='sepia'] .react-pdf__Page {
   filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
 }
 
-/* Text layer của react-pdf: chữ vốn được vẽ transparent (chỉ để select).
-   Khi canvas bị invert sang nền đen, text layer phải tự "ẩn đi" — nhưng
-   vì transparent nên không cần filter. Giữ mặc định. */
+/* Snapshot canvas cũng cần filter riêng vì nằm ngoài .react-pdf__Page */
+[data-pdf-theme='dark'] [data-pdf-snapshot] {
+  filter: invert(1) hue-rotate(180deg);
+}
+[data-pdf-theme='sepia'] [data-pdf-snapshot] {
+  filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
+}
+
+/* Text layer giữ nguyên transparent, selection highlight tự nhiên */
+.react-pdf__Page__textContent span {
+  color: transparent !important;
+}
+
+.react-pdf__Page__textContent ::selection {
+  background-color: rgba(100, 150, 255, 0.3);
+  color: transparent;
+}

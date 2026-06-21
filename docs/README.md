@@ -9,6 +9,8 @@ Tổng hợp kiến thức logic toàn project, phục vụ cho việc tiếp t�
 
 - [Database Schema](./database.md) — MockAPI schema, field mapping giữa các feature
 
+- [PDF Reader](./pdf-reader.md) — PDF viewer với themes, highlights, text selection
+
 - [Focus Algorithm](./focus-algorithm.md) — Logic hiển thị task/note ưu tiên
 
 - [Keycap Lot System](./keycap-lot.md) — Phân bổ vốn, lot math
