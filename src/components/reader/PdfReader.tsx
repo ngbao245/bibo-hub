@@ -36,6 +36,7 @@ interface SelectionMask {
 }
 
 const SELECTION_MASK_KEY = 'reader_selection_mask';
+const DISABLE_IOS_CALLOUT_KEY = 'reader_disable_ios_callout';
 
 const ZOOM_KEY = 'reader_pdf_zoom';
 const THEME_KEY = 'reader_pdf_theme';
@@ -111,6 +112,10 @@ export default function PdfReader({ book }: { book: Book }) {
   });
   const [showMaskBorders, setShowMaskBorders] = useState(false);
   const [mobilePageInputOpen, setMobilePageInputOpen] = useState(false);
+  const [disableIosCallout, setDisableIosCallout] = useState<boolean>(() => {
+    const stored = localStorage.getItem(DISABLE_IOS_CALLOUT_KEY);
+    return stored === 'true';
+  });
   /** Snapshot canvas trang trước → đè lên trong lúc react-pdf render
    * trang mới, tránh flicker nền tối. Tái sử dụng 1 offscreen canvas
    * và copy bitmap bằng drawImage — gần như free, không cần encode PNG. */
@@ -201,6 +206,10 @@ export default function PdfReader({ book }: { book: Book }) {
   useEffect(() => {
     localStorage.setItem(SELECTION_MASK_KEY, JSON.stringify(selectionMask));
   }, [selectionMask]);
+
+  useEffect(() => {
+    localStorage.setItem(DISABLE_IOS_CALLOUT_KEY, String(disableIosCallout));
+  }, [disableIosCallout]);
 
   const cycleTheme = useCallback(() => {
     setTheme((t) => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length]);
@@ -548,6 +557,8 @@ export default function PdfReader({ book }: { book: Book }) {
             scale={scale}
             onZoomIn={() => changeScale((s) => s + 0.1)}
             onZoomOut={() => changeScale((s) => s - 0.1)}
+            disableIosCallout={disableIosCallout}
+            onToggleIosCallout={() => setDisableIosCallout((v) => !v)}
           />
         </div>
 
@@ -690,7 +701,12 @@ export default function PdfReader({ book }: { book: Book }) {
                 loading={null}
                 className="shadow-2xl"
               >
-                <div ref={pageWrapRef} className="relative select-text" data-pdf-theme={theme}>
+                <div 
+                  ref={pageWrapRef} 
+                  className="relative select-text" 
+                  data-pdf-theme={theme}
+                  style={disableIosCallout ? { WebkitTouchCallout: 'none' } as React.CSSProperties : undefined}
+                >
                   <Page
                     pageNumber={pageNumber}
                     scale={scale}

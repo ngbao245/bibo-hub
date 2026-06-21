@@ -15,6 +15,8 @@ interface SettingsDropdownProps {
   scale?: number;
   onZoomIn?: () => void;
   onZoomOut?: () => void;
+  disableIosCallout?: boolean;
+  onToggleIosCallout?: () => void;
 }
 
 export default function SettingsDropdown({
@@ -29,6 +31,8 @@ export default function SettingsDropdown({
   scale,
   onZoomIn,
   onZoomOut,
+  disableIosCallout = false,
+  onToggleIosCallout,
 }: SettingsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -163,6 +167,26 @@ export default function SettingsDropdown({
                   />
                 </div>
               </div>
+            )}
+
+            {/* iOS Callout Disable - Only show on mobile/touch devices */}
+            {onToggleIosCallout && 'ontouchstart' in window && (
+              <>
+                <div className="h-px bg-zinc-800" />
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-zinc-300">Disable iOS Menu</span>
+                  <button
+                    onClick={onToggleIosCallout}
+                    className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
+                      disableIosCallout
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+                    }`}
+                  >
+                    <span>{disableIosCallout ? 'ON' : 'OFF'}</span>
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
