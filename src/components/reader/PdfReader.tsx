@@ -467,15 +467,14 @@ export default function PdfReader({ book }: { book: Book }) {
           Chỉ enable lại cho PDF content (pageWrapRef có select-text).
           Selection mask sẽ block thêm header/footer của PDF page. */}
       <ReaderHeader title={book.title}>
-        {/* Desktop: Menu button always visible */}
         <button
           onClick={() => setSidebarOpen((v) => !v)}
-          className="hidden md:block p-1.5 text-zinc-400 hover:text-zinc-100"
+          className="p-1.5 text-zinc-400 hover:text-zinc-100"
           title="Mục lục / Highlights"
         >
           <Menu className="h-4 w-4" />
         </button>
-        <span className="mx-1 h-4 w-px bg-zinc-800 hidden md:block" />
+        <span className="mx-1 h-4 w-px bg-zinc-800" />
         
         {/* Mobile: Compact controls */}
         <div className="flex items-center gap-1 md:hidden">
@@ -494,7 +493,7 @@ export default function PdfReader({ book }: { book: Book }) {
               type="number"
               min={1}
               max={numPages || 1}
-              placeholder={String(pageNumber)}
+              // placeholder={String(pageNumber)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const value = e.currentTarget.value.trim();
@@ -537,13 +536,6 @@ export default function PdfReader({ book }: { book: Book }) {
             <ChevronRight className="h-4 w-4" />
           </button>
           <span className="mx-1 h-4 w-px bg-zinc-800" />
-          <button
-            onClick={() => setSidebarOpen((v) => !v)}
-            className="p-1.5 text-zinc-400 hover:text-zinc-100"
-            title="Mục lục / Highlights"
-          >
-            <Menu className="h-4 w-4" />
-          </button>
           <SettingsDropdown
             theme={theme}
             onThemeChange={cycleTheme}
