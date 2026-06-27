@@ -158,8 +158,6 @@ useCryptoStore.subscribe((state, prev) => {
  *   - Không thì dùng APP_SECRET hardcode (default cho mọi visitor).
  */
 function resolvePassphrase(): string {
-  const userInput = useCryptoStore.getState().passphrase;
-  if (userInput) return userInput;
   return APP_SECRET;
 }
 
