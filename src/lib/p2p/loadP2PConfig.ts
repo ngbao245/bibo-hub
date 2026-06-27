@@ -129,7 +129,7 @@ function pickFirebase(map: Record<string, string>): FirebaseConfig {
 }
 
 function pickTurn(map: Record<string, string>): TurnCredential {
-  const username = map.username ?? '';
+  const username = map.userName ?? '';
   const credential = map.credential ?? '';
   if (!username || !credential) {
     throw new Error(
