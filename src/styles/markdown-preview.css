@@ -1,0 +1,46 @@
+/*
+ * Style cho preview pane của Markdown Preview tool.
+ * github-markdown-css cung cấp typography GitHub style.
+ * Override màu nền/text qua data-theme để khớp app.
+ */
+
+@import 'github-markdown-css/github-markdown.css';
+
+.markdown-body {
+  box-sizing: border-box;
+  min-width: 200px;
+  max-width: 100%;
+  margin: 0;
+  padding: 16px 24px;
+  background: transparent;
+}
+
+[data-theme='dark'] .markdown-body {
+  color-scheme: dark;
+}
+
+/*
+ * Light preview toggle: scoped trên wrapper [data-md-preview-root][data-theme='light'].
+ * Force GitHub light variables để preview luôn giấy trắng dù app đang dark.
+ * github-markdown-css v5+ expose vars qua attribute selector — set lại đây để override.
+ */
+[data-md-preview-root][data-theme='light'] {
+  background: #ffffff !important;
+}
+
+[data-md-preview-root][data-theme='light'] .markdown-body {
+  color-scheme: light;
+  background: #ffffff !important;
+  color: #1f2328 !important;
+  --bgColor-default: #ffffff;
+  --fgColor-default: #1f2328;
+  --fgColor-muted: #59636e;
+  --borderColor-default: #d1d9e0;
+  --borderColor-muted: #d1d9e0b3;
+  --bgColor-muted: #f6f8fa;
+  --fgColor-accent: #0969da;
+  --bgColor-accent-muted: #ddf4ff;
+  --bgColor-attention-muted: #fff8c5;
+  --bgColor-success-muted: #dafbe1;
+  --bgColor-danger-muted: #ffebe9;
+}

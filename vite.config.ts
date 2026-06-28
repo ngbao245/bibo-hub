@@ -51,6 +51,10 @@ export default defineConfig(() => ({
     strictPort: false,
     open: true,
   },
+  worker: {
+    // ES format cần thiết khi worker có dynamic import (code-splitting).
+    // Default 'iife' không hỗ trợ multi-chunk. Browser support tốt với
+    // `new Worker(..., { type: 'module' })` mà parser-client đang dùng.
+    format: 'es' as const,
+  },
 }));
-
-

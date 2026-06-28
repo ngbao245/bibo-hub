@@ -40,6 +40,7 @@ const DISABLE_IOS_CALLOUT_KEY = 'reader_disable_ios_callout';
 
 const ZOOM_KEY = 'reader_pdf_zoom';
 const THEME_KEY = 'reader_pdf_theme';
+const SCROLL_POSITIONS_KEY_PREFIX = 'reader_scroll_positions_'; // sessionStorage key prefix, append book.id
 
 type ReaderTheme = 'light' | 'sepia' | 'dark';
 
@@ -80,6 +81,8 @@ export default function PdfReader({ book }: { book: Book }) {
   const [fileData, setFileData] = useState<PdfSource | null>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
+  /** State để debounce input page number desktop. */
+  const [inputPageValue, setInputPageValue] = useState(1);
   const [docLoaded, setDocLoaded] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState<{
     loaded: number;
@@ -130,6 +133,17 @@ export default function PdfReader({ book }: { book: Book }) {
    * saveProgress invalidate query và refetch trả về giá trị cũ giữa lúc user
    * vừa lật sang trang mới. */
   const restoredRef = useRef(false);
+  /** Lưu scroll position per page: { pageNumber -> scrollY }. */
+  const scrollPositionsRef = useRef(new Map<number, number>());
+  /** Track lý do thay đổi page:
+   * - 'next'/'input': scroll top (đi tiếp / jump intentional)
+   * - 'prev'/'restore': restore scroll cũ (quay lại / tiếp tục đọc) */
+  const navigationSourceRef = useRef<'next' | 'prev' | 'input' | 'restore'>('next');
+  /** Forward ref tới changePage để effect ở trên có thể gọi (workaround hoisting). */
+  const changePageRef = useRef<
+    | ((updater: number | ((p: number) => number), source?: 'next' | 'prev' | 'input') => void)
+    | null
+  >(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -168,8 +182,31 @@ export default function PdfReader({ book }: { book: Book }) {
     const loc = progressQuery.data.location;
     if (!loc) return;
     const n = Number(loc);
-    if (Number.isFinite(n) && n >= 1) setPageNumber(n);
+    if (Number.isFinite(n) && n >= 1) {
+      // Mark source = 'restore' để restore scroll from localStorage.
+      navigationSourceRef.current = 'restore';
+      setPageNumber(n);
+    }
   }, [progressQuery.data]);
+
+  // Restore scroll positions từ sessionStorage khi mount (scope theo book.id).
+  useEffect(() => {
+    try {
+      const key = SCROLL_POSITIONS_KEY_PREFIX + book.id;
+      const stored = sessionStorage.getItem(key);
+      if (stored) {
+        const positions = JSON.parse(stored) as Record<string, number>;
+        scrollPositionsRef.current = new Map(
+          Object.entries(positions).map(([k, v]) => [Number(k), v]),
+        );
+      } else {
+        // Book khác → reset map.
+        scrollPositionsRef.current = new Map();
+      }
+    } catch {
+      scrollPositionsRef.current = new Map();
+    }
+  }, [book.id]);
 
   // Background prefetch: sau khi load xong lần đầu (streaming mode),
   // tải full file ngầm + cache → lần sau instant load
@@ -241,6 +278,26 @@ export default function PdfReader({ book }: { book: Book }) {
       cancelled = true;
     };
   }, [pageNumber, numPages, docLoaded]);
+
+  // Persist scroll positions to sessionStorage (debounced, scope theo book.id).
+  // Dùng sessionStorage để scroll chỉ tồn tại trong session, đóng tab → fresh start.
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const positions: Record<string, number> = {};
+      scrollPositionsRef.current.forEach((scroll, page) => {
+        positions[String(page)] = scroll;
+      });
+      try {
+        const key = SCROLL_POSITIONS_KEY_PREFIX + book.id;
+        sessionStorage.setItem(key, JSON.stringify(positions));
+      } catch {
+        // ignore storage quota error
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, [pageNumber, book.id]);
+
   // Debounce save: lật trang nhanh chỉ persist 1 lần khi user dừng ~600ms.
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
@@ -258,6 +315,43 @@ export default function PdfReader({ book }: { book: Book }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageNumber, numPages]);
+
+  // Sync inputPageValue khi pageNumber thay đổi từ nơi khác (button, etc.)
+  useEffect(() => {
+    setInputPageValue(pageNumber);
+  }, [pageNumber]);
+
+  // Restore scroll position khi quay lại trang đã visit trước.
+  // Chỉ restore khi navigation source là 'prev' hoặc 'restore'.
+  useEffect(() => {
+    if (
+      containerRef.current &&
+      docLoaded &&
+      (navigationSourceRef.current === 'prev' ||
+        navigationSourceRef.current === 'restore')
+    ) {
+      const savedScroll = scrollPositionsRef.current.get(pageNumber);
+      if (savedScroll !== undefined && savedScroll > 0) {
+        // Delay một tick để react-pdf render xong trang mới.
+        const timer = requestAnimationFrame(() => {
+          containerRef.current?.scrollTo({ top: savedScroll, behavior: 'auto' });
+        });
+        return () => cancelAnimationFrame(timer);
+      }
+    }
+  }, [pageNumber, docLoaded]);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (inputPageValue !== pageNumber && Number.isFinite(inputPageValue)) {
+        const n = Math.max(1, Math.min(inputPageValue, numPages || inputPageValue));
+        if (n !== pageNumber) {
+          changePageRef.current?.(n, 'input');
+        }
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [inputPageValue, pageNumber, numPages]);
 
   const pageHighlights = useMemo(() => {
     if (!highlightsQuery.data) return [] as Highlight[];
@@ -411,6 +505,11 @@ export default function PdfReader({ book }: { book: Book }) {
     return () => clearTimeout(id);
   }, [snapshotVisible, clearSnapshot]);
 
+  // Safety: clear pageTransitioning sau 1.5s phòng khi onRenderSuccess
+  // không fire (user lật trang quá nhanh, page bị cancel).
+  // Dùng safety timer ngoài effect (không cần state).
+  const pageTransitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Cleanup offscreen canvas khi unmount
   useEffect(
     () => () => {
@@ -422,18 +521,54 @@ export default function PdfReader({ book }: { book: Book }) {
   );
 
   const changePage = useCallback(
-    (updater: number | ((p: number) => number)) => {
-      setPageNumber((p) => {
-        const target = typeof updater === 'function' ? updater(p) : updater;
-        const next = Math.min(numPages || target, Math.max(1, target));
-        // Chỉ snapshot khi page thực sự đổi → tránh toDataURL/drawImage
-        // không cần thiết khi đã ở page đầu/cuối.
-        if (next !== p) captureSnapshot();
-        return next;
-      });
+    (
+      updater: number | ((p: number) => number),
+      source: 'next' | 'prev' | 'input' = 'next',
+    ) => {
+      navigationSourceRef.current = source;
+
+      const container = containerRef.current;
+      if (!container) return;
+
+      const prevScroll = container.scrollTop;
+      const prevPage = pageNumber;
+      const target = typeof updater === 'function' ? updater(prevPage) : updater;
+      const next = Math.min(numPages || target, Math.max(1, target));
+
+      if (next === prevPage) return; // No-op
+
+      // Lưu scroll cũ.
+      scrollPositionsRef.current.set(prevPage, prevScroll);
+
+      // HIDE page wrap SYNCHRONOUSLY qua DOM ref (không chờ React state).
+      // Phải hide TRƯỚC scrollTop = 0 để user không thấy đầu trang cũ.
+      if (pageWrapRef.current) {
+        pageWrapRef.current.style.visibility = 'hidden';
+      }
+
+      // Safety timeout phòng khi onRenderSuccess không fire.
+      if (pageTransitionTimerRef.current) clearTimeout(pageTransitionTimerRef.current);
+      pageTransitionTimerRef.current = setTimeout(() => {
+        if (pageWrapRef.current) {
+          pageWrapRef.current.style.visibility = 'visible';
+        }
+      }, 1500);
+
+      // Chỉ scroll to top khi source = 'next' hoặc 'input'.
+      // Source 'prev' giữ scrollTop, để restore effect chạy sau khi page render.
+      if (source === 'next' || source === 'input') {
+        container.scrollTop = 0;
+      }
+
+      setPageNumber(next);
     },
-    [captureSnapshot, numPages],
+    [numPages, pageNumber],
   );
+
+  // Sync changePageRef để useEffect ở trên có thể gọi.
+  useEffect(() => {
+    changePageRef.current = changePage;
+  }, [changePage]);
 
   /** Zoom: snapshot canvas hiện tại, scale CSS-size theo ratio để khớp
    * canvas mới → người dùng thấy trang to/nhỏ ngay lập tức, không flicker. */
@@ -456,15 +591,15 @@ export default function PdfReader({ book }: { book: Book }) {
   );
 
   function goToPage(target: number) {
-    changePage(target);
-    if (containerRef.current) containerRef.current.scrollTop = 0;
+    // Jump qua input (sidebar/TOC/highlights) — không restore scroll cũ.
+    changePage(target, 'input');
   }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      if (e.key === 'ArrowLeft') changePage((p) => Math.max(1, p - 1));
-      if (e.key === 'ArrowRight') changePage((p) => Math.min(numPages || p, p + 1));
+      if (e.key === 'ArrowLeft') changePage((p) => Math.max(1, p - 1), 'prev');
+      if (e.key === 'ArrowRight') changePage((p) => Math.min(numPages || p, p + 1), 'next');
     }
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -488,7 +623,7 @@ export default function PdfReader({ book }: { book: Book }) {
         {/* Mobile: Compact controls */}
         <div className="flex items-center gap-1 md:hidden">
           <button
-            onClick={() => changePage((p) => Math.max(1, p - 1))}
+            onClick={() => changePage((p) => Math.max(1, p - 1), 'prev')}
             disabled={pageNumber <= 1}
             className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
             title="Previous page"
@@ -508,7 +643,7 @@ export default function PdfReader({ book }: { book: Book }) {
                   const value = e.currentTarget.value.trim();
                   const n = value === '' ? pageNumber : Number(value);
                   if (Number.isFinite(n) && n >= 1 && n <= (numPages || n)) {
-                    changePage(n);
+                    changePage(n, 'input');
                   }
                   setMobilePageInputOpen(false);
                 } else if (e.key === 'Escape') {
@@ -519,7 +654,7 @@ export default function PdfReader({ book }: { book: Book }) {
                 const value = e.currentTarget.value.trim();
                 const n = value === '' ? pageNumber : Number(value);
                 if (Number.isFinite(n) && n >= 1 && n <= (numPages || n)) {
-                  changePage(n);
+                  changePage(n, 'input');
                 }
                 setMobilePageInputOpen(false);
               }}
@@ -537,7 +672,7 @@ export default function PdfReader({ book }: { book: Book }) {
           )}
 
           <button
-            onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
+            onClick={() => changePage((p) => Math.min(numPages || p, p + 1), 'next')}
             disabled={pageNumber >= numPages}
             className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
             title="Next page"
@@ -572,7 +707,7 @@ export default function PdfReader({ book }: { book: Book }) {
         {/* Desktop: Full controls */}
         <div className="hidden md:flex items-center gap-1">
           <button
-            onClick={() => changePage((p) => Math.max(1, p - 1))}
+            onClick={() => changePage((p) => Math.max(1, p - 1), 'prev')}
             disabled={pageNumber <= 1}
             className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
             title="Previous page (←)"
@@ -583,16 +718,16 @@ export default function PdfReader({ book }: { book: Book }) {
             type="number"
             min={1}
             max={numPages || 1}
-            value={pageNumber}
+            value={inputPageValue}
             onChange={(e) => {
               const n = Number(e.target.value);
-              if (Number.isFinite(n)) changePage(n);
+              if (Number.isFinite(n)) setInputPageValue(n);
             }}
             className="w-12 border border-zinc-800 bg-zinc-900 px-1 py-0.5 text-center text-xs"
           />
           <span className="text-xs text-zinc-500">/ {numPages || '?'}</span>
           <button
-            onClick={() => changePage((p) => Math.min(numPages || p, p + 1))}
+            onClick={() => changePage((p) => Math.min(numPages || p, p + 1), 'next')}
             disabled={pageNumber >= numPages}
             className="p-1.5 text-zinc-400 hover:text-zinc-100 disabled:opacity-40"
             title="Next page (→)"
@@ -679,6 +814,11 @@ export default function PdfReader({ book }: { book: Book }) {
           ref={containerRef}
           className="absolute inset-0 overflow-auto p-4 transition-colors"
           style={{ backgroundColor: THEME_BG[theme] }}
+          onScroll={(e) => {
+            // Update scroll position của trang hiện tại khi user scroll.
+            const scrollTop = (e.target as HTMLElement).scrollTop;
+            scrollPositionsRef.current.set(pageNumber, scrollTop);
+          }}
         >
           {error && <div className="text-center text-sm text-red-400">{error}</div>}
           {fileData && (
@@ -712,7 +852,11 @@ export default function PdfReader({ book }: { book: Book }) {
                   ref={pageWrapRef}
                   className="relative select-text"
                   data-pdf-theme={theme}
-                  style={disableIosCallout ? { WebkitTouchCallout: 'none' } as React.CSSProperties : undefined}
+                  style={
+                    disableIosCallout
+                      ? ({ WebkitTouchCallout: 'none' } as React.CSSProperties)
+                      : undefined
+                  }
                 >
                   <Page
                     pageNumber={pageNumber}
@@ -720,7 +864,17 @@ export default function PdfReader({ book }: { book: Book }) {
                     renderAnnotationLayer={false}
                     renderTextLayer
                     loading={null}
-                    onRenderSuccess={clearSnapshot}
+                    onRenderSuccess={() => {
+                      clearSnapshot();
+                      // Show lại page wrap SYNCHRONOUSLY qua DOM ref.
+                      if (pageWrapRef.current) {
+                        pageWrapRef.current.style.visibility = 'visible';
+                      }
+                      if (pageTransitionTimerRef.current) {
+                        clearTimeout(pageTransitionTimerRef.current);
+                        pageTransitionTimerRef.current = null;
+                      }
+                    }}
                   />
                   <HighlightOverlay highlights={pageHighlights} />
                   {selectionMask.enabled && (
@@ -742,13 +896,11 @@ export default function PdfReader({ book }: { book: Book }) {
           sidebarOpen={sidebarOpen}
           onPrev={() => {
             if (pageNumber <= 1) return;
-            changePage((p) => Math.max(1, p - 1));
-            if (containerRef.current) containerRef.current.scrollTop = 0;
+            changePage((p) => Math.max(1, p - 1), 'prev');
           }}
           onNext={() => {
             if (numPages && pageNumber >= numPages) return;
-            changePage((p) => Math.min(numPages || p, p + 1));
-            if (containerRef.current) containerRef.current.scrollTop = 0;
+            changePage((p) => Math.min(numPages || p, p + 1), 'next');
           }}
         />
 

@@ -192,6 +192,20 @@ export const TOOLS: Tool[] = [
     description: 'So sánh 2 đoạn code — inline diff',
   },
   {
+    id: 'markdown-preview',
+    label: 'Markdown',
+    group: 'Developer',
+    action: { kind: 'route', path: '/markdown' },
+    description: 'Markdown editor + live preview, export PDF',
+  },
+  {
+    id: 'json-viewer',
+    label: 'JSON Viewer',
+    group: 'Developer',
+    action: { kind: 'route', path: '/json-viewer' },
+    description: 'Visualize JSON/CSV bằng graph hoặc tree, import/export',
+  },
+  {
     id: 'readest',
     label: 'Reader',
     group: 'Productivity',
