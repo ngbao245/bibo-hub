@@ -7,10 +7,83 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex, nofollow" />
   <title>BiBo Tools</title>
-  <link rel="icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23007acc'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='18' font-family='monospace' fill='white'>B</text></svg>" />
-  <link rel="apple-touch-icon"
-    href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23007acc'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='18' font-family='monospace' fill='white'>B</text></svg>" />
+  <link id="fav" rel="icon" type="image/png" />
+  <script>
+    window.addEventListener('load', function () {
+      var c = document.createElement('canvas'); c.width = c.height = 64;
+      var x = c.getContext('2d'), lnk = document.getElementById('fav');
+      var FRAMES = [
+        { text: '',     cursor: true  },
+        { text: '<',    cursor: true  },
+        { text: '</',   cursor: true  },
+        { text: '</>',  cursor: true  },
+        { text: '</>',  cursor: false },
+        { text: '</>',  cursor: false  },
+        { text: '</>',  cursor: false },
+      ];
+      var DELAYS = [400, 280, 280, 280, 180, 50, 5000];
+      var fi = 0, elapsed = 0, last = Date.now();
+
+      setInterval(function () {
+        var now = Date.now(); elapsed += now - last; last = now;
+        if (elapsed >= DELAYS[fi]) { elapsed = 0; fi = (fi + 1) % FRAMES.length; }
+        var f = FRAMES[fi];
+
+        x.clearRect(0, 0, 64, 64);
+        x.beginPath(); x.roundRect(0, 0, 64, 64, 10);
+        x.fillStyle = '#0d1117'; x.fill();
+
+        var full = '</>'; // đo bằng text đầy đủ để giữ layout ổn định
+        x.font = 'bold 28px ui-monospace,SFMono-Regular,Menlo,monospace';
+        x.textBaseline = 'middle'; x.textAlign = 'center';
+
+        var fw = x.measureText(full).width;
+        var cw = x.measureText('|').width;
+        var totalW = fw + (f.cursor ? cw + 1 : 0);
+        var ox = (64 - totalW) / 2; // left edge của text block
+
+        if (f.text) {
+          var chars = f.text.split('');
+          var px = ox;
+          var colors = ['#58c4ff', '#ffffff', '#58c4ff'];
+          x.textAlign = 'left';
+
+          // helper: vẽ 1 ký tự dày bằng cách stroke + fill chồng
+          function fatChar(ch, dx, dy, color) {
+            x.strokeStyle = color;
+            x.lineWidth = 2.5;
+            x.lineJoin = 'round';
+            x.strokeText(ch, dx, dy);
+            // paint chồng offset nhỏ để dày thêm
+            x.fillStyle = color;
+            x.fillText(ch, dx, dy);
+            x.fillText(ch, dx + 0.5, dy);
+            x.fillText(ch, dx, dy + 0.5);
+          }
+
+          for (var i = 0; i < chars.length; i++) {
+            fatChar(chars[i], px, 34, colors[i] || '#ffffff');
+            px += x.measureText(chars[i]).width;
+          }
+          if (f.cursor) {
+            x.fillStyle = '#58c4ff';
+            x.lineWidth = 2;
+            x.strokeText('|', px + 1, 34);
+            x.fillText('|', px + 1, 34);
+          }
+        } else if (f.cursor) {
+          x.fillStyle = '#58c4ff';
+          x.textAlign = 'center';
+          x.lineWidth = 2;
+          x.strokeStyle = '#58c4ff';
+          x.strokeText('|', 32, 34);
+          x.fillText('|', 32, 34);
+        }
+
+        lnk.href = c.toDataURL('image/webp', 0.9);
+      }, 50);
+    });
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -23,3 +96,4 @@
 </body>
 
 </html>
+
