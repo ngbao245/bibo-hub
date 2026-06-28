@@ -7,6 +7,8 @@ export interface PackedFile {
   path: string;     // Relative path: "src/App.tsx"
   content: string;  // Nội dung text
   size: number;     // Số byte (UTF-8)
+  chunkIndex?: number;
+  chunkTotal?: number;
 }
 
 /** Một file user đã chọn (chưa đọc content) */

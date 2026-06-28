@@ -23,7 +23,6 @@ const COMMON_EXCLUDES = [
   'Thumbs.db',
   // Lock files (npm install lại được, size lớn)
   '*.lock',
-  'package-lock.json',
   'yarn.lock',
   'pnpm-lock.yaml',
   // Logs
