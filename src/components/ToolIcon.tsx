@@ -20,6 +20,7 @@ import {
   GitCompareArrows,
   FileText,
   Network,
+  Music,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -52,6 +53,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'code-compare': GitCompareArrows,
   'markdown-preview': FileText,
   'json-viewer': Network,
+  audio: Music,
 };
 
 interface ToolIconProps {

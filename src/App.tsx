@@ -34,6 +34,11 @@ import DailyReminder from './modals/DailyReminder';
 import Shortcuts from './modals/Shortcuts';
 import CacheInspector from './modals/CacheInspector';
 import Crypto from './modals/Crypto';
+import Audio from './modals/Audio';
+
+// Audio player toàn cục (provider + floating window mount 1 lần)
+import { AudioProvider } from './lib/audio/audio-context';
+import AudioFloatingHost from './components/audio/AudioFloatingHost';
 
 // Fallback loading UI cho Suspense
 function PageLoader() {
@@ -49,7 +54,7 @@ export default function App() {
   useBootstrapShortcutOverrides();
 
   return (
-    <>
+    <AudioProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Hub />} />
@@ -82,6 +87,10 @@ export default function App() {
       <Shortcuts />
       <CacheInspector />
       <Crypto />
-    </>
+      <Audio />
+
+      {/* Player host (YT iframe ẩn) + floating UI — mount global, không unmount khi đóng modal */}
+      <AudioFloatingHost />
+    </AudioProvider>
   );
 }

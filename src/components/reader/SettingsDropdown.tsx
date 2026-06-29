@@ -17,6 +17,8 @@ interface SettingsDropdownProps {
   onZoomOut?: () => void;
   disableIosCallout?: boolean;
   onToggleIosCallout?: () => void;
+  showPageNavButtons?: boolean;
+  onTogglePageNavButtons?: () => void;
 }
 
 export default function SettingsDropdown({
@@ -33,6 +35,8 @@ export default function SettingsDropdown({
   onZoomOut,
   disableIosCallout = false,
   onToggleIosCallout,
+  showPageNavButtons = true,
+  onTogglePageNavButtons,
 }: SettingsDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -115,6 +119,25 @@ export default function SettingsDropdown({
                 )}
               </button>
             </div>
+
+            <div className="h-px bg-zinc-800" />
+
+            {/* Edge click zones toggle — vùng rìa trái/phải hiện chevron khi hover */}
+            {onTogglePageNavButtons && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-zinc-300">Edge Click Zones</span>
+                <button
+                  onClick={onTogglePageNavButtons}
+                  className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
+                    showPageNavButtons
+                      ? 'bg-blue-500/20 text-blue-400'
+                      : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+                  }`}
+                >
+                  <span>{showPageNavButtons ? 'ON' : 'OFF'}</span>
+                </button>
+              </div>
+            )}
 
             <div className="h-px bg-zinc-800" />
 

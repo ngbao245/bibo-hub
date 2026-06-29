@@ -38,6 +38,7 @@ export const MODAL_IDS = [
   'dailyReminder',
   'cacheInspector',
   'crypto',
+  'audio',
 ] as const;
 
 export type ModalId = (typeof MODAL_IDS)[number];
@@ -61,4 +62,4 @@ export const useModalStore = create<ModalState>((set, get) => ({
   open: (id) => set({ current: id }),
   close: () => set({ current: null }),
   toggle: (id) => set({ current: get().current === id ? null : id }),
-}));
+}));

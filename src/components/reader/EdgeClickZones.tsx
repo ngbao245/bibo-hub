@@ -24,6 +24,7 @@ function EdgeClickZones({
     <>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={onPrev}
         aria-label="Previous page"
         className={cn(
@@ -35,6 +36,7 @@ function EdgeClickZones({
       </button>
       <button
         type="button"
+        onMouseDown={(e) => e.preventDefault()}
         onClick={onNext}
         aria-label="Next page"
         className="group absolute inset-y-0 right-0 flex w-[8%] min-w-[48px] items-center justify-center bg-transparent text-zinc-600 transition-colors hover:bg-zinc-950/40 hover:text-zinc-100"

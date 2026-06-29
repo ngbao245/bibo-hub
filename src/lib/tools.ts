@@ -212,6 +212,13 @@ export const TOOLS: Tool[] = [
     action: { kind: 'route', path: '/reader' },
     description: 'PDF reader với highlight, note, translate',
   },
+  {
+    id: 'audio',
+    label: 'Audio',
+    group: 'Utilities',
+    action: { kind: 'modal', modalId: 'audio' },
+    description: 'Phát nhạc YouTube nền — playlist + floating window',
+  },
 ];
 
 // Nhóm tools theo group (cho HubPro hiển thị section)

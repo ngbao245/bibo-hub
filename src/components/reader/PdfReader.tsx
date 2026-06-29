@@ -37,6 +37,7 @@ interface SelectionMask {
 
 const SELECTION_MASK_KEY = 'reader_selection_mask';
 const DISABLE_IOS_CALLOUT_KEY = 'reader_disable_ios_callout';
+const SHOW_PAGE_NAV_KEY = 'reader_show_page_nav';
 
 const ZOOM_KEY = 'reader_pdf_zoom';
 const THEME_KEY = 'reader_pdf_theme';
@@ -119,6 +120,16 @@ export default function PdfReader({ book }: { book: Book }) {
     const stored = localStorage.getItem(DISABLE_IOS_CALLOUT_KEY);
     return stored === 'true';
   });
+  const [showPageNavButtons, setShowPageNavButtons] = useState<boolean>(() => {
+    const stored = localStorage.getItem(SHOW_PAGE_NAV_KEY);
+    // Default: bật
+    return stored === null ? true : stored === 'true';
+  });
+  // Ref mirror để dùng trong handler mà không phá deps của useCallback.
+  const disableIosCalloutRef = useRef(disableIosCallout);
+  useEffect(() => {
+    disableIosCalloutRef.current = disableIosCallout;
+  }, [disableIosCallout]);
   /** Snapshot canvas trang trước → đè lên trong lúc react-pdf render
    * trang mới, tránh flicker nền tối. Tái sử dụng 1 offscreen canvas
    * và copy bitmap bằng drawImage — gần như free, không cần encode PNG. */
@@ -247,6 +258,10 @@ export default function PdfReader({ book }: { book: Book }) {
   useEffect(() => {
     localStorage.setItem(DISABLE_IOS_CALLOUT_KEY, String(disableIosCallout));
   }, [disableIosCallout]);
+
+  useEffect(() => {
+    localStorage.setItem(SHOW_PAGE_NAV_KEY, String(showPageNavButtons));
+  }, [showPageNavButtons]);
 
   const cycleTheme = useCallback(() => {
     setTheme((t) => THEME_ORDER[(THEME_ORDER.indexOf(t) + 1) % THEME_ORDER.length]);
@@ -405,6 +420,19 @@ export default function PdfReader({ book }: { book: Book }) {
         height: first.height,
       },
     });
+
+    // iOS Selection Callout Bar (Copy / Look Up / Share) chỉ tồn tại khi
+    // còn DOM Selection. Sau khi đã capture rects + text vào state, xóa
+    // selection → iOS không có gì để hiện callout. UI vẫn show overlay
+    // "fake selection" + SelectionMenu của app.
+    if (disableIosCalloutRef.current) {
+      // Defer ra microtask để Safari kịp dispatch touchend hoàn chỉnh
+      // trước khi mình clear range.
+      queueMicrotask(() => {
+        const s = window.getSelection();
+        if (s && !s.isCollapsed) s.removeAllRanges();
+      });
+    }
   }, [pageNumber]);
 
   useEffect(() => {
@@ -701,6 +729,8 @@ export default function PdfReader({ book }: { book: Book }) {
             onZoomOut={() => changeScale((s) => s - 0.1)}
             disableIosCallout={disableIosCallout}
             onToggleIosCallout={() => setDisableIosCallout((v) => !v)}
+            showPageNavButtons={showPageNavButtons}
+            onTogglePageNavButtons={() => setShowPageNavButtons((v) => !v)}
           />
         </div>
 
@@ -804,6 +834,23 @@ export default function PdfReader({ book }: { book: Book }) {
               />
             </div>
           )}
+          <SettingsDropdown
+            theme={theme}
+            onThemeChange={cycleTheme}
+            selectionMaskEnabled={selectionMask.enabled}
+            onToggleSelectionMask={() => setSelectionMask((m) => ({ ...m, enabled: !m.enabled }))}
+            selectionMaskTop={selectionMask.top}
+            selectionMaskBottom={selectionMask.bottom}
+            onMaskTopChange={(value) => setSelectionMask((m) => ({ ...m, top: value }))}
+            onMaskBottomChange={(value) => setSelectionMask((m) => ({ ...m, bottom: value }))}
+            scale={scale}
+            onZoomIn={() => changeScale((s) => s + 0.1)}
+            onZoomOut={() => changeScale((s) => s - 0.1)}
+            disableIosCallout={disableIosCallout}
+            onToggleIosCallout={() => setDisableIosCallout((v) => !v)}
+            showPageNavButtons={showPageNavButtons}
+            onTogglePageNavButtons={() => setShowPageNavButtons((v) => !v)}
+          />
         </div>
       </ReaderHeader>
 
@@ -877,6 +924,11 @@ export default function PdfReader({ book }: { book: Book }) {
                     }}
                   />
                   <HighlightOverlay highlights={pageHighlights} />
+                  {disableIosCallout &&
+                    selection &&
+                    selection.page === pageNumber && (
+                      <SelectionRectsOverlay rects={selection.rectsNorm} />
+                    )}
                   {selectionMask.enabled && (
                     <SelectionMaskOverlay
                       top={selectionMask.top}
@@ -891,18 +943,21 @@ export default function PdfReader({ book }: { book: Book }) {
         </div>
 
         {/* Edge zones — đặt ngoài scroll container để cố định theo viewport
-            reader, không bị đẩy khuất khi user zoom rồi scroll xuống */}
-        <EdgeClickZones
-          sidebarOpen={sidebarOpen}
-          onPrev={() => {
-            if (pageNumber <= 1) return;
-            changePage((p) => Math.max(1, p - 1), 'prev');
-          }}
-          onNext={() => {
-            if (numPages && pageNumber >= numPages) return;
-            changePage((p) => Math.min(numPages || p, p + 1), 'next');
-          }}
-        />
+            reader, không bị đẩy khuất khi user zoom rồi scroll xuống.
+            Ẩn được qua SettingsDropdown (showPageNavButtons). */}
+        {showPageNavButtons && (
+          <EdgeClickZones
+            sidebarOpen={sidebarOpen}
+            onPrev={() => {
+              if (pageNumber <= 1) return;
+              changePage((p) => Math.max(1, p - 1), 'prev');
+            }}
+            onNext={() => {
+              if (numPages && pageNumber >= numPages) return;
+              changePage((p) => Math.min(numPages || p, p + 1), 'next');
+            }}
+          />
+        )}
 
         {/* Skeleton chỉ hiện khi document chưa parse xong. Page render sau
             đó tốc độ ~100-300ms — không cần skeleton, để render canvas đè
@@ -961,6 +1016,36 @@ export default function PdfReader({ book }: { book: Book }) {
       {translateText && (
         <TranslatePopover text={translateText} onClose={() => setTranslateText(null)} />
       )}
+    </div>
+  );
+}
+
+/**
+ * SelectionRectsOverlay - vẽ "fake selection" theo rects normalized khi
+ * đã xóa native DOM Selection (để tránh iOS Selection Callout Bar). Màu
+ * mô phỏng selection mặc định của browser.
+ */
+function SelectionRectsOverlay({
+  rects,
+}: {
+  rects: Array<{ x: number; y: number; w: number; h: number }>;
+}) {
+  return (
+    <div className="pointer-events-none absolute inset-0 z-10">
+      {rects.map((r, i) => (
+        <div
+          key={i}
+          className="absolute"
+          style={{
+            left: `${r.x * 100}%`,
+            top: `${r.y * 100}%`,
+            width: `${r.w * 100}%`,
+            height: `${r.h * 100}%`,
+            backgroundColor: 'rgba(59, 130, 246, 0.35)',
+            mixBlendMode: 'multiply',
+          }}
+        />
+      ))}
     </div>
   );
 }
