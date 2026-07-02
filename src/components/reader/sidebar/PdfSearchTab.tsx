@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Search as SearchIcon, X } from 'lucide-react';
+import { Search as SearchIcon, X } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import { searchPdf, type PdfSearchMatch } from '@/lib/reader/pdf-search';
 
 interface Props {
@@ -60,9 +61,20 @@ export default function PdfSearchTab({ doc, onJump }: Props) {
 
       <div className="flex-1 overflow-y-auto">
         {loading && (
-          <div className="flex items-center justify-center gap-2 p-6 text-xs text-zinc-500">
-            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            Đang tìm…
+          <div>
+            {/* Skeleton match ResultList: header count + N group card (page label + 2 preview lines) */}
+            <div className="border-b border-zinc-800 px-3 py-1.5">
+              <Skeleton className="h-2.5 w-32 bg-zinc-800" />
+            </div>
+            <ul className="divide-y divide-zinc-800">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="px-3 py-2">
+                  <Skeleton className="h-2.5 w-20 bg-zinc-800" />
+                  <Skeleton className="mt-1.5 h-3 w-full bg-zinc-800" />
+                  <Skeleton className="mt-1 h-3 w-4/5 bg-zinc-800" />
+                </li>
+              ))}
+            </ul>
           </div>
         )}
         {!loading && error && <p className="p-4 text-xs text-red-400">{error}</p>}

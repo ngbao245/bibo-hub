@@ -26,7 +26,7 @@ export function useBootstrapRag(): void {
 
         if (result.status === 'ready') {
           // eslint-disable-next-line no-console
-          console.log('[rag] ✅ ready');
+          console.info('[rag] ready');
 
           // Lazy fixup tầng 1: background scan toàn bộ notes + GC orphan.
           //   - Delay 5s để không đánh vào latency boot.

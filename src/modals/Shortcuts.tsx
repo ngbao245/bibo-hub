@@ -5,6 +5,7 @@ import { Keyboard } from 'lucide-react';
 import { useShortcutStore, type Shortcut } from '@/stores/shortcutStore';
 
 import ToolModal from '@/components/ToolModal';
+import { EmptyState } from '@/components/shared';
 
 // ============================================================
 // Shortcuts Modal — hiển thị tất cả phím tắt active
@@ -47,10 +48,11 @@ function ShortcutsContent() {
 
   if (isEmpty) {
     return (
-      <div className="flex flex-col items-center py-8 text-center text-sm text-muted-foreground">
-        <Keyboard className="mb-2 h-8 w-8" />
-        Chưa có phím tắt nào được đăng ký
-      </div>
+      <EmptyState
+        compact
+        icon={Keyboard}
+        title="Chưa có phím tắt nào được đăng ký"
+      />
     );
   }
 
@@ -109,4 +111,4 @@ function prettyKey(part: string): string {
     arrowright: '→',
   };
   return map[part] ?? part.toUpperCase();
-}
+}

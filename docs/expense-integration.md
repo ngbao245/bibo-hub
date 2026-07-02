@@ -1,4 +1,4 @@
-d# Expense Integration
+# Expense Integration
 
 File: `src/lib/keycap/expenseSync.ts`
 

@@ -783,7 +783,7 @@ function EmptyChatState({
       <div className="space-y-1">
         <p className="text-sm font-medium text-foreground">Hỏi gì cũng được</p>
         <p className="mx-auto max-w-xs text-xs leading-relaxed text-muted-foreground">
-          AI tự kết hợp notes/tasks/highlights của người đẹp + kiến thức chung.
+          AI tự kết hợp notes/tasks/highlights của bạn + kiến thức chung.
           Nguồn cite dạng <code className="bg-muted px-1 py-px text-primary">[n]</code>, click để mở.
         </p>
       </div>

@@ -7,6 +7,7 @@ import {
   PanelLeft,
   PanelLeftClose,
   PanelLeftOpen,
+  Plus,
   X,
   SplitSquareHorizontal,
   FileText,
@@ -19,6 +20,7 @@ import { useModalStore } from '@/stores/modalStore';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
+import { EmptyState as SharedEmptyState } from '@/components/shared';
 
 import NoteList from '@/components/NoteList';
 import NoteEditor from '@/components/NoteEditor';
@@ -471,7 +473,7 @@ export default function Notes() {
                     onSelectNote={(id) => openTab(id, idx)}
                   />
                 ) : (
-                  <EmptyState onNew={handleNew} />
+                  <NoNoteSelected onNew={handleNew} />
                 )}
               </section>
             );
@@ -579,16 +581,19 @@ function TabBar({
   );
 }
 
-function EmptyState({ onNew }: { onNew: () => void }) {
+function NoNoteSelected({ onNew }: { onNew: () => void }) {
   return (
     <div className="flex flex-1 items-center justify-center">
-      <div className="text-center">
-        <p className="mb-4 text-muted-foreground">Chọn một note hoặc tạo note mới</p>
-        <Button onClick={onNew} className="gap-1.5">
-          <span>+</span>
-          Tạo note mới
-        </Button>
-      </div>
+      <SharedEmptyState
+        icon={FileText}
+        title="Chọn một note hoặc tạo note mới"
+        action={
+          <Button onClick={onNew} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Tạo note mới
+          </Button>
+        }
+      />
     </div>
   );
 }

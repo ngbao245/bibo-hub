@@ -67,7 +67,7 @@ export default function ItemCard({
               <span
                 className={cn(
                   'shrink-0 px-1.5 py-0.5 font-mono text-xs font-semibold',
-                  profit >= 0 ? 'bg-green-500/10 text-green-500' : 'bg-destructive/10 text-destructive',
+                  profit >= 0 ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive',
                 )}
               >
                 {profit >= 0 ? '+' : ''}{formatMoney(profit)}
@@ -106,7 +106,7 @@ export default function ItemCard({
           Sửa
         </Button>
         {item.status !== 'sold' && (
-          <Button variant="ghost" size="sm" onClick={onMarkSold} className="h-7 flex-1 gap-1.5 text-xs text-green-500">
+          <Button variant="ghost" size="sm" onClick={onMarkSold} className="h-7 flex-1 gap-1.5 text-xs text-success">
             <ShoppingBag className="h-3 w-3" />
             Đã bán
           </Button>

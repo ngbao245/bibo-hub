@@ -24,7 +24,7 @@ src/
     └── html2pdf.d.ts               # Module declaration
 ```
 
-Theo pattern hubibo (route + components/ + lib/ riêng theo feature). Tham khảo `docs/ADDING_NEW_FEATURE.md`.
+Theo pattern hubibo (route + components/ + lib/ riêng theo feature). Tham khảo `docs/adding-new-tool.md`.
 
 ## Bước-by-bước
 
@@ -145,7 +145,7 @@ Theo `.kiro/steering/readme-pattern.md`:
 
 - Tạo `src/components/markdown-preview/README.md` (template trong steering).
 - Tạo `src/lib/markdown-preview/README.md`.
-- Update `docs/FOLDER_STRUCTURE.md` thêm 2 entry.
+- Update `.kiro/steering/tools-registry.md` bảng nhóm phù hợp.
 
 ## Edge cases cần handle
 

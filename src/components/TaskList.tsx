@@ -254,7 +254,7 @@ function TaskRow({ task, isHighlighted }: { task: Task; isHighlighted?: boolean 
         <Button
           variant="ghost"
           size="icon"
-          className={cn('h-7 w-7', task.priority === 'high' && 'text-yellow-500')}
+          className={cn('h-7 w-7', task.priority === 'high' && 'text-warning')}
           onClick={() => toggleImportant.mutate(task)}
           disabled={toggleImportant.isPending}
           title={task.priority === 'high' ? 'Bỏ quan trọng' : 'Đánh dấu quan trọng'}

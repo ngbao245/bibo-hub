@@ -197,112 +197,7 @@ PDF có page numbers, running headers tại top/bottom → khi user chọn text,
 
 ---
 
-## 6. Text-to-Speech (TTS)
-
-### Architecture
-**Files:**
-- `src/lib/reader/pdf-tts.ts`: Text extraction + sentence splitting
-- `src/components/reader/useReaderTts.ts`: Web Speech API hook
-- `src/components/reader/TtsButton.tsx`: UI button (Play/Pause/Stop)
-
-### Text Extraction (`pdf-tts.ts`)
-
-**`extractPageText(doc, pageNumber): Promise<string>`**
-- Call `doc.getPage(pageNumber).getTextContent()` (pdfjs API)
-- Iterate items, join text → normalize line breaks:
-  - Remove hyphen breaks ("exam-\nple" → "example")
-  - Convert \n → space, collapse whitespace
-- Return: single string per page
-
-**`splitIntoSentences(text): string[]`**
-- Regex split: `/([.!?。！？]+\s+|[.!?。！？]+$)/` (capture delimiters)
-- Cap each chunk ~300 chars (iOS Safari limit)
-- Drop chunks < 2 chars (noise)
-- Filter có character đọc được (`/[A-Za-zÀ-ỹ\u4e00-\u9fff]/`)
-- Return: array of sentences
-
-**`getPageSentences(doc, pageNumber): Promise<string[]>`**
-- Helper: extract + split in one call
-
-### TTS Hook (`useReaderTts.ts`)
-
-**API:**
-```ts
-const tts = useReaderTts({
-  pdfDoc: unknown | null;           // PDFDocumentProxy (null until loaded)
-  currentPage: number;              // Reader current page
-  numPages: number;
-  onAdvancePage: (page: number) => void;  // Callback to navigate next page when TTS finishes
-});
-
-// Return:
-{
-  supported: boolean;                // 'speechSynthesis' in window
-  status: 'idle' | 'loading' | 'playing' | 'paused';
-  voices: SpeechSynthesisVoice[];
-  voiceURI: string | null;           // Selected voice (from select dropdown)
-  setVoiceURI: (uri: string | null) => void;
-  rate: number;                      // 0.5–2 (default 1)
-  setRate: (rate: number) => void;
-  sentenceIndex: number;             // Current sentence being spoken (for UI)
-  play: () => void;
-  pause: () => void;
-  stop: () => void;
-}
-```
-
-**Flow:**
-1. `play()`:
-   - If paused → speechSynthesis.resume()
-   - Else: Load sentences of current page async, speak first utterance
-2. For each utterance:
-   - Set voice from selected voiceURI (or system default)
-   - Set rate (user slider)
-   - onend: speak next sentence OR (if end of page) advance page + load new page
-3. Page change mid-speech (user navigate or TTS advance): auto reload sentences of new page
-4. Voice/rate change: cancel current utterance, re-speak at new settings
-
-**Persist:**
-- localStorage key: `reader_tts_voice` (voiceURI)
-- localStorage key: `reader_tts_rate` (rate 0.1 precision)
-
-**Load Voices:**
-- `getVoices()` async on most browsers (listen `voiceschanged` event)
-- Hook listen event on mount, populate dropdown
-
-### TTS Button (`TtsButton.tsx`)
-
-**Props:**
-```ts
-{
-  status: 'idle' | 'loading' | 'playing' | 'paused';
-  onPlay, onPause, onStop: () => void;
-  compact?: boolean;  // Mobile: hide stop button to save space
-}
-```
-
-**UI:**
-- Play/Pause button: toggle icon based status
-- Stop button: show only on desktop or when (playing || paused)
-
-### Integration in PdfReader
-
-**Code:**
-- Import hook + button (line 25-26)
-- Call hook (line 497-501): pass pdfDoc, currentPage, onAdvancePage
-- Render button (line 593-598 mobile, 738-743 desktop): conditional on `tts.supported && !!pdfDoc`
-- Pass TTS props to SettingsDropdown (line 625-629 mobile, 762-766 desktop)
-
-**SettingsDropdown Integration:**
-
-New section "Đọc to (TTS)" shows if `ttsSupported && (onTtsVoiceChange || onTtsRateChange)`:
-- Dropdown: Select voice (display: voice.name + lang)
-- Slider: Rate 0.5–2x (step 0.1)
-- Persist each change immediately to localStorage
-
----
-
-## 7. Settings & UI Components
+## 6. Settings & UI Components
 
 ### SettingsDropdown (`src/components/reader/SettingsDropdown.tsx`)
 
@@ -317,21 +212,18 @@ New section "Đọc to (TTS)" shows if `ttsSupported && (onTtsVoiceChange || onT
    - Toggle + conditional Top/Bottom % inputs
 5. **Disable iOS Menu** (mobile/touch only, if `'ontouchstart' in window`)
    - ON/OFF toggle
-6. **TTS (Đọc to)** (all, if supported)
-   - Voice select dropdown
-   - Rate range slider 0.5–2x
 
 **Header Toolbar Layout:**
 
 **Mobile (`md:hidden`):**
-- [Chevron Prev] [Page Input] [Chevron Next] [Sidebar Menu] [TTS Button] [Settings Dropdown]
+- [Chevron Prev] [Page Input] [Chevron Next] [Sidebar Menu] [Settings Dropdown]
 
 **Desktop (`hidden md:flex`):**
-- [Chevron Prev] [Page Input] / [NumPages] [Chevron Next] [Zoom -] [Zoom %] [Zoom +] [Theme] [Selection Mask] [Mask T/B inputs] [TTS Button] [Settings Dropdown]
+- [Chevron Prev] [Page Input] / [NumPages] [Chevron Next] [Zoom -] [Zoom %] [Zoom +] [Theme] [Selection Mask] [Mask T/B inputs] [Settings Dropdown]
 
 ---
 
-## 8. Sidebar & Search
+## 7. Sidebar & Search
 
 ### ReaderSidebar (`src/components/reader/ReaderSidebar.tsx`)
 - Toggle via menu button (header)
@@ -355,7 +247,7 @@ New section "Đọc to (TTS)" shows if `ttsSupported && (onTtsVoiceChange || onT
 
 ---
 
-## 9. Data Models
+## 8. Data Models
 
 ### Book Type (from API)
 ```ts
@@ -403,7 +295,7 @@ New section "Đọc to (TTS)" shows if `ttsSupported && (onTtsVoiceChange || onT
 
 ---
 
-## 10. LocalStorage Keys
+## 9. LocalStorage Keys
 
 | Key | Type | Default | Purpose |
 |---|---|---|---|
@@ -412,12 +304,10 @@ New section "Đọc to (TTS)" shows if `ttsSupported && (onTtsVoiceChange || onT
 | `reader_selection_mask` | string (JSON) | `{top:5,bottom:5,enabled:false}` | Selection mask settings |
 | `reader_disable_ios_callout` | string ("true"/"false") | "false" | iOS callout suppression |
 | `reader_show_page_nav` | string ("true"/"false") | "true" | Show/hide page nav buttons |
-| `reader_tts_voice` | string (voiceURI) | null | Selected TTS voice |
-| `reader_tts_rate` | string (number) | "1" | TTS speech rate |
 
 ---
 
-## 11. Common Patterns & Edge Cases
+## 10. Common Patterns & Edge Cases
 
 ### Pattern: Ref Mirror for useCallback
 Problem: Need to access latest state inside callback without adding to deps.
@@ -458,18 +348,12 @@ const captureSnapshot = () => {
 
 ### Edge Case: PDF is Scan/Image-Only
 - `getTextContent()` return empty items
-- TTS: no sentences extracted, auto-advance to next page
 - Search: no matches on that page
 - Selection: no text can be selected (pdfjs doesn't expose text layer)
 
-### Edge Case: iOS Safari Speech Cut Off
-- Background tab / locked screen → speechSynthesis paused by OS
-- No API-level fix; recommend user keep tab active
-- Can detect pause event and notify user (future improvement)
-
 ---
 
-## 12. Performance Considerations
+## 11. Performance Considerations
 
 ### Prefetch
 - Next/prev page loaded before user click (invisible, leverages pdfjs internal cache)
@@ -487,42 +371,32 @@ const captureSnapshot = () => {
 - Normalized rects (0–1 %) not absolute pixels (tolerates resize)
 - Stored per-highlight, not per-scroll-position (durable)
 
-### TTS
-- Split sentences ~300 chars max (iOS limit)
-- Load voices async, listen `voiceschanged` (not block)
-- Cancel + re-speak on voice/rate change (not queue multiple)
-
 ---
 
-## 13. Future Enhancements
+## 12. Future Enhancements
 
 1. **Highlight Sync with Full-Text Search**
    - Show all highlight matches in search results
 
-2. **TTS with Sentence Highlighting**
-   - Overlay current speaking sentence during playback
-   - Show rects of current utterance (from pdfjs text items)
-
-3. **OCR for Scan PDFs**
+2. **OCR for Scan PDFs**
    - Tesseract.js for image-only pages
    - Heavy (~5MB gzip), lazy-load on demand
 
-4. **Bookmark & Notes**
+3. **Bookmark & Notes**
    - Save position with custom label (beyond progress)
    - Separate from highlights
 
-5. **Offline Mode**
+4. **Offline Mode**
    - Service Worker + full PDF cache
    - Read without network
 
-6. **Reader Stats**
+5. **Reader Stats**
    - Time spent per page
-   - Words per minute (TTS-based estimate)
    - Reading streak
 
 ---
 
-## 14. API Endpoints (Supabase)
+## 13. API Endpoints (Supabase)
 
 **Progress Tracking:**
 - `POST /progress`: Save page + progress%
@@ -546,8 +420,7 @@ The BiBo Reader is a full-featured PDF reader with:
 - **Caching**: IndexedDB + streaming
 - **Selection & Highlighting**: App-level menu to suppress iOS native UI
 - **Navigation**: Keyboard, buttons, edge zones, searchable TOC
-- **TTS**: Web Speech API with voice/rate control, auto page advance
 - **Settings**: Zoom, theme, masks, UI toggles, persisted to localStorage
 - **Performance**: Snapshots, prefetch, lazy indexing, debounce saves
 
-Core complexity: managing DOM Selection state + native browser behaviors on iOS + async text extraction + Web Speech API limitations. Codebase follows React hooks patterns, TanStack Query for server state, localStorage for client preferences.
+Core complexity: managing DOM Selection state + native browser behaviors on iOS + async text extraction. Codebase follows React hooks patterns, TanStack Query for server state, localStorage for client preferences.

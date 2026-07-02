@@ -703,8 +703,8 @@ export default function PackPanel() {
           <p className="mt-1 text-xs text-muted-foreground">
             Hoặc click để chọn (kéo-thả nhanh hơn, không bị lag với project lớn)
           </p>
-          <p className="mt-2 text-[10px] text-yellow-500/80">
-            ⚠ Click chọn folder có thể lag nếu project lớn
+          <p className="mt-2 text-[10px] text-warning/80">
+            Click chọn folder có thể lag nếu project lớn
           </p>
           <input
             ref={inputRef}

@@ -141,7 +141,7 @@ function CryptoContent() {
         />
         <div className="flex items-center justify-between gap-2">
           {mode === 'decrypt' && input && !isEncrypted(input.trim()) && (
-            <span className="text-[11px] text-yellow-500">
+            <span className="text-[11px] text-warning">
               Payload thiếu prefix <code className="font-mono">v1:</code>
             </span>
           )}
@@ -208,4 +208,4 @@ function ModeTab({
       {children}
     </button>
   );
-}
+}

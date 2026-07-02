@@ -2,14 +2,25 @@
 import type { ModalId } from '@/stores/modalStore';
 
 // ============================================================
-// Danh sách tools trên Hub - single source of truth
+// Danh sách tools - single source of truth
 // ============================================================
 //
-// Cả Hub original và HubPro đều đọc từ đây.
-// Khi thêm tool mới, sửa 1 chỗ duy nhất.
+// File này list metadata tĩnh cho từng tool: id, label, action, description,
+// và group (dùng cho Shortcuts modal). KHÔNG quyết định tool nằm ở category
+// nào trên HubPro — mapping category là dynamic.
 //
-// Icon được render qua `<ToolIcon id={tool.id} />` (xem ToolIcon.tsx).
+// Icon: render qua `<ToolIcon id={tool.id} />` (xem ToolIcon.tsx).
 // Tool ID phải khớp với key trong ICON_MAP của ToolIcon.
+//
+// Phím tắt: KHÔNG khai báo ở đây. Shortcut là dynamic — user gán qua
+// Setting → lưu /Config → bootstrap load vào shortcutStore. Xem
+// `src/lib/shortcutRegistry.ts` và `src/stores/shortcutStore.ts`.
+//
+// Category trên HubPro: dynamic — user kéo-thả tool giữa 6 category fix cứng
+// (Productivity, Finance, Tracking, Utilities, Developer, Admin) qua Setting →
+// Tool Categories. Lưu MockAPI record group="Setting" type="Category".
+// Xem `src/components/ToolCategoryManager.tsx` và `src/api/toolCategories.ts`.
+// Default state (user chưa config): tất cả tool ở section "Unassigned".
 // ============================================================
 
 export type ToolKind =
@@ -23,27 +34,42 @@ export type ToolKind =
 export interface Tool {
   id: string;
   label: string;
-  shortcut?: string;
-  /** Nhóm hiển thị ở HubPro (Productivity, Finance, Utilities...) */
+  /**
+   * Nhóm logic của tool — dùng làm section header trong Shortcuts modal.
+   * KHÔNG phải category assignment cho HubPro (cái đó dynamic qua Setting).
+   */
   group: ToolGroup;
   action: ToolKind;
-  /** Mô tả ngắn, dùng ở HubPro */
+  /** Mô tả ngắn, dùng ở HubPro tile hover */
   description?: string;
 }
 
+/**
+ * 6 category fix cứng. User KHÔNG thêm/xoá được. Nhưng tool nào ở category nào
+ * là dynamic, chỉnh qua /setting → Tool Categories.
+ */
 export type ToolGroup =
   | 'Productivity'
   | 'Finance'
-  | 'Utilities'
   | 'Tracking'
-  | 'Developer';
+  | 'Utilities'
+  | 'Developer'
+  | 'Admin';
+
+export const TOOL_GROUPS: readonly ToolGroup[] = [
+  'Productivity',
+  'Finance',
+  'Tracking',
+  'Utilities',
+  'Developer',
+  'Admin',
+] as const;
 
 export const TOOLS: Tool[] = [
   // Productivity
   {
     id: 'notes',
     label: 'Notes',
-    shortcut: 'Alt+N',
     group: 'Productivity',
     action: { kind: 'route', path: '/notes' },
     description: 'Rich text note-taking với highlight và shortcut',
@@ -51,7 +77,6 @@ export const TOOLS: Tool[] = [
   {
     id: 'tasks',
     label: 'Tasks',
-    shortcut: 'Alt+D',
     group: 'Productivity',
     action: { kind: 'route', path: '/tasks' },
     description: 'Task management theo style Microsoft To Do',
@@ -59,7 +84,6 @@ export const TOOLS: Tool[] = [
   {
     id: 'sources',
     label: 'Sources',
-    shortcut: 'Alt+P',
     group: 'Productivity',
     action: { kind: 'route', path: '/sources' },
     description: 'Quản lý nguồn tài liệu và link',
@@ -70,6 +94,34 @@ export const TOOLS: Tool[] = [
     group: 'Productivity',
     action: { kind: 'modal', modalId: 'secret' },
     description: 'Notes mã hóa bằng password',
+  },
+  {
+    id: 'readest',
+    label: 'Reader',
+    group: 'Productivity',
+    action: { kind: 'route', path: '/reader' },
+    description: 'PDF reader với highlight, note, translate',
+  },
+  {
+    id: 'markdown-preview',
+    label: 'Markdown',
+    group: 'Productivity',
+    action: { kind: 'route', path: '/markdown' },
+    description: 'Markdown editor + live preview, export PDF',
+  },
+  {
+    id: 'json-viewer',
+    label: 'JSON Viewer',
+    group: 'Productivity',
+    action: { kind: 'route', path: '/json-viewer' },
+    description: 'Visualize JSON/CSV bằng graph hoặc tree, import/export',
+  },
+  {
+    id: 'rag',
+    label: 'AI Search',
+    group: 'Productivity',
+    action: { kind: 'modal', modalId: 'rag' },
+    description: 'Semantic search + AI chat trên notes / tasks / highlights',
   },
 
   // Finance
@@ -108,7 +160,6 @@ export const TOOLS: Tool[] = [
   {
     id: 'translate',
     label: 'Translate',
-    shortcut: 'Alt+T',
     group: 'Utilities',
     action: { kind: 'modal', modalId: 'translate' },
     description: 'Dịch Việt-Anh tự động',
@@ -116,7 +167,6 @@ export const TOOLS: Tool[] = [
   {
     id: 'calculator',
     label: 'Calculator',
-    shortcut: 'Alt+C',
     group: 'Utilities',
     action: { kind: 'modal', modalId: 'calculator' },
     description: 'Máy tính cơ bản',
@@ -124,7 +174,6 @@ export const TOOLS: Tool[] = [
   {
     id: 'encoder',
     label: 'Encoder',
-    shortcut: 'Alt+E',
     group: 'Utilities',
     action: { kind: 'modal', modalId: 'encoder' },
     description: 'Encode API URL cho config.js',
@@ -132,28 +181,19 @@ export const TOOLS: Tool[] = [
   {
     id: 'crypto',
     label: 'Crypto',
-    shortcut: 'Alt+Shift+C',
     group: 'Utilities',
     action: { kind: 'modal', modalId: 'crypto' },
     description: 'Mã hoá / giải mã AES-GCM (dùng chung passphrase với Setting)',
   },
   {
-    id: 'backup',
-    label: 'Backup',
-    shortcut: 'Alt+B',
+    id: 'audio',
+    label: 'Audio',
     group: 'Utilities',
-    action: { kind: 'modal', modalId: 'backup' },
-    description: 'Export/import data',
+    action: { kind: 'modal', modalId: 'audio' },
+    description: 'Phát nhạc YouTube nền — playlist + floating window',
   },
 
   // Developer
-  {
-    id: 'project-packer',
-    label: 'Project Packer',
-    group: 'Developer',
-    action: { kind: 'route', path: '/project-packer' },
-    description: 'Đóng gói project source code',
-  },
   {
     id: 'p2p-transfer',
     label: 'P2P Transfer',
@@ -169,67 +209,48 @@ export const TOOLS: Tool[] = [
     description: 'Quản lý sản phẩm bán lẻ',
   },
   {
+    id: 'code-compare',
+    label: 'Compare',
+    group: 'Developer',
+    action: { kind: 'route', path: '/code-compare' },
+    description: 'So sánh 2 đoạn code — inline diff',
+  },
+
+  // Admin
+  {
+    id: 'backup',
+    label: 'Backup',
+    group: 'Admin',
+    action: { kind: 'modal', modalId: 'backup' },
+    description: 'Export/import data',
+  },
+  {
+    id: 'project-packer',
+    label: 'Project Packer',
+    group: 'Admin',
+    action: { kind: 'route', path: '/project-packer' },
+    description: 'Đóng gói project source code',
+  },
+  {
     id: 'setting',
     label: 'Config',
-    group: 'Developer',
+    group: 'Admin',
     action: { kind: 'route', path: '/setting' },
     description: 'Quản lý setting dự án (CRUD qua mockapi)',
   },
   {
     id: 'cache-inspector',
     label: 'Cache',
-    shortcut: 'Alt+I',
-    group: 'Developer',
+    group: 'Admin',
     action: { kind: 'modal', modalId: 'cacheInspector' },
     description: 'Xem & quản lý cache',
   },
-  {
-    id: 'code-compare',
-    label: 'Compare',
-    shortcut: 'Alt+Shift+D',
-    group: 'Developer',
-    action: { kind: 'route', path: '/code-compare' },
-    description: 'So sánh 2 đoạn code — inline diff',
-  },
-  {
-    id: 'markdown-preview',
-    label: 'Markdown',
-    group: 'Developer',
-    action: { kind: 'route', path: '/markdown' },
-    description: 'Markdown editor + live preview, export PDF',
-  },
-  {
-    id: 'json-viewer',
-    label: 'JSON Viewer',
-    group: 'Developer',
-    action: { kind: 'route', path: '/json-viewer' },
-    description: 'Visualize JSON/CSV bằng graph hoặc tree, import/export',
-  },
-  {
-    id: 'readest',
-    label: 'Reader',
-    group: 'Productivity',
-    action: { kind: 'route', path: '/reader' },
-    description: 'PDF reader với highlight, note, translate',
-  },
-  {
-    id: 'audio',
-    label: 'Audio',
-    group: 'Utilities',
-    action: { kind: 'modal', modalId: 'audio' },
-    description: 'Phát nhạc YouTube nền — playlist + floating window',
-  },
-  {
-    id: 'rag',
-    label: 'AI Search',
-    shortcut: 'Alt+K',
-    group: 'Productivity',
-    action: { kind: 'modal', modalId: 'rag' },
-    description: 'Semantic search + AI chat trên notes / tasks / highlights',
-  },
 ];
 
-// Nhóm tools theo group (cho HubPro hiển thị section)
+/**
+ * Group tools theo `Tool.group` — dùng cho Shortcuts modal section header.
+ * KHÔNG dùng làm layout cho HubPro (đó là dynamic qua ToolCategoryManager).
+ */
 export function groupTools(tools: Tool[]): Record<ToolGroup, Tool[]> {
   const result: Record<ToolGroup, Tool[]> = {
     Productivity: [],
@@ -237,6 +258,7 @@ export function groupTools(tools: Tool[]): Record<ToolGroup, Tool[]> {
     Tracking: [],
     Utilities: [],
     Developer: [],
+    Admin: [],
   };
   for (const t of tools) result[t.group].push(t);
   return result;

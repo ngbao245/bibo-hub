@@ -13,8 +13,8 @@ import { cn } from '@/lib/cn';
 import ToolModal from '@/components/ToolModal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
+import { LoadingState, EmptyState } from '@/components/shared';
 
 import type { Note } from '@/schemas/note';
 
@@ -141,15 +141,15 @@ function SecretApp() {
 
         <div className="flex-1 overflow-y-auto">
           {notesQuery.isLoading ? (
-            <div className="space-y-1 p-2">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+            <LoadingState
+              variant="skeleton"
+              layout="list"
+              count={3}
+              itemClassName="h-12"
+              className="p-2"
+            />
           ) : secretNotes.length === 0 ? (
-            <div className="p-4 text-center text-xs text-muted-foreground">
-              Chưa có secret note nào
-            </div>
+            <EmptyState compact icon={Lock} title="Chưa có secret note nào" />
           ) : (
             <ul>
               {secretNotes.map((note) => (

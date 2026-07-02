@@ -1,4 +1,13 @@
+---
+status: deprecated
+last_verified: 2026-07-02
+replacement: docs/audio.md
+reason: spec ban đầu cho Opus implement, không phản ánh state hiện tại (standalone route /audio đã bỏ, dùng modal)
+---
+
 # Audio Player Tool — Spec cho Opus Implementation
+
+> **[Deprecated]** File này là spec ban đầu, giữ làm lịch sử. State hiện tại xem `docs/audio.md`. Sự khác biệt lớn: Audio ship dạng **modal** (`Alt+shortcut`) chứ không phải standalone route `/audio`. AudioProvider + FloatingHost đã ship khớp với plan này.
 
 ## Mục Tiêu
 

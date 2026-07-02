@@ -50,6 +50,14 @@ export default {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
+        },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
           foreground: 'hsl(var(--muted-foreground))',
@@ -112,12 +120,22 @@ export default {
             transform: 'translateX(400%)',
           },
         },
+        // Beam ánh sáng chạy 1 lần từ trái qua phải container.
+        // Đặt overlay ở container level (KHÔNG phải per-block) để 1 dải sáng
+        // duy nhất trôi qua nhiều block cùng lúc, không có cảm giác flash
+        // per-block. Container cần: `relative overflow-hidden`. Overlay cần
+        // width = 40-50% container, dùng translate để chạy từ -100% → 200%.
+        shimmer: {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(300%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         indeterminate:
           'indeterminate 1.5s infinite ease-in-out',
+        shimmer: 'shimmer 1.8s ease-in-out infinite',
       },
     },
   },

@@ -59,9 +59,9 @@ function daysBetween(from: Date, to: Date): number {
 
 ## Config
 
-- Focus tasks limit: **5** (top 5 task đáng focus nhất)
-- Focus notes limit: **3** (3 note gần nhất)
-- Không configurable từ UI (hardcode trong code)
+- Focus tasks limit: default **5** (top 5 task đáng focus nhất)
+- Focus notes limit: default **3** (3 note gần nhất)
+- Limit là parameter của `getFocusTasks(tasks, limit)` / `getFocusNotes(notes, limit)`. Caller (`FocusLayer`) truyền explicit `5`/`3`. Muốn configurable UI thì đổi ở caller, không đụng `focus.ts`.
 
 ## formatDueDate helper
 

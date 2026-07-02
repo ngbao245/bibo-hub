@@ -1,8 +1,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, X, Save, GripVertical } from 'lucide-react';
+import { X, Save, GripVertical } from 'lucide-react';
 
-import { TOOLS, type Tool } from '@/lib/tools';
+import { TOOLS, TOOL_GROUPS, type Tool } from '@/lib/tools';
 import {
   useToolCategories,
   useSaveToolCategories,
@@ -10,21 +10,19 @@ import {
 } from '@/api/toolCategories';
 
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/cn';
 
 // ============================================================
 // ToolCategoryManager — drag-drop tools giữa categories
 // ============================================================
+//
+// 6 category fix cứng (Productivity/Finance/Tracking/Utilities/Developer/Admin)
+// — user KHÔNG thêm/xoá được. Chỉ được reorder + gán tool vào category.
+// Default: tất cả tool unassigned. User kéo về category tương ứng.
+// ============================================================
 
-const DEFAULT_CATEGORIES = ['Productivity', 'Finance', 'Tracking', 'Utilities', 'Developer'];
-
-function buildDefaultMapping(): Record<string, string> {
-  const m: Record<string, string> = {};
-  for (const t of TOOLS) m[t.id] = t.group;
-  return m;
-}
+const DEFAULT_CATEGORIES: string[] = [...TOOL_GROUPS];
 
 export default function ToolCategoryManager({
   onDirtyChange,
@@ -38,8 +36,6 @@ export default function ToolCategoryManager({
   const [categories, setCategories] = useState<string[]>([]);
   const [mapping, setMapping] = useState<Record<string, string>>({});
   const [dirty, setDirty] = useState(false);
-  const [addingCat, setAddingCat] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
   const [draggedToolId, setDraggedToolId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 
@@ -55,36 +51,11 @@ export default function ToolCategoryManager({
       setCategories(d.categories);
       setMapping(d.mapping);
     } else {
+      // Chưa config → 6 category rỗng, tất cả tool unassigned
       setCategories(DEFAULT_CATEGORIES);
-      setMapping(buildDefaultMapping());
+      setMapping({});
     }
   }, [catQuery.data]);
-
-  function addCategory() {
-    const name = newCatName.trim();
-    if (!name) return;
-    if (categories.includes(name)) {
-      toast.error(`Category "${name}" đã tồn tại`);
-      return;
-    }
-    setCategories((prev) => [...prev, name]);
-    setNewCatName('');
-    setAddingCat(false);
-    setDirty(true);
-  }
-
-  function removeCategory(cat: string) {
-    if (!window.confirm(`Xoá category "${cat}"? Tools sẽ thành unassigned.`)) return;
-    setCategories((prev) => prev.filter((c) => c !== cat));
-    setMapping((prev) => {
-      const next = { ...prev };
-      for (const [k, v] of Object.entries(next)) {
-        if (v === cat) delete next[k];
-      }
-      return next;
-    });
-    setDirty(true);
-  }
 
   function moveTool(toolId: string, toCat: string) {
     setMapping((prev) => ({ ...prev, [toolId]: toCat }));
@@ -197,13 +168,6 @@ export default function ToolCategoryManager({
                       ({tools.length})
                     </span>
                   </h3>
-                  <button
-                    onClick={() => removeCategory(cat)}
-                    title="Xoá category"
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
                 </div>
                 {tools.length === 0 ? (
                   <p className="py-2 text-center text-[11px] text-muted-foreground">
@@ -246,7 +210,7 @@ export default function ToolCategoryManager({
             className={cn(
               'border border-dashed p-3 transition-colors',
               dropTarget === '__unassigned'
-                ? 'border-yellow-500 bg-yellow-500/5'
+                ? 'border-warning bg-warning/5'
                 : 'border-border',
             )}
           >
@@ -272,46 +236,10 @@ export default function ToolCategoryManager({
             )}
           </div>
 
-          {/* Add category */}
-          {addingCat ? (
-            <div className="flex items-center gap-2">
-              <Input
-                autoFocus
-                value={newCatName}
-                onChange={(e) => setNewCatName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') addCategory();
-                  if (e.key === 'Escape') {
-                    setAddingCat(false);
-                    setNewCatName('');
-                  }
-                }}
-                placeholder="Category name"
-                className="h-8 w-48 text-xs"
-              />
-              <Button size="sm" onClick={addCategory} className="h-8 text-xs">
-                Tạo
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => { setAddingCat(false); setNewCatName(''); }}
-                className="h-8 text-xs"
-              >
-                Huỷ
-              </Button>
-            </div>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setAddingCat(true)}
-              className="gap-1.5"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Thêm category
-            </Button>
-          )}
+          <p className="pt-2 text-[11px] text-muted-foreground">
+            6 category cố định, không thêm/xoá được. Kéo tool giữa các category
+            hoặc bỏ về Unassigned để ẩn khỏi Hub.
+          </p>
         </div>
       </div>
     </div>
@@ -369,4 +297,4 @@ function ToolChip({
       )}
     </div>
   );
-}
+}

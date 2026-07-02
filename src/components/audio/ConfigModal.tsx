@@ -47,7 +47,7 @@ export default function ConfigModal({ state, open, onClose }: Props) {
             onClick={() => state.setEnabled(!state.enabled)}
             className={`rounded px-2 py-1 text-xs ${
               state.enabled
-                ? 'bg-blue-500/20 text-blue-400'
+                ? 'bg-primary/20 text-primary'
                 : 'bg-zinc-800 text-zinc-400 hover:text-zinc-100'
             }`}
           >
@@ -79,7 +79,7 @@ export default function ConfigModal({ state, open, onClose }: Props) {
                   title={label}
                   className={`flex items-center justify-center rounded px-2 py-1.5 ${
                     active
-                      ? 'bg-blue-500/20 text-blue-400'
+                      ? 'bg-primary/20 text-primary'
                       : 'bg-zinc-800 text-zinc-400 hover:text-zinc-100'
                   }`}
                 >
@@ -92,7 +92,7 @@ export default function ConfigModal({ state, open, onClose }: Props) {
                       >
                         <span
                           className={`block h-[1.5px] w-[120%] rotate-45 rounded-sm ${
-                            active ? 'bg-blue-400' : 'bg-current'
+                            active ? 'bg-primary' : 'bg-current'
                           }`}
                         />
                       </span>
@@ -118,7 +118,7 @@ export default function ConfigModal({ state, open, onClose }: Props) {
                   title={label}
                   className={`flex items-center justify-center rounded px-2 py-1.5 ${
                     active
-                      ? 'bg-blue-500/20 text-blue-400'
+                      ? 'bg-primary/20 text-primary'
                       : 'bg-zinc-800 text-zinc-400 hover:text-zinc-100'
                   }`}
                 >
@@ -152,7 +152,7 @@ export default function ConfigModal({ state, open, onClose }: Props) {
             max={100}
             value={state.volume}
             onChange={(e) => state.setVolume(Number(e.target.value))}
-            className="w-full accent-blue-500"
+            className="w-full accent-primary"
           />
         </div>
       </div>

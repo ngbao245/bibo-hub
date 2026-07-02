@@ -60,7 +60,7 @@ export default function PartOutput({ part }: PartOutputProps) {
             onClick={handleCopy}
             className="h-7 gap-1.5 px-2 text-xs"
           >
-            {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+            {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
             {copied ? 'Copied' : 'Copy'}
           </Button>
           <Button

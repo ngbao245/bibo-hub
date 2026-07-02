@@ -17,9 +17,9 @@ interface TerminalLogProps {
 
 const TYPE_COLORS: Record<LogEntry['type'], string> = {
   info: 'text-muted-foreground',
-  success: 'text-green-500',
+  success: 'text-success',
   error: 'text-destructive',
-  warning: 'text-yellow-500',
+  warning: 'text-warning',
 };
 
 export default function TerminalLog({ logs, maxLines = 100 }: TerminalLogProps) {

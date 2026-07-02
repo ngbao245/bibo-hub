@@ -33,7 +33,7 @@ export default function AudioFloatingHost() {
       {showLauncher && (
         <button
           onClick={() => setFloatingOpen(true)}
-          className="fixed bottom-4 right-4 z-40 flex items-center gap-1.5 rounded-full border border-blue-500/40 bg-blue-500/20 px-3 py-2 text-xs text-blue-300 shadow-2xl backdrop-blur hover:bg-blue-500/30"
+          className="fixed bottom-4 right-4 z-40 flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/20 px-3 py-2 text-xs text-primary shadow-2xl backdrop-blur hover:bg-primary/30"
           title={
             player.currentItem
               ? `Đang phát: ${player.currentItem.title}`

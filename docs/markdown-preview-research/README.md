@@ -1,6 +1,6 @@
 # Markdown Live Preview — Research & Build Plan
 
-Tổng hợp nghiên cứu từ project gốc [`markdown-live-preview/`](../../markdown-live-preview/) để build lại tool tương đương trong hubibo (`/markdown` route).
+Tổng hợp nghiên cứu từ project gốc `markdown-live-preview/` (external repo Kiro clone-local để reference khi port, KHÔNG commit vào workspace) để build lại tool tương đương trong hubibo (`/markdown` route).
 
 ## Tool gốc làm gì
 
@@ -42,7 +42,7 @@ Chi tiết từng bước trong các file `01..04`.
 
 ## Doc liên quan
 
-- **[../FOLDER_STRUCTURE.md](../FOLDER_STRUCTURE.md)** — Map tổng thể folder hubibo.
-- **[../ADDING_NEW_FEATURE.md](../ADDING_NEW_FEATURE.md)** — Quy trình thêm tool mới (route + tools.ts + nav).
+- **[../architecture.md](../architecture.md)** — Map tổng thể folder hubibo.
+- **[../adding-new-tool.md](../adding-new-tool.md)** — Quy trình thêm tool mới (route + tools.ts + nav).
 - **[../../src/components/CodeEditor.tsx](../../src/components/CodeEditor.tsx)** — Editor có sẵn (line numbers + shortcut).
-- **[../../markdown-live-preview/src/main.js](../../markdown-live-preview/src/main.js)** — Source tool gốc.
+- `markdown-live-preview/src/main.js` — Source tool gốc (external repo, không có trong workspace).

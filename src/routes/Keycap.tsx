@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { EmptyState } from '@/components/shared';
 
 import ItemCard from '@/components/keycap/ItemCard';
 import SummaryBar from '@/components/keycap/SummaryBar';
@@ -60,12 +61,15 @@ export default function Keycap() {
     );
     if (catFilter) list = list.filter((i) => i.cat === catFilter);
     const q = query.trim().toLowerCase();
-    if (q) list = list.filter((i) => i.name.toLowerCase().includes(q) || i.tags.toLowerCase().includes(q));
+    if (q)
+      list = list.filter(
+        (i) => (i.name ?? '').toLowerCase().includes(q) || (i.tags ?? '').toLowerCase().includes(q),
+      );
 
     const sorted = [...list];
     switch (sortMode) {
       case 'newest':
-        sorted.sort((a, b) => b.buyDate.localeCompare(a.buyDate));
+        sorted.sort((a, b) => (b.buyDate ?? '').localeCompare(a.buyDate ?? ''));
         break;
       case 'profit':
         sorted.sort((a, b) => {
@@ -78,7 +82,7 @@ export default function Keycap() {
         sorted.sort((a, b) => b.buyPrice - a.buyPrice);
         break;
       case 'name':
-        sorted.sort((a, b) => a.name.localeCompare(b.name));
+        sorted.sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''));
         break;
     }
     return sorted;
@@ -329,7 +333,7 @@ function ItemGrid({
   onDelete: (item: KeycapItem) => void;
 }) {
   if (items.length === 0) {
-    return <div className="p-8 text-center text-sm text-muted-foreground">Không có item nào</div>;
+    return <EmptyState compact icon={Keyboard} title="Không có item nào" />;
   }
   return (
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -374,9 +378,18 @@ function GroupsList({
         </Button>
       </div>
       {groups.length === 0 ? (
-        <div className="border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-          Chưa có group nào
-        </div>
+        <EmptyState
+          compact
+          icon={Users}
+          title="Chưa có group nào"
+          description="Tạo group để phân loại keycap theo lô/vendor."
+          action={
+            <Button size="sm" onClick={onAdd} className="gap-1.5">
+              <Plus className="h-4 w-4" />
+              Thêm group
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-2">
           {groups.map((g) => (

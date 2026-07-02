@@ -21,10 +21,10 @@ import type { Note } from '@/schemas/note';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/sonner';
+import { LoadingState } from '@/components/shared';
 
 // ============================================================
 // FocusLayer - section trên cùng HubPro
@@ -325,16 +325,13 @@ function NoteRow({ note }: { note: Note }) {
 
 function SkeletonGrid() {
   return (
-    <div className="mt-3 grid gap-3 md:grid-cols-2">
-      {[1, 2].map((col) => (
-        <div key={col} className="space-y-2">
-          <Skeleton className="h-4 w-32" />
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ))}
-    </div>
+    <LoadingState
+      variant="skeleton"
+      layout="list"
+      count={6}
+      itemClassName="h-12"
+      className="mt-3 grid gap-3 md:grid-cols-2"
+    />
   );
 }
 
@@ -344,4 +341,4 @@ function Empty({ text }: { text: string }) {
       {text}
     </div>
   );
-}
+}

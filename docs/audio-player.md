@@ -1,4 +1,13 @@
+---
+status: deprecated
+last_verified: 2026-07-02
+replacement: docs/audio.md
+reason: spec v2 cho Opus, feature đã ship (queue, floating, config), nội dung trùng audio-tool.md
+---
+
 # Audio Player Tool — Spec cho Opus Implementation
+
+> **[Deprecated]** File này là spec ban đầu, giữ làm lịch sử. State hiện tại xem `docs/audio.md`. Hầu hết feature list ở đây (queue, floating window, config modal, auto-repeat) đã ship xong.
 
 ## Mục Tiêu
 

@@ -1,7 +1,10 @@
 // Export preview element → PDF, force light theme.
 // Port từ markdown-live-preview/src/main.js fn `exportPreviewToPdf`.
+//
+// html2pdf.js nặng (~500KB gzip) và chỉ dùng khi user bấm Export PDF.
+// Dynamic import để tách khỏi MarkdownPreview route chunk — user vào /markdown
+// không phải tải ngay html2pdf, chỉ tải khi bấm nút Export.
 
-import html2pdf from 'html2pdf.js';
 import lightCss from 'github-markdown-css/github-markdown-light.css?inline';
 
 const A4_CONTENT_WIDTH_MM = '190mm'; // 210mm - 2×10mm margin
@@ -10,6 +13,10 @@ export async function exportPreviewToPdf(
   previewElement: HTMLElement,
   filename = 'markdown-preview.pdf',
 ) {
+  // Dynamic import: lần đầu bấm Export sẽ delay ~200-300ms tải chunk,
+  // lần sau instant vì browser cache.
+  const { default: html2pdf } = await import('html2pdf.js');
+
   const opts = {
     margin: 10,
     filename,

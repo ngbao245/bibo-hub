@@ -11,7 +11,7 @@ const anonKey = envAnonKey || cachedConfig?.anonKey || 'invalid';
 
 if (cachedConfig) {
   // eslint-disable-next-line no-console
-  console.log('[reader-supabase] ✅ Using cached config for instant session restore');
+  console.info('[reader-supabase] Using cached config for instant session restore');
 } else if (!envUrl || !envAnonKey) {
   // eslint-disable-next-line no-console
   console.warn(
@@ -49,12 +49,12 @@ export async function reinitializeSupabase(newUrl: string, newAnonKey: string) {
   // Check if already initialized with same config
   if (currentUrl === newUrl && currentAnonKey === newAnonKey) {
     // eslint-disable-next-line no-console
-    console.log('[reader-supabase] Already initialized with correct config, skipping');
+    console.info('[reader-supabase] Already initialized with correct config, skipping');
     return;
   }
 
   // eslint-disable-next-line no-console
-  console.log('[reader-supabase] 🔄 Reinitializing client with new config');
+  console.info('[reader-supabase] Reinitializing client with new config');
 
   // Get existing session before replacing client
   const { data: oldSessionData } = await client.auth.getSession();
@@ -72,7 +72,7 @@ export async function reinitializeSupabase(newUrl: string, newAnonKey: string) {
   // Restore session if exists (important for re-init case)
   if (oldSession) {
     // eslint-disable-next-line no-console
-    console.log('[reader-supabase] 🔐 Restoring previous session to new client');
+    console.info('[reader-supabase] Restoring previous session to new client');
     await client.auth.setSession({
       access_token: oldSession.access_token,
       refresh_token: oldSession.refresh_token,

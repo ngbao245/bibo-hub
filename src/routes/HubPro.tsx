@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Keyboard, ChevronDown, Pin, PinOff } from 'lucide-react';
 
-import { TOOLS, type Tool, type ToolGroup } from '@/lib/tools';
+import { TOOLS, TOOL_GROUPS, type Tool, type ToolGroup } from '@/lib/tools';
 import { useToolAction } from '@/hooks/useToolAction';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useHubFavorites, useSaveHubFavorites } from '@/api/hubFavorites';
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ToolIcon } from '@/components/ToolIcon';
 import { toast } from '@/components/ui/sonner';
+import { LoadingState, EmptyState } from '@/components/shared';
 import { useModalStore } from '@/stores/modalStore';
 
 // ============================================================
@@ -29,13 +30,18 @@ import { useModalStore } from '@/stores/modalStore';
 // Tối đa 24 favorite slots.
 // ============================================================
 
+// 6 category fix cứng — user không thêm/xoá được.
+// Thứ tự này là default order lần đầu vào app; user có thể reorder qua Setting.
 const DEFAULT_GROUP_ORDER: ToolGroup[] = [
   'Productivity',
   'Finance',
   'Tracking',
   'Utilities',
   'Developer',
+  'Admin',
 ];
+
+const UNASSIGNED_CATEGORY = 'Unassigned';
 
 const MAX_FAVORITES = 24;
 
@@ -108,9 +114,10 @@ export default function HubPro() {
     .filter((t): t is Tool => !!t)
     .slice(0, MAX_FAVORITES); // hard limit khi render
 
-  // Categories — lưu /Config, fallback hardcode
+  // Categories — lưu /Config. Mapping tool → category hoàn toàn dynamic.
+  // Chưa config → dùng DEFAULT_GROUP_ORDER, mọi tool rơi vào Unassigned.
   const catQuery = useToolCategories();
-  const { categoryOrder, toolsByCategory } = useMemo(() => {
+  const { categoryOrder, toolsByCategory, unassignedTools } = useMemo(() => {
     const catData = catQuery.data?.data;
     const hasCustom = catData && catData.categories.length > 0;
 
@@ -119,19 +126,25 @@ export default function HubPro() {
       ? catData.categories
       : DEFAULT_GROUP_ORDER;
 
-    // Mapping tool → category
     const grouped: Record<string, Tool[]> = {};
     for (const cat of order) grouped[cat] = [];
 
+    const unassigned: Tool[] = [];
+    const mapping = catData?.mapping ?? {};
     for (const tool of TOOLS) {
-      const cat = hasCustom
-        ? (catData.mapping[tool.id] ?? '')
-        : tool.group;
-      if (!cat || !grouped[cat]) continue;
-      grouped[cat].push(tool);
+      const cat = mapping[tool.id];
+      if (cat && grouped[cat]) {
+        grouped[cat].push(tool);
+      } else {
+        unassigned.push(tool);
+      }
     }
 
-    return { categoryOrder: order, toolsByCategory: grouped };
+    return {
+      categoryOrder: order,
+      toolsByCategory: grouped,
+      unassignedTools: unassigned,
+    };
   }, [catQuery.data]);
 
   function toggleFavorite(id: string) {
@@ -300,7 +313,9 @@ export default function HubPro() {
             {focusVisible && <FocusLayer onHide={() => setFocusVisible(false)} />}
 
             <section className="min-h-0 flex-1 overflow-y-auto">
-              {favorites.length > 0 ? (
+              {favQuery.isLoading ? (
+                <FavoritesSkeleton />
+              ) : favorites.length > 0 ? (
                 <div
                   className="grid content-start gap-px bg-border"
                   style={{
@@ -339,45 +354,86 @@ export default function HubPro() {
                   })}
                 </div>
               ) : (
-                <div className="border border-dashed border-border bg-card p-8 text-center text-xs text-muted-foreground">
-                  Chưa có pin nào. Cuộn xuống và bấm
-                  <Pin className="mx-1 inline h-3 w-3" />
-                  ở tool bất kỳ để pin lên đây.
-                </div>
+                <EmptyState
+                  compact
+                  icon={Pin}
+                  title="Chưa có pin nào"
+                  description="Cuộn xuống và bấm biểu tượng pin ở tool bất kỳ để pin lên đây."
+                />
               )}
             </section>
           </div>
 
-          {/* Section 2: content height tự nhiên */}
+          {/* Section 2: content height tự nhiên.
+              Khi catQuery còn loading → skeleton grid, tránh flash mọi tool
+              vào Unassigned rồi ngay lập tức nhảy về category thật. */}
           <div className="shrink-0 space-y-6 border-t border-border py-6">
-            {categoryOrder.map((group) => {
-              const tools = toolsByCategory[group] ?? [];
-              if (tools.length === 0) return null;
-              return (
-                <section key={group}>
-                  <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {group}
-                  </h2>
-                  <div
-                    className="grid gap-px bg-border"
-                    style={{
-                      gridTemplateColumns:
-                        'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))',
-                    }}
-                  >
-                    {tools.map((tool) => (
-                      <ToolCell
-                        key={tool.id}
-                        tool={tool}
-                        isFavorite={favoriteSet.has(tool.id)}
-                        onClick={() => handleClick(tool)}
-                        onToggleFavorite={() => toggleFavorite(tool.id)}
-                      />
-                    ))}
-                  </div>
-                </section>
-              );
-            })}
+            {catQuery.isLoading ? (
+              <CategoriesSkeleton />
+            ) : (
+              <>
+                {categoryOrder.map((group) => {
+                  const tools = toolsByCategory[group] ?? [];
+                  if (tools.length === 0) return null;
+                  return (
+                    <section key={group}>
+                      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        {group}
+                      </h2>
+                      <div
+                        className="grid gap-px bg-border"
+                        style={{
+                          gridTemplateColumns:
+                            'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))',
+                        }}
+                      >
+                        {tools.map((tool) => (
+                          <ToolCell
+                            key={tool.id}
+                            tool={tool}
+                            isFavorite={favoriteSet.has(tool.id)}
+                            onClick={() => handleClick(tool)}
+                            onToggleFavorite={() => toggleFavorite(tool.id)}
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  );
+                })}
+
+                {/* Unassigned — tool chưa được gán vào category nào */}
+                {unassignedTools.length > 0 && (
+                  <section>
+                    <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-warning">
+                      {UNASSIGNED_CATEGORY}
+                      <span className="ml-1.5 font-mono font-normal text-muted-foreground">
+                        ({unassignedTools.length})
+                      </span>
+                    </h2>
+                    <p className="mb-2 text-[11px] text-muted-foreground">
+                      Vào Config → Tool Categories để kéo các tool này vào category.
+                    </p>
+                    <div
+                      className="grid gap-px bg-border"
+                      style={{
+                        gridTemplateColumns:
+                          'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))',
+                      }}
+                    >
+                      {unassignedTools.map((tool) => (
+                        <ToolCell
+                          key={tool.id}
+                          tool={tool}
+                          isFavorite={favoriteSet.has(tool.id)}
+                          onClick={() => handleClick(tool)}
+                          onToggleFavorite={() => toggleFavorite(tool.id)}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -422,6 +478,56 @@ function Header({
         </Tooltip>
       </div>
     </header>
+  );
+}
+
+// ============================================================
+// Skeletons — beam sweep N hàng, mỗi hàng tốc độ khác nhau
+// ============================================================
+// Mỗi row = 1 grid clip 1 hàng, có beam riêng. Stack nhiều row với duration
+// khác nhau → cảm giác "living", không đơn điệu.
+
+const GRID_TEMPLATE_COLUMNS =
+  'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))';
+
+// Duration cho từng row theo index. Beyond 4 rows dùng modulo (hiếm khi cần).
+const ROW_DURATIONS = ['1.4s', '2.4s', '1.8s', '2s'];
+
+function SkeletonRows({ rows }: { rows: number }) {
+  return (
+    <div className="space-y-px">
+      {Array.from({ length: rows }).map((_, i) => (
+        <LoadingState
+          key={i}
+          variant="skeleton"
+          count={20}
+          maxRows={1}
+          itemClassName="aspect-square h-auto w-full"
+          className="grid gap-px bg-border"
+          style={{ gridTemplateColumns: GRID_TEMPLATE_COLUMNS }}
+          shimmerDuration={ROW_DURATIONS[i % ROW_DURATIONS.length]}
+        />
+      ))}
+    </div>
+  );
+}
+
+function FavoritesSkeleton() {
+  return <SkeletonRows rows={2} />;
+}
+
+function CategoriesSkeleton() {
+  // Số section = số category fix cứng (`TOOL_GROUPS`). Nếu tương lai thêm
+  // category → tự sync, không phải nhớ update chỗ này.
+  return (
+    <>
+      {TOOL_GROUPS.map((g) => (
+        <section key={g}>
+          <div className="mb-2 h-3 w-24 bg-muted" />
+          <SkeletonRows rows={1} />
+        </section>
+      ))}
+    </>
   );
 }
 
@@ -531,13 +637,8 @@ function ToolCell({
           </span>
         </div>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="flex items-center gap-2">
+      <TooltipContent side="bottom">
         <span>{tool.label}</span>
-        {tool.shortcut && (
-          <span className="border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-primary">
-            {tool.shortcut}
-          </span>
-        )}
       </TooltipContent>
     </Tooltip>
   );

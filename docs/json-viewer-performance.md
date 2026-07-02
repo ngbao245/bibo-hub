@@ -48,7 +48,7 @@ Reject pending Promise + drop singleton. Mỗi lần parse tạo worker mới.
 
 ## Giải pháp THẬT SỰ hiệu quả (theo JSON Crack)
 
-Đọc source [`jsoncrack.com/apps/www/src/store/useFile.ts`](../jsoncrack.com/apps/www/src/store/useFile.ts):
+Đọc source `jsoncrack.com/apps/www/src/store/useFile.ts` (external repo Kiro clone-local để reference, KHÔNG commit vào workspace):
 
 ```ts
 const debouncedUpdateJson = debounce((value: unknown) => {
@@ -220,6 +220,6 @@ Initial app bundle KHÔNG bị ảnh hưởng. Worker chunk: 20KB.
 
 ## Reference
 
-- [JSON Crack `useFile.ts`](../jsoncrack.com/apps/www/src/store/useFile.ts) — pattern debounce gốc
-- [JSON Crack `GraphView/index.tsx`](../jsoncrack.com/apps/www/src/features/editor/views/GraphView/index.tsx) — key cho config, không cho data
+- JSON Crack `apps/www/src/store/useFile.ts` — pattern debounce gốc (external repo, không có trong workspace)
+- JSON Crack `apps/www/src/features/editor/views/GraphView/index.tsx` — key cho config, không cho data (external repo)
 - [ELK Layered](https://eclipse.dev/elk/) — layout algorithm reaflow dùng

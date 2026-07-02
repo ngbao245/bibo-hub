@@ -358,14 +358,14 @@ export async function runLazyFixupNotes(
 
   if (opts.verbose) {
     /* eslint-disable no-console */
-    console.log(
+    console.info(
       `[rag-fixup] scanned=${scoped.length}, enqueued=${enqueuedNotes.length}, gced=${gcedIds.length}, limit=${opts.limit ?? 'all'}, gc=${opts.gc ? 'on' : 'off'}`,
     );
     for (const n of enqueuedNotes) {
-      console.log(`[rag-fixup]  · ${n.reason.padEnd(7)} "${n.title}" (id=${n.id})`);
+      console.info(`[rag-fixup]  · ${n.reason.padEnd(7)} "${n.title}" (id=${n.id})`);
     }
     for (const id of gcedIds) {
-      console.log(`[rag-fixup]  · orphan  (id=${id}) → enqueue delete`);
+      console.info(`[rag-fixup]  · orphan  (id=${id}) → enqueue delete`);
     }
     /* eslint-enable no-console */
   }

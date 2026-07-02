@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, X } from 'lucide-react';
+import { ArrowLeft, Film, Plus, Search, X } from 'lucide-react';
 
 import { useMovies, useCreateMovie, useUpdateMovie, useDeleteMovie } from '@/api/movies';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
+import { EmptyState, LoadingState } from '@/components/shared';
 import { cn } from '@/lib/cn';
 
 import MovieCard from '@/components/movies/MovieCard';
@@ -192,9 +192,26 @@ export default function Movies() {
       {/* Body */}
       <div className="flex-1 overflow-y-auto p-4">
         {moviesQuery.isLoading ? (
-          <SkeletonGrid />
+          <LoadingState
+            variant="skeleton"
+            count={8}
+            itemClassName="h-48"
+            className="mx-auto max-w-6xl xl:grid-cols-4"
+          />
         ) : filtered.length === 0 ? (
-          <EmptyState query={query} onAdd={openAddDialog} />
+          <EmptyState
+            icon={Film}
+            title={query ? `Không có phim nào khớp "${query}"` : 'Chưa có phim nào'}
+            description={query ? 'Thử từ khoá khác hoặc xoá bộ lọc.' : 'Thêm phim đầu tiên để bắt đầu theo dõi.'}
+            action={
+              !query && (
+                <Button onClick={openAddDialog} className="gap-1.5">
+                  <Plus className="h-4 w-4" />
+                  Thêm phim đầu tiên
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="mx-auto grid max-w-6xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filtered.map((m) => (
@@ -243,31 +260,5 @@ function FilterButton({
     >
       {children}
     </button>
-  );
-}
-
-function SkeletonGrid() {
-  return (
-    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <Skeleton key={i} className="h-48" />
-      ))}
-    </div>
-  );
-}
-
-function EmptyState({ query, onAdd }: { query: string; onAdd: () => void }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <p className="mb-4 text-muted-foreground">
-        {query ? `Không có phim nào khớp "${query}"` : 'Chưa có phim nào'}
-      </p>
-      {!query && (
-        <Button onClick={onAdd} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Thêm phim đầu tiên
-        </Button>
-      )}
-    </div>
   );
 }

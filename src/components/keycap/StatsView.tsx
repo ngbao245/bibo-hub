@@ -31,25 +31,25 @@ export default function StatsView({ items, lots, groups }: StatsViewProps) {
     <div className="grid gap-4 overflow-y-auto p-4 md:grid-cols-2">
       {/* Financial overview */}
       <Section icon={Wallet} title="Tài chính">
-        <Row label="Tổng vốn bỏ ra" value={formatMoney(stats.totalInvested)} color="text-yellow-500" />
+        <Row label="Tổng vốn bỏ ra" value={formatMoney(stats.totalInvested)} color="text-warning" />
         <Row label="Vốn đang giữ" value={formatMoney(stats.heldInvested)} />
         <Row label="Doanh thu đã bán" value={formatMoney(stats.soldRevenue)} color="text-primary" />
         <Row
           label="Lời/lỗ thực tế"
           value={`${stats.realizedProfit >= 0 ? '+' : ''}${formatMoney(stats.realizedProfit)}`}
-          color={stats.realizedProfit >= 0 ? 'text-green-500' : 'text-destructive'}
+          color={stats.realizedProfit >= 0 ? 'text-success' : 'text-destructive'}
         />
         <Row
           label="Tiềm năng"
           value={`${stats.unrealizedProfit >= 0 ? '+' : ''}${formatMoney(stats.unrealizedProfit)}`}
-          color={stats.unrealizedProfit >= 0 ? 'text-green-500' : 'text-destructive'}
+          color={stats.unrealizedProfit >= 0 ? 'text-success' : 'text-destructive'}
         />
         {stats.sold > 0 && (
           <>
             <Row
               label="ROI bán"
               value={stats.soldCost > 0 ? `${((stats.realizedProfit / stats.soldCost) * 100).toFixed(1)}%` : '—'}
-              color={stats.realizedProfit >= 0 ? 'text-green-500' : 'text-destructive'}
+              color={stats.realizedProfit >= 0 ? 'text-success' : 'text-destructive'}
             />
             <Row label="TB ngày để bán" value={`${Math.round(stats.avgDaysToSell)} ngày`} />
           </>
@@ -66,7 +66,7 @@ export default function StatsView({ items, lots, groups }: StatsViewProps) {
               labelIcon={cat.Icon}
               label={`${cat.label} (${c.count})`}
               value={`${c.profit >= 0 ? '+' : ''}${formatMoney(c.profit)}`}
-              color={c.profit >= 0 ? 'text-green-500' : 'text-destructive'}
+              color={c.profit >= 0 ? 'text-success' : 'text-destructive'}
             />
           );
         })}
@@ -112,7 +112,7 @@ export default function StatsView({ items, lots, groups }: StatsViewProps) {
                 key={l.lotId}
                 label={`${lot?.name ?? 'Unknown'} (${l.itemCount})`}
                 value={`${l.profit >= 0 ? '+' : ''}${formatMoney(l.profit)}`}
-                color={l.profit >= 0 ? 'text-green-500' : 'text-destructive'}
+                color={l.profit >= 0 ? 'text-success' : 'text-destructive'}
               />
             );
           })}
@@ -127,7 +127,7 @@ export default function StatsView({ items, lots, groups }: StatsViewProps) {
               key={item.id}
               label={item.name}
               value={`+${formatMoney(itemProfit(item))}`}
-              color="text-green-500"
+              color="text-success"
             />
           ))}
         </Section>

@@ -26,7 +26,7 @@ const STATUS_LABELS: Record<Movie['status'], string> = {
 
 const STATUS_COLORS: Record<Movie['status'], string> = {
   watching: 'bg-primary/20 text-primary border-primary/30',
-  completed: 'bg-green-500/10 text-green-500 border-green-500/30',
+  completed: 'bg-success/10 text-success border-success/30',
   plan: 'bg-muted-foreground/10 text-muted-foreground border-border',
 };
 
@@ -91,7 +91,7 @@ export default function MovieCard({ movie, onEdit, onDelete, onRate }: MovieCard
           <div
             className={cn(
               'h-full transition-all duration-300',
-              movie.status === 'completed' ? 'bg-green-500' : 'bg-primary',
+              movie.status === 'completed' ? 'bg-success' : 'bg-primary',
             )}
             style={{ width: `${progress}%` }}
           />

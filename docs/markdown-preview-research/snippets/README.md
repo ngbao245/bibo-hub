@@ -17,7 +17,7 @@ Snippet đã port từ tool gốc sang style hubibo (React + hook + token theme)
 
 ## Còn thiếu
 
-- `src/lib/markdown-preview/default-input.ts` — copy template từ [`main.js` dòng ~17-80](../../../markdown-live-preview/src/main.js#L17-L80).
+- `src/lib/markdown-preview/default-input.ts` — copy template từ `main.js` dòng ~17-80 (external repo `markdown-live-preview`, không có trong workspace).
 - `src/styles/markdown-preview.css` — `@import 'github-markdown-css/github-markdown.css';` + override theme.
 - `src/types/html2pdf.d.ts` — module declaration (xem 03-dependencies.md).
 - `src/components/ToolIcon.tsx` — thêm entry icon mới.

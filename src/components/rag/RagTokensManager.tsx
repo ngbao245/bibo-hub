@@ -3,6 +3,7 @@ import { Eye, EyeOff, ExternalLink, Loader2, Save, ShieldCheck } from 'lucide-re
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
 
 import { useSettings, useCreateSetting, useUpdateSetting } from '@/api/setting';
@@ -274,28 +275,32 @@ export default function RagTokensManager({
         </div>
       </div>
 
-      {loadingExisting && (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Đang load token hiện có...
-        </div>
-      )}
-
       <div className="space-y-3">
-        {FIELDS.map((f) => (
-          <KeyRow
-            key={f.name}
-            field={f}
-            value={tokens[f.name]}
-            visible={!!show[f.name]}
-            status={testStatus[f.name] ?? 'idle'}
-            onChange={(v) => setField(f.name, v)}
-            onToggleVisible={() =>
-              setShow((prev) => ({ ...prev, [f.name]: !prev[f.name] }))
-            }
-            onTest={() => testKey(f.name)}
-          />
-        ))}
+        {loadingExisting
+          ? // Skeleton match form field rows: label 24 wide + input h-9 full + test button
+            FIELDS.map((f) => (
+              <div key={f.name} className="space-y-1.5">
+                <Skeleton className="h-3 w-32" />
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-9 flex-1" />
+                  <Skeleton className="h-9 w-16 shrink-0" />
+                </div>
+              </div>
+            ))
+          : FIELDS.map((f) => (
+              <KeyRow
+                key={f.name}
+                field={f}
+                value={tokens[f.name]}
+                visible={!!show[f.name]}
+                status={testStatus[f.name] ?? 'idle'}
+                onChange={(v) => setField(f.name, v)}
+                onToggleVisible={() =>
+                  setShow((prev) => ({ ...prev, [f.name]: !prev[f.name] }))
+                }
+                onTest={() => testKey(f.name)}
+              />
+            ))}
       </div>
 
       <div className="flex items-center justify-between border-t border-border pt-3">

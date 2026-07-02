@@ -465,7 +465,7 @@ useUpdateNote.onSuccess → dualWriteNote → enqueueEmbed → queue drain backg
 
 ## 11. Bugs đã fix trong quá trình ship
 
-Xem `docs/rag-issues-log.md` cho danh sách đầy đủ. Highlights:
+Highlights:
 
 1. Model `text-embedding-004` không available → đổi sang `gemini-embedding-001`.
 2. Dimension mismatch 3072 vs 768 → thêm `outputDimensionality: 768`.
@@ -486,7 +486,6 @@ Xem `docs/rag-issues-log.md` cho danh sách đầy đủ. Highlights:
 - [`docs/reader.md`](./reader.md) — Reader architecture, pdfjs.
 - [`docs/optimistic-ui.md`](./optimistic-ui.md) — pattern dual-write.
 - [`docs/modal-system.md`](./modal-system.md) — pattern modal + shortcut.
-- [`docs/rag-issues-log.md`](./rag-issues-log.md) — issues log chi tiết.
 - [`scripts/rag-migration.sql`](../scripts/rag-migration.sql) — SQL migration.
 
 **External:**

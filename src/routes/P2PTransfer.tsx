@@ -634,10 +634,10 @@ export default function P2PTransfer() {
                 {myId}
               </code>
               <Button variant="outline" size="icon" onClick={copyId} className="h-10 w-10" title="Copy ID">
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
               </Button>
               <Button variant="outline" size="icon" onClick={copyShareLink} className="h-10 w-10" title="Copy share link">
-                {linkCopied ? <Check className="h-4 w-4 text-green-500" /> : <Link2 className="h-4 w-4" />}
+                {linkCopied ? <Check className="h-4 w-4 text-success" /> : <Link2 className="h-4 w-4" />}
               </Button>
               <Button
                 variant="outline"
@@ -670,7 +670,7 @@ export default function P2PTransfer() {
             )}
 
             {peerStatus === 'waiting' && (
-              <div className="mt-3 flex items-center gap-2 text-sm text-yellow-500">
+              <div className="mt-3 flex items-center gap-2 text-sm text-warning">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Đang đợi đối phương kết nối...
               </div>
@@ -684,7 +684,7 @@ export default function P2PTransfer() {
                 Kết nối tới đối phương
               </h2>
               {connectedTo && peerStatus === 'connected' && (
-                <span className="border border-green-500/30 bg-green-500/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-green-500">
+                <span className="border border-success/30 bg-success/5 px-2 py-0.5 text-[10px] uppercase tracking-wider text-success">
                   Đã nối
                 </span>
               )}
@@ -715,7 +715,7 @@ export default function P2PTransfer() {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-between gap-2 border border-green-500/30 bg-green-500/5 px-3 py-2 text-sm text-green-500">
+              <div className="flex items-center justify-between gap-2 border border-success/30 bg-success/5 px-3 py-2 text-sm text-success">
                 <span className="inline-flex items-center gap-2">
                   <Wifi className="h-4 w-4" />
                   Đã kết nối
@@ -737,8 +737,8 @@ export default function P2PTransfer() {
               </h3>
               <p className="mt-2 text-xs text-foreground">{errorInfo.detail}</p>
               {errorInfo.hint && (
-                <div className="mt-2 border border-yellow-500/30 bg-yellow-500/5 px-3 py-2 text-xs text-yellow-600 dark:text-yellow-400">
-                  💡 {errorInfo.hint}
+                <div className="mt-2 border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+                  {errorInfo.hint}
                 </div>
               )}
               <div className="mt-3 flex gap-2">
@@ -828,9 +828,9 @@ export default function P2PTransfer() {
 function PeerStatusBadge({ status }: { status: PeerStatus }) {
   const cfg: Record<PeerStatus, { label: string; cls: string }> = {
     idle: { label: 'Chưa mở phòng', cls: 'border-border bg-background text-muted-foreground' },
-    waiting: { label: 'Đang đợi', cls: 'border-yellow-500/30 bg-yellow-500/5 text-yellow-500' },
-    connecting: { label: 'Đang nối', cls: 'border-yellow-500/30 bg-yellow-500/5 text-yellow-500' },
-    connected: { label: 'Đã kết nối', cls: 'border-green-500/30 bg-green-500/5 text-green-500' },
+    waiting: { label: 'Đang đợi', cls: 'border-warning/30 bg-warning/5 text-warning' },
+    connecting: { label: 'Đang nối', cls: 'border-warning/30 bg-warning/5 text-warning' },
+    connected: { label: 'Đã kết nối', cls: 'border-success/30 bg-success/5 text-success' },
     error: { label: 'Lỗi', cls: 'border-destructive/30 bg-destructive/5 text-destructive' },
   };
   const c = cfg[status];
@@ -887,7 +887,7 @@ function SendingRow({ item, onRemove }: { item: SendingItem; onRemove: () => voi
                 <span>ETA {formatDuration(item.eta)}</span>
               </>
             )}
-            {item.done && <span className="text-green-500">✓ Xong</span>}
+            {item.done && <span className="text-success">Xong</span>}
             {item.error && <span className="text-destructive">{item.error}</span>}
           </div>
         </div>
@@ -896,7 +896,7 @@ function SendingRow({ item, onRemove }: { item: SendingItem; onRemove: () => voi
         </Button>
       </div>
       <div className="h-0.5 w-full bg-background">
-        <div className={cn('h-full transition-all', item.done ? 'bg-green-500' : 'bg-primary')} style={{ width: `${pct}%` }} />
+        <div className={cn('h-full transition-all', item.done ? 'bg-success' : 'bg-primary')} style={{ width: `${pct}%` }} />
       </div>
     </li>
   );
@@ -918,7 +918,7 @@ function ReceivingRow({ item, onRemove }: { item: ReceivedItem; onRemove: () => 
                 <span>ETA {formatDuration(item.eta)}</span>
               </>
             )}
-            {item.done && <span className="text-green-500">✓ Xong</span>}
+            {item.done && <span className="text-success">Xong</span>}
           </div>
         </div>
         {item.done && item.blob && (
@@ -932,7 +932,7 @@ function ReceivingRow({ item, onRemove }: { item: ReceivedItem; onRemove: () => 
         </Button>
       </div>
       <div className="h-0.5 w-full bg-background">
-        <div className={cn('h-full transition-all', item.done ? 'bg-green-500' : 'bg-primary')} style={{ width: `${pct}%` }} />
+        <div className={cn('h-full transition-all', item.done ? 'bg-success' : 'bg-primary')} style={{ width: `${pct}%` }} />
       </div>
     </li>
   );
@@ -980,4 +980,4 @@ function QrDisplay({ value }: { value: string }) {
       <code className="break-all text-center text-[10px] text-muted-foreground">{value}</code>
     </div>
   );
-}
+}

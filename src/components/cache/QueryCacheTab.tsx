@@ -138,8 +138,8 @@ function QueryRow({
 
                 <span className={cn(
                     'shrink-0 border px-1.5 py-0.5 text-[9px] uppercase',
-                    status === 'success' && 'border-green-500/30 bg-green-500/10 text-green-500',
-                    status === 'pending' && 'border-yellow-500/30 bg-yellow-500/10 text-yellow-500',
+                    status === 'success' && 'border-success/30 bg-success/10 text-success',
+                    status === 'pending' && 'border-warning/30 bg-warning/10 text-warning',
                     status === 'error' && 'border-destructive/30 bg-destructive/10 text-destructive',
                 )}>
                     {status}

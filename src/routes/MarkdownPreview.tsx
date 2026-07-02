@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Copy, Download, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Copy, Download, RotateCcw, Wand2 } from 'lucide-react';
 
 import CodeEditor from '@/components/CodeEditor';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ import { renderMarkdown } from '@/lib/markdown-preview/render';
 import { exportPreviewToPdf } from '@/lib/markdown-preview/export-pdf';
 import { syncScroll } from '@/lib/markdown-preview/sync-scroll';
 import { DEFAULT_INPUT } from '@/lib/markdown-preview/default-input';
+import { formatMarkdown } from '@/lib/markdown-preview/format';
 
 import '@/styles/markdown-preview.css';
 
@@ -32,11 +33,36 @@ export default function MarkdownPreviewPage() {
   const [md, setMd] = useLocalStorage('md-preview/content', DEFAULT_INPUT);
   const [sync, setSync] = useLocalStorage('md-preview/sync', false);
   const [lightTheme, setLightTheme] = useLocalStorage('md-preview/light', false);
+  const [autoFormat, setAutoFormat] = useLocalStorage('md-preview/auto-format', false);
   const [exporting, setExporting] = useState(false);
+  const [formatting, setFormatting] = useState(false);
 
   // Debounce render để gõ liền tay không lag với markdown lớn.
   const [html, setHtml] = useState(() => renderMarkdown(md));
   useDebouncedEffect(() => setHtml(renderMarkdown(md)), [md], 80);
+
+  // Auto format: chờ user ngưng gõ 800ms rồi format background. Không toast để tránh spam.
+  // Skip khi đang có Format thủ công chạy hoặc auto đang chạy để tránh loop.
+  const autoFormatRunning = useRef(false);
+  useDebouncedEffect(
+    () => {
+      if (!autoFormat || formatting || autoFormatRunning.current) return;
+      autoFormatRunning.current = true;
+      formatMarkdown(md)
+        .then((next) => {
+          if (next !== md) setMd(next);
+        })
+        .catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error('[markdown-preview] auto-format failed', err);
+        })
+        .finally(() => {
+          autoFormatRunning.current = false;
+        });
+    },
+    [md, autoFormat],
+    800,
+  );
 
   const editorScrollRef = useRef<HTMLDivElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -84,6 +110,26 @@ export default function MarkdownPreviewPage() {
     }
   }
 
+  async function handleFormat() {
+    if (formatting) return;
+    setFormatting(true);
+    try {
+      const next = await formatMarkdown(md);
+      if (next === md) {
+        toast.info('Markdown đã format sẵn');
+      } else {
+        setMd(next);
+        toast.success('Đã format markdown');
+      }
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[markdown-preview] format failed', err);
+      toast.error('Format thất bại');
+    } finally {
+      setFormatting(false);
+    }
+  }
+
   async function handleExport() {
     if (!previewRef.current || exporting) return;
     setExporting(true);
@@ -111,6 +157,16 @@ export default function MarkdownPreviewPage() {
           <RotateCcw className="h-3 w-3" />
           Reset
         </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleFormat}
+          disabled={formatting}
+          className="h-7 gap-1 px-2 text-xs"
+        >
+          <Wand2 className="h-3 w-3" />
+          {formatting ? 'Formatting...' : 'Format'}
+        </Button>
         <Button variant="outline" size="sm" onClick={handleCopy} className="h-7 gap-1 px-2 text-xs">
           <Copy className="h-3 w-3" />
           Copy
@@ -127,6 +183,10 @@ export default function MarkdownPreviewPage() {
         </Button>
 
         <label className="ml-2 flex select-none items-center gap-1.5 text-xs">
+          <Checkbox checked={autoFormat} onCheckedChange={(v) => setAutoFormat(!!v)} />
+          Auto format
+        </label>
+        <label className="flex select-none items-center gap-1.5 text-xs">
           <Checkbox checked={sync} onCheckedChange={(v) => setSync(!!v)} />
           Sync scroll
         </label>

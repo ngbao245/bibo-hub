@@ -146,7 +146,7 @@ export default function ShortcutManager({ onDirtyChange }: ShortcutManagerProps)
       </div>
 
       {Object.keys(conflicts).length > 0 && (
-        <div className="mb-3 flex items-start gap-2 border border-yellow-500/40 bg-yellow-500/10 p-2 text-xs text-yellow-200">
+        <div className="mb-3 flex items-start gap-2 border border-warning/40 bg-warning/10 p-2 text-xs text-warning">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           <span>
             Có {Object.keys(conflicts).length} phím tắt bị trùng. Khi bấm, chỉ
@@ -334,7 +334,7 @@ function ShortcutCapture({
         capturing
           ? 'border-primary bg-primary/10 text-primary'
           : conflict
-            ? 'border-yellow-500/60 bg-yellow-500/10 text-yellow-400'
+            ? 'border-warning/60 bg-warning/10 text-warning'
             : 'border-border bg-background text-foreground hover:border-primary',
         disabled && 'cursor-not-allowed opacity-50',
       )}
@@ -360,4 +360,4 @@ function formatShortcut(key: string): string {
       return k.charAt(0).toUpperCase() + k.slice(1);
     })
     .join('+');
-}
+}

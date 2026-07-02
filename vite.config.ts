@@ -57,4 +57,14 @@ export default defineConfig(() => ({
     // `new Worker(..., { type: 'module' })` mà parser-client đang dùng.
     format: 'es' as const,
   },
+  // KHÔNG dùng manualChunks tách vendor.
+  //
+  // Đã thử (2026-07-02): tách `vendor` chunk gồm React/router/radix/tanstack
+  // → first visit `/` tăng từ 366 KB → 479 KB gzip (+31%). Vite auto-chunking
+  // đã dedupe tốt theo lazy route boundary; tách thêm chỉ tệ đi vì overhead
+  // module wrapper + eager load code chưa cần. Cache benefit khi user visit
+  // lần 2+ không bù được first-load penalty.
+  //
+  // Nếu muốn thử lại: xem git log `.kiro/` commit `audit/html2pdf-dynamic-import`
+  // → sau đó bị revert. Cần approach khác (VD split JSON chunk 3MB) mới ROI.
 }));

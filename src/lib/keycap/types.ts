@@ -89,8 +89,8 @@ export const STATUS_LABELS: Record<ItemStatus, string> = {
 };
 
 export const STATUS_COLORS: Record<ItemStatus, string> = {
-  available: 'text-green-500 bg-green-500/10 border-green-500/30',
-  incoming: 'text-yellow-500 bg-yellow-500/10 border-yellow-500/30',
+  available: 'text-success bg-success/10 border-success/30',
+  incoming: 'text-warning bg-warning/10 border-warning/30',
   sold: 'text-muted-foreground bg-muted border-border',
 };
 

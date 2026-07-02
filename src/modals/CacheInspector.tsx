@@ -50,7 +50,7 @@ function CacheContent() {
       {/* Header với nút Clear All + Refresh */}
       <div className="flex items-center justify-between border border-border bg-card px-3 py-2">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />
+          <AlertTriangle className="h-3.5 w-3.5 text-warning" />
           <span>Xoá cache có thể làm mất dữ liệu chưa save. Cẩn thận.</span>
         </div>
         <div className="flex gap-2">

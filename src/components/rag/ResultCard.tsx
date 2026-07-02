@@ -138,7 +138,7 @@ function TaskBadges({ metadata }: { metadata: Record<string, unknown> }) {
   return (
     <div className="flex flex-wrap gap-1 pt-0.5">
       {status === 'pending' && (
-        <span className="border border-yellow-500/40 bg-yellow-500/5 px-1.5 py-0.5 text-[10px] text-yellow-400">
+        <span className="border border-warning/40 bg-warning/5 px-1.5 py-0.5 text-[10px] text-warning">
           pending
         </span>
       )}

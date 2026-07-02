@@ -1,24 +1,48 @@
 # Adding a New Tool — Recipe ngắn
 
-Doc này áp dụng cho tool dạng **utility 1 page** (giống Markdown Preview, Code Compare, Project Packer). Không phải CRUD feature — cho CRUD xem [ADDING_NEW_FEATURE.md](./ADDING_NEW_FEATURE.md).
+Doc bao 2 dạng tool: **Modal** (Calculator, Translate, Encoder) và **Route** (Notes, Movies, Markdown Preview). Chọn dạng nào phụ thuộc câu hỏi ở section 0.
 
-> Case study: cách Markdown Preview (`/markdown`) được thêm vào. Mọi bước trong doc này đều có file thật tham chiếu.
+## 0. Quyết định: Modal hay Route?
 
----
+### Decision matrix
 
-## 0. Quyết định trước khi code
+| Tiêu chí | Modal | Route |
+|---|---|---|
+| Interaction time | < 30 giây / lần dùng | > 1 phút, có workflow |
+| Layout | 1 form, 1 view | Split panes, sidebar + main, hoặc scroll dài |
+| State | Reset khi đóng OK | Persist qua session (`useLocalStorage`), có URL riêng |
+| Có back button riêng? | Không | Có |
+| Có async data (query) heavy? | Không (data đơn giản) | Có (CRUD, list, filter) |
+| Cần deep-link (share URL) | Không | Có |
+| Ví dụ trong project | Calculator, Translate, Encoder, Secret, Savings | Notes, Tasks, Movies, Keycap, Reader |
+
+### Không rõ chọn cái nào?
+
+- Bắt đầu bằng **Modal** nếu tool có < 3 field input + 1 output. Sau này phình ra thì refactor sang Route.
+- Bắt đầu bằng **Route** nếu có list data từ API (dù ngắn).
+
+### Câu hỏi bổ sung (cho cả 2 dạng)
 
 | Câu hỏi | Ảnh hưởng |
 |---|---|
-| Tool là **modal** (mở overlay, chia sẻ global shortcut) hay **route** (page riêng full screen)? | Modal → `src/modals/`, register trong `modalStore` + `App.tsx`. Route → `src/routes/`, lazy import. |
-| Có **state nặng / split layout / scroll riêng** không? | Có → route. Không → modal. |
-| Có **dependency external** mới không? | Có → `npm install`, optional thêm `*.d.ts` cho lib thiếu types. |
-| Cần **persist** state qua session? | `useLocalStorage('tool-name/key', default)`. |
-| Có **research / docs lib gốc** không? | Có → tạo `docs/{tool}-research/` (xem [markdown-preview-research/](./markdown-preview-research/) làm mẫu). |
+| Có dependency external mới không? | Có → `npm install` (pin version). Lib thiếu types → thêm `src/types/{lib}.d.ts`. |
+| Cần persist state qua session? | `useLocalStorage('tool-name/key', default)`. |
+| Có research / docs lib gốc? | Có → `docs/{tool}-research/` (mẫu: `markdown-preview-research/`). |
+| Có shortcut Alt+X? | Check trùng với `tools-registry.md` trước. Đăng ký trong `useGlobalShortcuts`. |
 
 ---
 
-## 1. Folder layout chuẩn
+## Path A: Tool dạng Modal
+
+Dùng khi thoả matrix trên. Chi tiết ở section 5. Nhảy xuống nếu chắc chắn cần Modal.
+
+## Path B: Tool dạng Route
+
+Dùng khi thoả matrix trên. Section 1-4 + 6-10 áp dụng cho Route. Đây là path phổ biến hơn.
+
+---
+
+## 1. Path B — Folder layout chuẩn (Route)
 
 Một tool route phức tạp thường có 4 chỗ:
 
@@ -38,7 +62,7 @@ Tool đơn giản (1 file < 300 dòng): chỉ cần `src/routes/{Tool}.tsx`. Khi
 
 ---
 
-## 2. Step-by-step (theo đúng order khi làm Markdown Preview)
+## 2. Path B — Step-by-step (theo đúng order khi làm Markdown Preview)
 
 ### Step 1: Install dependencies
 
@@ -153,7 +177,7 @@ const ToolName = lazy(() => import('./routes/ToolName'));
   id: 'tool-id',                          // kebab-case, match ICON_MAP key
   label: 'Tool name',                     // hiển thị card
   shortcut: 'Alt+M',                      // (optional)
-  group: 'Developer',                     // Productivity | Finance | Utilities | Tracking | Developer
+  group: 'Developer',                     // Productivity | Finance | Utilities | Tracking | Developer | Admin
   action: { kind: 'route', path: '/tool-path' },
   description: 'Mô tả 1 dòng',
 },
@@ -180,7 +204,7 @@ Theo `.kiro/steering/readme-pattern.md`, tạo:
 - `src/lib/{tool}/README.md`
 - `src/components/{tool}/README.md` (nếu có folder)
 
-Update `docs/FOLDER_STRUCTURE.md` thêm row mới.
+Update `.kiro/steering/tools-registry.md` bảng nhóm phù hợp (đây là source of truth cho tool list).
 
 ### Step 10: Verify
 
@@ -200,7 +224,7 @@ Manual test:
 
 ---
 
-## 3. Anti-patterns thường gặp
+## 3. Anti-patterns thường gặp (cả 2 path)
 
 | ❌ Sai | ✅ Đúng |
 |---|---|
@@ -244,17 +268,94 @@ Manual test:
 
 ---
 
-## 5. Khi tool là modal thay vì route
+## 5. Path A: Tool dạng Modal — quy trình đầy đủ
 
-Modal nhanh hơn route nhưng giới hạn UI. Quy trình:
+Modal nhanh hơn Route (không lazy load, không đổi URL) nhưng chỉ hợp cho tool đơn giản.
 
-1. Tạo `src/modals/{Tool}.tsx` — component `<Dialog>` từ `@/components/ui/dialog`.
-2. Thêm `modalId` vào `src/stores/modalStore.ts` (union type `ModalId`).
-3. Mount eager trong `App.tsx` (cuối file): `<Tool />`.
-4. Thêm vào `tools.ts` với `action: { kind: 'modal', modalId: 'tool' }`.
-5. Icon + shortcut như tool route.
+### Step 5.1: Tạo modal component
 
-Tham khảo [`Calculator.tsx`](../src/modals/Calculator.tsx) hoặc [`Encoder.tsx`](../src/modals/Encoder.tsx).
+`src/modals/{Tool}.tsx`:
+
+```tsx
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useModalStore } from '@/stores/modalStore';
+
+export default function ToolModal() {
+  const isOpen = useModalStore((s) => s.current === 'tool-id');
+  const close = useModalStore((s) => s.close);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && close()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Tool name</DialogTitle>
+        </DialogHeader>
+        {/* body */}
+      </DialogContent>
+    </Dialog>
+  );
+}
+```
+
+Checklist:
+- [ ] `export default`
+- [ ] Semantic token only
+- [ ] `useModalStore` selector cụ thể (không subscribe cả store)
+- [ ] Không lồng thêm `<Dialog>` bên trong — 1 modal = 1 dialog root
+
+### Step 5.2: Đăng ký `modalId`
+
+`src/stores/modalStore.ts` — thêm literal vào union `ModalId`:
+
+```ts
+export type ModalId =
+  | 'calculator'
+  | 'translate'
+  | 'tool-id';  // ← thêm dòng này
+```
+
+### Step 5.3: Mount trong `App.tsx`
+
+Modal mount EAGER (không lazy) ở cuối `<App>`:
+
+```tsx
+import ToolModal from './modals/ToolModal';
+
+<Router>
+  {/* routes */}
+  {/* ... existing modals */}
+  <ToolModal />
+</Router>
+```
+
+### Step 5.4: Thêm vào `tools.ts`
+
+```ts
+{
+  id: 'tool-id',
+  label: 'Tool name',
+  shortcut: 'Alt+M',
+  group: 'Utilities',
+  action: { kind: 'modal', modalId: 'tool-id' },
+  description: 'Mô tả 1 dòng',
+},
+```
+
+### Step 5.5: Icon + Shortcut
+
+- Icon: thêm vào `src/components/ToolIcon.tsx` (`ICON_MAP`).
+- Shortcut: nếu khai báo `shortcut` ở step 5.4, thêm handler trong `useGlobalShortcuts`.
+
+### Step 5.6: Registry + verify
+
+- Update `.kiro/steering/tools-registry.md` — thêm row nhóm phù hợp, cột Route ghi `(modal)`.
+- `npm run build` pass.
+- Manual test: click tool ở Hub → modal mở. Nhấn Esc / bấm ra ngoài → đóng.
+
+Tham khảo:
+- [`src/modals/Calculator.tsx`](../src/modals/Calculator.tsx) — modal đơn giản
+- [`src/modals/Encoder.tsx`](../src/modals/Encoder.tsx) — modal có tabs
+- [`src/modals/Backup.tsx`](../src/modals/Backup.tsx) — modal có file I/O
 
 ---
 

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Trash2, RefreshCw, BookOpen, Image as ImageIcon } from 'lucide-react';
+import { Trash2, BookOpen, Image as ImageIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatBytes } from '@/lib/cacheInspect';
 import {
   STORE_FILES,
@@ -51,10 +52,28 @@ export default function IndexedDBTab({ refreshKey, onChange }: Props) {
   const totalCovers = useMemo(() => covers.reduce((s, e) => s + e.size, 0), [covers]);
 
   if (loading) {
+    // Skeleton match footprint 2 StoreSection: header (icon + label + count)
+    // + 3 entry rows. Shimmer sweep tự chạy từ base Skeleton component.
     return (
-      <div className="border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-        <RefreshCw className="mx-auto mb-2 h-4 w-4 animate-spin" />
-        Loading IndexedDB…
+      <div className="space-y-3">
+        {[0, 1].map((i) => (
+          <div key={i} className="border border-border bg-card">
+            <div className="flex items-center gap-2 border-b border-border px-3 py-2">
+              <Skeleton className="h-3.5 w-3.5" />
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="ml-auto h-3 w-16" />
+            </div>
+            <div className="space-y-0">
+              {[0, 1, 2].map((j) => (
+                <div key={j} className="flex items-center gap-2 border-b border-border px-3 py-1.5 last:border-b-0">
+                  <Skeleton className="h-2.5 flex-1" />
+                  <Skeleton className="h-2.5 w-8 shrink-0" />
+                  <Skeleton className="h-2.5 w-10 shrink-0" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     );
   }

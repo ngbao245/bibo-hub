@@ -1,6 +1,6 @@
 # 02. Feature mapping — code gốc → hubibo
 
-Mỗi feature trỏ chính xác đoạn code trong [`markdown-live-preview/src/main.js`](../../markdown-live-preview/src/main.js).
+Mỗi feature trỏ tới đoạn code trong `markdown-live-preview/src/main.js` (external repo Kiro clone-local để reference, KHÔNG commit vào workspace).
 
 ## 1. Reset
 
@@ -32,7 +32,7 @@ function handleReset() {
 }
 ```
 
-`DEFAULT_INPUT` lấy từ `defaultInput` trong [main.js dòng ~17-80](../../markdown-live-preview/src/main.js).
+`DEFAULT_INPUT` lấy từ `defaultInput` trong `main.js` dòng ~17-80 (external repo).
 
 ---
 
@@ -300,4 +300,4 @@ for (const el of elements) {
 
 Có version guard chống race khi user gõ nhanh.
 
-**Quyết định**: skip mermaid ở v1 hubibo (tiết kiệm 600KB bundle). Nếu cần thêm sau, copy nguyên block từ [main.js dòng 140-215](../../markdown-live-preview/src/main.js).
+**Quyết định**: skip mermaid ở v1 hubibo (tiết kiệm 600KB bundle). Nếu cần thêm sau, copy nguyên block từ `main.js` dòng 140-215 (external repo).

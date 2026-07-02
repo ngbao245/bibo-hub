@@ -57,8 +57,12 @@ import { cn } from '@/lib/cn';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
+import {
+  EmptyState as SharedEmptyState,
+  ErrorState as SharedErrorState,
+  LoadingState,
+} from '@/components/shared';
 import {
   Dialog,
   DialogContent,
@@ -279,16 +283,18 @@ function GroupIndex({
       <div className="flex-1 overflow-y-auto p-6">
         <div className="mx-auto max-w-5xl">
           {listQuery.isLoading ? (
-            <SkeletonGrid />
+            <LoadingState variant="skeleton" count={6} itemClassName="h-40" />
           ) : listQuery.isError ? (
-            <ErrorState message={(listQuery.error as Error)?.message} />
+            <SharedErrorState
+              message={(listQuery.error as Error)?.message ?? 'Không tải được dữ liệu'}
+              onRetry={() => listQuery.refetch()}
+            />
           ) : groups.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <Folder className="mb-3 h-10 w-10 text-muted-foreground" />
-              <p className="mb-4 text-sm text-muted-foreground">
-                Chưa có group nào. Bấm "Group" để tạo.
-              </p>
-            </div>
+            <SharedEmptyState
+              icon={Folder}
+              title="Chưa có group nào"
+              description='Bấm "Group" ở toolbar để tạo group đầu tiên.'
+            />
           ) : (
             <ul
               className="grid list-none gap-3"
@@ -571,9 +577,12 @@ function GroupView({ group, onBack }: { group: string; onBack: () => void }) {
 
         <div className="flex-1 overflow-y-auto p-4">
           {listQuery.isLoading ? (
-            <SkeletonGrid />
+            <LoadingState variant="skeleton" count={6} itemClassName="h-40" />
           ) : listQuery.isError ? (
-            <ErrorState message={(listQuery.error as Error)?.message} />
+            <SharedErrorState
+              message={(listQuery.error as Error)?.message ?? 'Không tải được dữ liệu'}
+              onRetry={() => listQuery.refetch()}
+            />
           ) : filtered.length === 0 ? (
             <EmptyRecords
               query={query}
@@ -893,7 +902,7 @@ function SettingCard({
               className="inline-flex items-center gap-1 border border-border bg-background px-1.5 py-0.5 font-mono text-[10px] text-foreground"
               title={f.encrypt ? '(encrypted)' : f.value}
             >
-              {f.encrypt && <Lock className="h-2.5 w-2.5 text-yellow-500" />}
+              {f.encrypt && <Lock className="h-2.5 w-2.5 text-warning" />}
               {f.name || '(unnamed)'}
             </span>
           ))}
@@ -1128,9 +1137,11 @@ function SettingDialog({
             )}
 
             {fields.length === 0 && (
-              <p className="border border-dashed border-border bg-background p-3 text-center text-xs text-muted-foreground">
-                Chưa có field nào. Bấm "Thêm field" để bắt đầu.
-              </p>
+              <SharedEmptyState
+                compact
+                title="Chưa có field nào"
+                description='Bấm "Thêm field" để bắt đầu.'
+              />
             )}
 
             <div className="space-y-2">
@@ -1315,12 +1326,12 @@ function FieldRow({
   if (isCipher) {
     lockTitle = 'Bấm để giải mã';
     lockClass =
-      'border-yellow-500/60 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20 animate-pulse';
+      'border-warning/60 bg-warning/10 text-warning hover:bg-warning/20 animate-pulse';
     LockIcon = Lock;
   } else if (field.encrypt) {
     lockTitle = 'Tắt mã hoá';
     lockClass =
-      'border-yellow-500/60 bg-yellow-500/10 text-yellow-400 hover:bg-yellow-500/20';
+      'border-warning/60 bg-warning/10 text-warning hover:bg-warning/20';
     LockIcon = Lock;
   } else {
     lockTitle = 'Bật mã hoá';
@@ -1348,7 +1359,7 @@ function FieldRow({
         readOnly={isCipher}
         className={cn(
           'h-8 font-mono text-xs',
-          isCipher && 'text-yellow-500',
+          isCipher && 'text-warning',
         )}
       />
 
@@ -1402,16 +1413,6 @@ function Field({
   );
 }
 
-function SkeletonGrid() {
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {[1, 2, 3, 4, 5, 6].map((i) => (
-        <Skeleton key={i} className="h-40" />
-      ))}
-    </div>
-  );
-}
-
 function EmptyRecords({
   query,
   type,
@@ -1430,23 +1431,17 @@ function EmptyRecords({
   else msg = 'Chưa có record nào trong group này';
 
   return (
-    <div className="flex flex-col items-center justify-center py-20 text-center">
-      <p className="mb-4 text-sm text-muted-foreground">{msg}</p>
-      {!query && (
-        <Button onClick={onAdd} className="gap-1.5">
-          <Plus className="h-4 w-4" />
-          Thêm record đầu tiên
-        </Button>
-      )}
-    </div>
-  );
-}
-
-function ErrorState({ message }: { message?: string }) {
-  return (
-    <div className="mx-auto max-w-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
-      <p className="font-medium">Không tải được dữ liệu</p>
-      {message && <p className="mt-1 break-all font-mono text-xs">{message}</p>}
-    </div>
+    <SharedEmptyState
+      icon={Search}
+      title={msg}
+      action={
+        !query && (
+          <Button onClick={onAdd} className="gap-1.5">
+            <Plus className="h-4 w-4" />
+            Thêm record đầu tiên
+          </Button>
+        )
+      }
+    />
   );
 }

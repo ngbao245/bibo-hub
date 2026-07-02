@@ -403,8 +403,8 @@ export default function RagConfigManager({
       </section>
 
       {/* Warning */}
-      <div className="flex gap-2 border border-yellow-500/40 bg-yellow-500/5 p-3 text-xs text-foreground">
-        <AlertTriangle className="h-4 w-4 shrink-0 text-yellow-500" />
+      <div className="flex gap-2 border border-warning/40 bg-warning/5 p-3 text-xs text-foreground">
+        <AlertTriangle className="h-4 w-4 shrink-0 text-warning" />
         <p>
           Đổi nguồn dữ liệu (tắt note type, bật/tắt tasks/highlights) sẽ trigger
           cleanup + backfill background ở Phase 1.
