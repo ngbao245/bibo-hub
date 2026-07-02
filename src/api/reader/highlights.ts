@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/reader/supabase';
 import type { Highlight, HighlightLocation } from '@/lib/reader/types';
+import { dualWriteHighlight, dualDeleteHighlight } from '@/lib/rag/dual-write';
 
 export function useHighlights(bookId: string | undefined) {
   return useQuery({
@@ -48,8 +49,10 @@ export function useCreateHighlight() {
       if (error) throw error;
       return data as Highlight;
     },
-    onSuccess: (_data, vars) =>
-      qc.invalidateQueries({ queryKey: ['reader', 'highlights', vars.bookId] }),
+    onSuccess: (h, vars) => {
+      if (h?.id) dualWriteHighlight(h);
+      qc.invalidateQueries({ queryKey: ['reader', 'highlights', vars.bookId] });
+    },
   });
 }
 
@@ -60,11 +63,19 @@ export function useUpdateHighlight() {
       const patch: Record<string, unknown> = {};
       if (input.note !== undefined) patch.note = input.note;
       if (input.color !== undefined) patch.color = input.color;
-      const { error } = await supabase.from('highlights').update(patch).eq('id', input.id);
+      const { data, error } = await supabase
+        .from('highlights')
+        .update(patch)
+        .eq('id', input.id)
+        .select()
+        .single();
       if (error) throw error;
+      return data as Highlight;
     },
-    onSuccess: (_data, vars) =>
-      qc.invalidateQueries({ queryKey: ['reader', 'highlights', vars.bookId] }),
+    onSuccess: (h, vars) => {
+      if (h?.id) dualWriteHighlight(h);
+      qc.invalidateQueries({ queryKey: ['reader', 'highlights', vars.bookId] });
+    },
   });
 }
 
@@ -75,7 +86,9 @@ export function useDeleteHighlight() {
       const { error } = await supabase.from('highlights').delete().eq('id', input.id);
       if (error) throw error;
     },
-    onSuccess: (_data, vars) =>
-      qc.invalidateQueries({ queryKey: ['reader', 'highlights', vars.bookId] }),
+    onSuccess: (_data, vars) => {
+      dualDeleteHighlight(vars.id);
+      qc.invalidateQueries({ queryKey: ['reader', 'highlights', vars.bookId] });
+    },
   });
 }

@@ -3,6 +3,7 @@ import { fetchJson } from './client';
 import { API } from '@/lib/config';
 import { parseTaskRecords, type Task, type List } from '@/schemas/task';
 import { optimisticList } from '@/lib/optimistic';
+import { dualWriteTask, dualDeleteTask } from '@/lib/rag/dual-write';
 
 // ============================================================
 // Tasks API hooks — Optimistic UI
@@ -63,6 +64,9 @@ export function useCreateTask() {
         }),
       });
     },
+    onSuccess: (task) => {
+      if (task?.id) dualWriteTask(task);
+    },
     ...optimisticList<TaskApiResponse, TaskInput>(qc, ['tasks'], (old, input) => {
       const tempTask: Task = {
         id: 'temp_' + Date.now(),
@@ -95,6 +99,9 @@ export function useUpdateTask() {
         body: JSON.stringify({ ...task, updatedAt: new Date().toISOString() }),
       });
     },
+    onSuccess: (updated) => {
+      if (updated?.id) dualWriteTask(updated);
+    },
     ...optimisticList<TaskApiResponse, Task>(qc, ['tasks'], (old, task) => ({
       ...old,
       tasks: old.tasks.map((t) => (t.id === task.id ? { ...task, updatedAt: new Date().toISOString() } : t)),
@@ -117,6 +124,9 @@ export function useToggleTask() {
           updatedAt: now,
         }),
       });
+    },
+    onSuccess: (updated) => {
+      if (updated?.id) dualWriteTask(updated);
     },
     ...optimisticList<TaskApiResponse, Task>(qc, ['tasks'], (old, task) => {
       const newStatus = task.status === 'completed' ? 'pending' : 'completed';
@@ -143,6 +153,9 @@ export function useToggleImportant() {
         body: JSON.stringify({ ...task, priority: newPriority, updatedAt: new Date().toISOString() }),
       });
     },
+    onSuccess: (updated) => {
+      if (updated?.id) dualWriteTask(updated);
+    },
     ...optimisticList<TaskApiResponse, Task>(qc, ['tasks'], (old, task) => ({
       ...old,
       tasks: old.tasks.map((t) =>
@@ -158,7 +171,8 @@ export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      return fetchJson(`${API.TASKS}/${id}`, { method: 'DELETE' });
+      await fetchJson(`${API.TASKS}/${id}`, { method: 'DELETE' });
+      dualDeleteTask(id);
     },
     ...optimisticList<TaskApiResponse, string>(qc, ['tasks'], (old, id) => ({
       ...old,

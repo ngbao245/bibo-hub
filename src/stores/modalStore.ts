@@ -39,6 +39,7 @@ export const MODAL_IDS = [
   'cacheInspector',
   'crypto',
   'audio',
+  'rag',
 ] as const;
 
 export type ModalId = (typeof MODAL_IDS)[number];

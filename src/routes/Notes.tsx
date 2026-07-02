@@ -1,6 +1,6 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Menu,
   Keyboard,
@@ -163,6 +163,22 @@ export default function Notes() {
     setFocusedPaneIdx(paneIdx);
     setListOpenMobile(false);
   }
+
+  // Deep-link từ RAG citation: /notes?noteId=X → openTab(X) sau khi notes loaded.
+  // Strip param sau khi consume để F5 không re-open lặp.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const noteIdParam = searchParams.get('noteId');
+  useEffect(() => {
+    if (!noteIdParam) return;
+    if (!notesQuery.data) return;
+    const exists = notesQuery.data.some((n) => n.id === noteIdParam);
+    if (exists) openTab(noteIdParam, safeFocusedIdx);
+    // Clear param dù note có tồn tại hay không (tránh loop nếu note đã bị xóa)
+    const next = new URLSearchParams(searchParams);
+    next.delete('noteId');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteIdParam, notesQuery.data]);
 
   /** Đóng tab. Nếu pane rỗng (>1 pane) → đóng cả pane. */
   function closeTab(id: string, paneIdx: number) {
@@ -586,4 +602,4 @@ function layoutModeTitle(mode: 'pinned' | 'compact' | 'zen'): string {
     case 'zen':
       return 'Layout: Zen (cả 2 auto-hide) → Ctrl+B để quay lại Pinned';
   }
-}
+}

@@ -21,6 +21,10 @@ import ProgressBar from './ProgressBar';
 import SettingsDropdown from './SettingsDropdown';
 import type { Book, Highlight } from '@/lib/reader/types';
 import { ReaderHeader } from './ReaderHeader';
+import { useReaderStore, type PdfDocLike } from '@/stores/readerStore';
+import { clearBookContextCache } from '@/lib/rag/book-context';
+import { useRagStore } from '@/stores/ragStore';
+import { useModalStore } from '@/stores/modalStore';
 
 interface SelectionState {
   text: string;
@@ -53,7 +57,7 @@ const THEME_BG: Record<ReaderTheme, string> = {
   dark: '#0a0a0a',
 };
 
-export default function PdfReader({ book }: { book: Book }) {
+export default function PdfReader({ book, initialPage }: { book: Book; initialPage?: number }) {
   // Defensive check: ensure worker is configured
   useEffect(() => {
     const workerSrc = pdfjs.GlobalWorkerOptions.workerSrc;
@@ -200,6 +204,17 @@ export default function PdfReader({ book }: { book: Book }) {
     }
   }, [progressQuery.data]);
 
+  // Deep-link ?page=X (RAG citation [p.X]) — ưu tiên hơn restore progress.
+  // Re-fire mỗi khi prop đổi (cùng book, click citation khác trang).
+  useEffect(() => {
+    if (initialPage === undefined) return;
+    if (!docLoaded || !numPages) return;
+    restoredRef.current = true; // ngăn effect progress override sau này
+    navigationSourceRef.current = 'input';
+    const target = Math.min(numPages, Math.max(1, Math.floor(initialPage)));
+    setPageNumber(target);
+  }, [initialPage, docLoaded, numPages]);
+
   // Restore scroll positions từ sessionStorage khi mount (scope theo book.id).
   useEffect(() => {
     try {
@@ -335,6 +350,20 @@ export default function PdfReader({ book }: { book: Book }) {
   useEffect(() => {
     setInputPageValue(pageNumber);
   }, [pageNumber]);
+
+  // Sync currentPage vào readerStore để RAG ChatTab biết user đang đọc trang nào.
+  useEffect(() => {
+    useReaderStore.getState().setPage(pageNumber);
+  }, [pageNumber]);
+
+  // Unmount: clear reader store + WeakMap text cache.
+  useEffect(() => {
+    return () => {
+      const doc = pdfDocRef.current;
+      if (doc) clearBookContextCache(doc);
+      useReaderStore.getState().clear();
+    };
+  }, []);
 
   // Restore scroll position khi quay lại trang đã visit trước.
   // Chỉ restore khi navigation source là 'prev' hoặc 'restore'.
@@ -485,6 +514,20 @@ export default function PdfReader({ book }: { book: Book }) {
   function handleTranslate() {
     if (!selection) return;
     setTranslateText(selection.text);
+    window.getSelection()?.removeAllRanges();
+    setSelection(null);
+  }
+
+  function handleAskAi() {
+    if (!selection) return;
+    const quoted = selection.text.trim();
+    if (!quoted) return;
+    // Đẩy prompt vào ragStore + mở RAG modal. ChatTab sẽ tự gửi.
+    useRagStore.getState().setPendingPrompt(
+      `Về đoạn này (trang ${selection.page}):\n\n> ${quoted}\n\nHãy giải thích / tóm tắt giúp.`,
+      { preferBookMode: true },
+    );
+    useModalStore.getState().open('rag');
     window.getSelection()?.removeAllRanges();
     setSelection(null);
   }
@@ -881,6 +924,13 @@ export default function PdfReader({ book }: { book: Book }) {
                   setNumPages(pdf.numPages);
                   setDocLoaded(true);
                   pdfDocRef.current = pdf;
+                  // Expose doc cho RAG ChatTab (mode Sách dùng book-context).
+                  useReaderStore.getState().setReader({
+                    doc: pdf as unknown as PdfDocLike,
+                    bookId: book.id,
+                    bookTitle: book.title,
+                    numPages: pdf.numPages,
+                  });
                   // Lazy build TOC từ outline
                   try {
                     const outline = await (pdf as unknown as {
@@ -1007,6 +1057,7 @@ export default function PdfReader({ book }: { book: Book }) {
           onHighlight={handleHighlight}
           onNote={handleNote}
           onTranslate={handleTranslate}
+          onAskAi={handleAskAi}
           onDismiss={() => {
             window.getSelection()?.removeAllRanges();
             setSelection(null);

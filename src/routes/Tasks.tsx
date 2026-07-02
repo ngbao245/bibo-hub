@@ -1,6 +1,6 @@
 
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Menu, Sparkles, Keyboard, LayoutGrid } from 'lucide-react';
 
 import { useTasks, useCreateList, useDeleteList } from '@/api/tasks';
@@ -40,6 +40,27 @@ export default function Tasks() {
   // Lưu filter đang chọn để vào lại trang giữ chỗ
   const [filter, setFilter] = useLocalStorage<TaskListFilter>('tasks_filter', 'today');
   const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
+
+  // Deep-link từ RAG: /tasks?taskId=X&listId=Y → set filter + highlight task.
+  // Strip param sau khi consume để F5 không loop.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const taskIdParam = searchParams.get('taskId');
+  const listIdParam = searchParams.get('listId');
+  const [pendingHighlightTaskId, setPendingHighlightTaskId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!taskIdParam) return;
+    if (listIdParam) setFilter(listIdParam as TaskListFilter);
+    else setFilter('all'); // fallback: hiện all để task chắc chắn nằm trong list
+    setPendingHighlightTaskId(taskIdParam);
+    const next = new URLSearchParams(searchParams);
+    next.delete('taskId');
+    next.delete('listId');
+    setSearchParams(next, { replace: true });
+    // Clear highlight sau 3s
+    const t = window.setTimeout(() => setPendingHighlightTaskId(null), 3000);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taskIdParam, listIdParam]);
 
   const tasks = tasksQuery.data?.tasks ?? [];
   const lists = tasksQuery.data?.lists ?? [];
@@ -174,6 +195,7 @@ export default function Tasks() {
           isLoading={tasksQuery.isLoading}
           filter={filter}
           title={title}
+          highlightTaskId={pendingHighlightTaskId}
         />
       </main>
     </div>

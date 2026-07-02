@@ -219,6 +219,14 @@ export const TOOLS: Tool[] = [
     action: { kind: 'modal', modalId: 'audio' },
     description: 'Phát nhạc YouTube nền — playlist + floating window',
   },
+  {
+    id: 'rag',
+    label: 'AI Search',
+    shortcut: 'Alt+K',
+    group: 'Productivity',
+    action: { kind: 'modal', modalId: 'rag' },
+    description: 'Semantic search + AI chat trên notes / tasks / highlights',
+  },
 ];
 
 // Nhóm tools theo group (cho HubPro hiển thị section)

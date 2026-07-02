@@ -68,6 +68,8 @@ import {
 } from '@/components/ui/dialog';
 import ToolCategoryManager from '@/components/ToolCategoryManager';
 import ShortcutManager from '@/components/ShortcutManager';
+import RagTokensManager from '@/components/rag/RagTokensManager';
+import RagConfigManager from '@/components/rag/RagConfigManager';
 
 // ============================================================
 // Helpers — pack/unpack 10 slot config thành DraftField[]
@@ -391,6 +393,10 @@ function GroupView({ group, onBack }: { group: string; onBack: () => void }) {
   const [categoryDirty, setCategoryDirty] = useState(false);
   const [shortcutManagerOpen, setShortcutManagerOpen] = useState(false);
   const [shortcutDirty, setShortcutDirty] = useState(false);
+  const [ragTokensOpen, setRagTokensOpen] = useState(false);
+  const [ragTokensDirty, setRagTokensDirty] = useState(false);
+  const [ragConfigOpen, setRagConfigOpen] = useState(false);
+  const [ragConfigDirty, setRagConfigDirty] = useState(false);
 
   const inGroup = useMemo(
     () => (listQuery.data ?? []).filter((s) => s.group.trim() === group),
@@ -431,6 +437,15 @@ function GroupView({ group, onBack }: { group: string; onBack: () => void }) {
     }
     if (setting.group.trim() === 'Setting' && setting.type.trim() === 'Shortcut') {
       setShortcutManagerOpen(true);
+      return;
+    }
+    // RAG records — 2 custom managers
+    if (setting.group.trim() === 'RAG' && setting.type.trim() === 'SettingInfor') {
+      setRagTokensOpen(true);
+      return;
+    }
+    if (setting.group.trim() === 'RAG' && setting.type.trim() === 'Config') {
+      setRagConfigOpen(true);
       return;
     }
     setEditing(setting);
@@ -638,6 +653,54 @@ function GroupView({ group, onBack }: { group: string; onBack: () => void }) {
               <DialogTitle>Shortcuts</DialogTitle>
             </DialogHeader>
             <ShortcutManager onDirtyChange={setShortcutDirty} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {ragTokensOpen && (
+        <Dialog
+          open
+          onOpenChange={async (o) => {
+            if (!o) {
+              if (ragTokensDirty) {
+                if (!window.confirm('Discard changes? You have unsaved changes.')) return;
+              }
+              setRagTokensOpen(false);
+            }
+          }}
+        >
+          <DialogContent
+            className="max-h-[90vh] max-w-2xl overflow-y-auto"
+            aria-describedby={undefined}
+          >
+            <DialogHeader>
+              <DialogTitle>RAG API Tokens</DialogTitle>
+            </DialogHeader>
+            <RagTokensManager onDirtyChange={setRagTokensDirty} />
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {ragConfigOpen && (
+        <Dialog
+          open
+          onOpenChange={async (o) => {
+            if (!o) {
+              if (ragConfigDirty) {
+                if (!window.confirm('Discard changes? You have unsaved changes.')) return;
+              }
+              setRagConfigOpen(false);
+            }
+          }}
+        >
+          <DialogContent
+            className="max-h-[90vh] max-w-2xl overflow-y-auto"
+            aria-describedby={undefined}
+          >
+            <DialogHeader>
+              <DialogTitle>RAG Configuration</DialogTitle>
+            </DialogHeader>
+            <RagConfigManager onDirtyChange={setRagConfigDirty} />
           </DialogContent>
         </Dialog>
       )}

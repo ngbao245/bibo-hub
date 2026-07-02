@@ -4,6 +4,7 @@ import { fetchJson } from './client';
 import { API } from '@/lib/config';
 import { parseNotes, type Note, type NoteType } from '@/schemas/note';
 import { optimisticList } from '@/lib/optimistic';
+import { dualWriteNote, dualDeleteNote, dualDeleteNotes } from '@/lib/rag/dual-write';
 
 // ============================================================
 // Notes API hooks — Optimistic UI
@@ -59,6 +60,9 @@ export function useCreateNote() {
         }),
       });
     },
+    onSuccess: (note) => {
+      if (note?.id) dualWriteNote(note);
+    },
     ...optimisticList<Note[], NoteInput>(qc, ['notes'], (old, input) => {
       const temp: Note = {
         id: 'temp_' + Date.now(),
@@ -95,6 +99,9 @@ export function useUpdateNote() {
         body: JSON.stringify({ ...note, updatedAt: new Date().toISOString() }),
       });
     },
+    onSuccess: (updated) => {
+      if (updated?.id) dualWriteNote(updated);
+    },
     ...optimisticList<Note[], Note>(qc, ['notes'], (old, note) =>
       old.map((n) => (n.id === note.id ? { ...note, updatedAt: new Date().toISOString() } : n)),
     ),
@@ -113,7 +120,9 @@ export function useDeleteNote() {
       const all = qc.getQueryData<Note[]>(['notes']) ?? [];
       const target = all.find((n) => n.id === id);
       if (!target) {
-        return fetchJson(`${API.NOTES}/${id}`, { method: 'DELETE' });
+        await fetchJson(`${API.NOTES}/${id}`, { method: 'DELETE' });
+        dualDeleteNote(id);
+        return;
       }
 
       // 1. Xoá child notes (nếu có)
@@ -148,6 +157,8 @@ export function useDeleteNote() {
             method: 'PUT',
             body: JSON.stringify(next),
           });
+          // Re-embed note tham chiếu vì content (linkedNotes) đổi
+          dualWriteNote(next);
         } catch {
           /* ignore */
         }
@@ -167,6 +178,7 @@ export function useDeleteNote() {
               method: 'PUT',
               body: JSON.stringify(next),
             });
+            dualWriteNote(next);
           } catch {
             /* ignore */
           }
@@ -174,7 +186,9 @@ export function useDeleteNote() {
       }
 
       // 4. Xoá target
-      return fetchJson(`${API.NOTES}/${id}`, { method: 'DELETE' });
+      await fetchJson(`${API.NOTES}/${id}`, { method: 'DELETE' });
+      dualDeleteNote(id);
+      if (childNoteIds.length > 0) dualDeleteNotes(childNoteIds);
     },
     ...optimisticList<Note[], string>(qc, ['notes'], (old, id) => {
       const target = old.find((n) => n.id === id);
@@ -200,4 +214,4 @@ export function useDeleteNote() {
         );
     }),
   });
-}
+}

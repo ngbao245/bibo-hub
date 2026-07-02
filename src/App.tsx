@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { useBootstrapShortcutOverrides } from './hooks/useBootstrapShortcutOverrides';
+import { useBootstrapRag } from './hooks/useBootstrapRag';
 
 // ============================================================
 // Lazy routes - mỗi page load chunk riêng khi navigate tới.
@@ -35,6 +36,7 @@ import Shortcuts from './modals/Shortcuts';
 import CacheInspector from './modals/CacheInspector';
 import Crypto from './modals/Crypto';
 import Audio from './modals/Audio';
+import RagAssistantModal from './components/rag/RagAssistantModal';
 
 // Audio player toàn cục (provider + floating window mount 1 lần)
 import { AudioProvider } from './lib/audio/audio-context';
@@ -52,6 +54,7 @@ function PageLoader() {
 export default function App() {
   useGlobalShortcuts();
   useBootstrapShortcutOverrides();
+  useBootstrapRag();
 
   return (
     <AudioProvider>
@@ -88,6 +91,7 @@ export default function App() {
       <CacheInspector />
       <Crypto />
       <Audio />
+      <RagAssistantModal />
 
       {/* Player host (YT iframe ẩn) + floating UI — mount global, không unmount khi đóng modal */}
       <AudioFloatingHost />

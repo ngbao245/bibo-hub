@@ -1,19 +1,20 @@
 import { useRef, useEffect, useState } from 'react';
-import { Highlighter, Languages, StickyNote, X } from 'lucide-react';
+import { Highlighter, Languages, StickyNote, Sparkles, X } from 'lucide-react';
 
 interface Props {
   rect: { top: number; left: number; width: number; height: number };
   onHighlight: () => void;
   onNote: () => void;
   onTranslate: () => void;
+  onAskAi: () => void;
   onDismiss: () => void;
 }
 
 const MARGIN = 8;
 const MENU_HEIGHT = 44;
-const MENU_WIDTH_EST = 220; // estimated, updated after mount
+const MENU_WIDTH_EST = 280; // estimated, updated after mount
 
-export default function SelectionMenu({ rect, onHighlight, onNote, onTranslate, onDismiss }: Props) {
+export default function SelectionMenu({ rect, onHighlight, onNote, onTranslate, onAskAi, onDismiss }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number }>(() =>
     calcPos(rect, MENU_WIDTH_EST, MENU_HEIGHT),
@@ -35,6 +36,7 @@ export default function SelectionMenu({ rect, onHighlight, onNote, onTranslate, 
       <MenuButton onClick={onHighlight} icon={<Highlighter className="h-3.5 w-3.5" />} label="Highlight" />
       <MenuButton onClick={onNote} icon={<StickyNote className="h-3.5 w-3.5" />} label="Note" />
       <MenuButton onClick={onTranslate} icon={<Languages className="h-3.5 w-3.5" />} label="Translate" />
+      <MenuButton onClick={onAskAi} icon={<Sparkles className="h-3.5 w-3.5" />} label="AI Assistant" />
       <button
         onClick={onDismiss}
         className="ml-1 border-l border-zinc-800 px-1.5 py-1 text-zinc-500 hover:text-zinc-200"

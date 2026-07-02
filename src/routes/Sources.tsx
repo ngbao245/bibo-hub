@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { Menu, ArrowLeft } from 'lucide-react';
 
 import { useNotes, useCreateNote } from '@/api/notes';
@@ -29,6 +29,21 @@ export default function Sources() {
     null,
   );
   const [listOpenMobile, setListOpenMobile] = useState(false);
+
+  // Deep-link từ RAG: /sources?noteId=X → setSelectedId(X). Ưu tiên hơn
+  // auto-select source mới nhất. Strip param sau khi consume.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const noteIdParam = searchParams.get('noteId');
+  useEffect(() => {
+    if (!noteIdParam) return;
+    if (!notesQuery.data) return;
+    const exists = sources.some((s) => s.id === noteIdParam);
+    if (exists) setSelectedId(noteIdParam);
+    const next = new URLSearchParams(searchParams);
+    next.delete('noteId');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteIdParam, notesQuery.data]);
 
   // Auto-select source mới nhất khi vào trang
   useEffect(() => {

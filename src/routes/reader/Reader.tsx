@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useBook } from '@/api/reader/books';
 import PdfReader from '@/components/reader/PdfReader';
 import ReaderSkeleton from '@/components/reader/ReaderSkeleton';
@@ -6,6 +6,15 @@ import ReaderSkeleton from '@/components/reader/ReaderSkeleton';
 export default function ReaderRoute() {
   const { bookId } = useParams<{ bookId: string }>();
   const bookQuery = useBook(bookId);
+  const [searchParams] = useSearchParams();
+
+  // Deep-link từ RAG citation [p.X] click → /reader/:id?page=X
+  const pageParam = searchParams.get('page');
+  const initialPage = pageParam ? Number(pageParam) : undefined;
+  const validInitialPage =
+    initialPage !== undefined && Number.isFinite(initialPage) && initialPage >= 1
+      ? Math.floor(initialPage)
+      : undefined;
 
   if (bookQuery.isLoading || !bookQuery.data) {
     return (
@@ -23,5 +32,5 @@ export default function ReaderRoute() {
     );
   }
 
-  return <PdfReader book={bookQuery.data} />;
+  return <PdfReader book={bookQuery.data} initialPage={validInitialPage} />;
 }

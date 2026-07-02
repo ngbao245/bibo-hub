@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Search, X, Plus, Star, Trash2, Calendar, Loader2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,11 @@ interface TaskListProps {
   filter: TaskListFilter;
   /** Title hiển thị ở header (vd "Hôm nay", tên custom list...) */
   title: string;
+  /** Task ID cần highlight + scroll vào view (deep-link từ RAG). */
+  highlightTaskId?: string | null;
 }
 
-export default function TaskList({ tasks, isLoading, filter, title }: TaskListProps) {
+export default function TaskList({ tasks, isLoading, filter, title, highlightTaskId }: TaskListProps) {
   const [query, setQuery] = useState('');
   const createTask = useCreateTask();
 
@@ -46,6 +48,16 @@ export default function TaskList({ tasks, isLoading, filter, title }: TaskListPr
     }
     return sortTasks(list);
   }, [tasks, filter, query]);
+
+  // Scroll highlightTaskId vào view sau khi render. Re-fire khi id đổi.
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    if (!highlightTaskId) return;
+    const el = listRef.current?.querySelector<HTMLElement>(
+      `[data-task-id="${CSS.escape(highlightTaskId)}"]`,
+    );
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [highlightTaskId, filtered]);
 
   const handleQuickAdd = (title: string) => {
     // Set parentId nếu đang ở custom list
@@ -118,9 +130,13 @@ export default function TaskList({ tasks, isLoading, filter, title }: TaskListPr
             {query ? `Không có task nào khớp "${query}"` : 'Chưa có task nào ở đây'}
           </div>
         ) : (
-          <ul>
+          <ul ref={listRef}>
             {filtered.map((task) => (
-              <TaskRow key={task.id} task={task} />
+              <TaskRow
+                key={task.id}
+                task={task}
+                isHighlighted={task.id === highlightTaskId}
+              />
             ))}
           </ul>
         )}
@@ -168,7 +184,7 @@ function QuickAdd({
   );
 }
 
-function TaskRow({ task }: { task: Task }) {
+function TaskRow({ task, isHighlighted }: { task: Task; isHighlighted?: boolean }) {
   const toggle = useToggleTask();
   const toggleImportant = useToggleImportant();
   const deleteTask = useDeleteTask();
@@ -193,9 +209,11 @@ function TaskRow({ task }: { task: Task }) {
 
   return (
     <li
+      data-task-id={task.id}
       className={cn(
         'group flex items-start gap-3 border-b border-border px-4 py-3 transition-colors hover:bg-popover/30',
         task.status === 'completed' && 'opacity-60',
+        isHighlighted && 'animate-pulse bg-primary/10 ring-1 ring-primary/40',
       )}
     >
       <Checkbox
