@@ -227,7 +227,10 @@ export function useUploadBook() {
       try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
       return data as Book;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['reader', 'books'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reader', 'books'] });
+      qc.invalidateQueries({ queryKey: ['reader', 'storage-usage'] });
+    },
   });
 }
 
@@ -245,6 +248,9 @@ export function useDeleteBook() {
       if (book.cover_url) await deleteCached(STORE_COVERS, book.cover_url);
       try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['reader', 'books'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['reader', 'books'] });
+      qc.invalidateQueries({ queryKey: ['reader', 'storage-usage'] });
+    },
   });
 }

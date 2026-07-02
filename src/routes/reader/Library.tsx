@@ -8,6 +8,7 @@ import { useAllProgress } from '@/api/reader/progress';
 import { signOut, useAuth } from '@/lib/reader/auth';
 import type { Book, ReadingProgress } from '@/lib/reader/types';
 import BookCover from '@/components/reader/BookCover';
+import StorageBadge from '@/components/reader/StorageBadge';
 import UploadProgressPanel, { type UploadItem } from '@/components/reader/UploadProgressPanel';
 
 export default function ReaderLibrary() {
@@ -91,6 +92,8 @@ export default function ReaderLibrary() {
           </div>
         </div>
         <div className="flex items-center gap-3 text-xs text-zinc-500">
+          <StorageBadge />
+          <span className="h-4 w-px bg-zinc-800" />
           <span>{user?.email}</span>
           <button
             onClick={() => signOut()}
