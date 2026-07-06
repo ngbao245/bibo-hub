@@ -23,8 +23,17 @@ src/
 ├── App.tsx               # Routes (lazy) + Global modals mount
 │
 ├── routes/               # Page components (1 file = 1 route, lazy loaded)
-│   ├── Hub.tsx           # / — bản original
-│   ├── HubPro.tsx        # /pro — bản redesigned + Focus Layer
+│   ├── Landing/          # / — public portfolio landing (polygon 3D hero)
+│   │   ├── index.tsx
+│   │   ├── Hero.tsx
+│   │   ├── About.tsx
+│   │   ├── Services.tsx
+│   │   ├── Portfolio.tsx
+│   │   ├── Contact.tsx
+│   │   ├── Footer.tsx
+│   │   └── content.ts
+│   ├── Hub.tsx           # (legacy) bản original
+│   ├── HubPro.tsx        # /hub — bản redesigned + Focus Layer
 │   ├── Notes.tsx         # /notes
 │   ├── Tasks.tsx         # /tasks
 │   ├── Sources.tsx       # /sources
@@ -50,7 +59,10 @@ src/
 │   ├── expense/
 │   ├── sources/
 │   ├── packer/
-│   └── cache/            # Cache Inspector tabs
+│   ├── cache/            # Cache Inspector tabs
+│   ├── polygon-3d/       # React wrapper Polygon scene — dùng cho Landing hero
+│   │   └── PolygonBackground.tsx
+│   └── json-studio/      # JSON Studio UI — GraphView + TreeView + DataEditor + IOPanel + toolbars
 │
 ├── modals/               # Global modals (mount ở App level)
 │   ├── Calculator.tsx
@@ -86,7 +98,10 @@ src/
 │   ├── useShortcut.ts
 │   ├── useToolAction.ts
 │   ├── useLocalStorage.ts
-│   └── useDebouncedEffect.ts
+│   ├── useDebouncedEffect.ts
+│   ├── useLandingShortcut.ts # Alt+H → /hub (escape hatch cho owner)
+│   ├── usePauseWhenHidden.ts # Pause canvas/animation khi tab hidden hoặc out-of-view
+│   └── useScrollActive.ts    # True khi user đang scroll (pause heavy anim để giảm jank)
 │
 ├── lib/                  # Pure utilities (no React)
 │   ├── config.ts         # API URL decode
@@ -115,6 +130,23 @@ src/
 │   │   ├── presets.ts
 │   │   ├── pack.ts
 │   │   └── unpack.ts
+│   ├── polygon-3d/       # Pure three.js scene — dùng cho Landing hero
+│   │   ├── scene.ts
+│   │   └── deviceCapability.ts  # detectDeviceTier + prefersReducedMotion
+│   ├── json-studio/      # JSON Studio (formerly json-viewer) — parser + graph + formats + CM6
+│   │   ├── parser.ts
+│   │   ├── parser.worker.ts
+│   │   ├── parser-client.ts
+│   │   ├── canvasHelpers.ts
+│   │   ├── calculateNodeSize.ts
+│   │   ├── codemirror-setup.ts
+│   │   ├── CollapseContext.ts
+│   │   ├── cache-maintenance.ts
+│   │   ├── export-formatter.ts
+│   │   ├── json-highlight.ts
+│   │   ├── theme.ts
+│   │   ├── types.ts
+│   │   └── formats/      # JSON/YAML/XML/CSV parse+stringify
 │   └── editor/
 │       └── VocabBlock.tsx # Tiptap custom node
 │

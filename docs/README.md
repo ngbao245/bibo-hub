@@ -23,7 +23,7 @@ Rule màu, theme token, code style hard rules → `.kiro/steering/system.md` (kh
 | [cache-inspector.md](./cache-inspector.md) | Cache Inspector |
 | [expense-integration.md](./expense-integration.md) | Chi tiêu (Finance) |
 | [focus-algorithm.md](./focus-algorithm.md) | Tasks — Focus Layer |
-| [json-viewer-performance.md](./json-viewer-performance.md) | JSON Viewer |
+| [json-studio-performance.md](./json-studio-performance.md) | JSON Studio |
 | [keycap-lot.md](./keycap-lot.md) | Compare (Keycap) |
 | [pdf-reader.md](./pdf-reader.md) + [reader.md](./reader.md) + [reader-session-persist.md](./reader-session-persist.md) + [reader-vault-setup.md](./reader-vault-setup.md) | Reader |
 | [project-packer.md](./project-packer.md) | Project Packer |

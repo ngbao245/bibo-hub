@@ -4,7 +4,6 @@
 //
 // Mọi call ra Gemini API đi qua đây. Lý do:
 //   - Quản lý key pool tập trung (rotate, cooldown, invalid)
-//   - Fallback Groq khi tất cả Gemini key fail
 //   - Không log token ra console
 //
 // Không lưu instance Gemini SDK — gọi REST trực tiếp.
@@ -51,6 +50,11 @@ export function getKeyPoolSnapshot() {
   return pool.snapshot();
 }
 
+/** Thông tin đợi khi tất cả key exhausted — cho friendly error message. */
+export function getKeyPoolWaitInfo() {
+  return pool.computeWaitInfo();
+}
+
 // ------------------------------------------------------------
 // Retry orchestrator
 // ------------------------------------------------------------
@@ -62,7 +66,7 @@ export function getKeyPoolSnapshot() {
  * - 429 RPD → markDailyExhausted(key) → retry với key khác
  * - 401/403 → markInvalid(key) → retry với key khác
  * - 500/503 → retry không markKey
- * - Mọi key fail → throw RagAllKeysFailedError → caller fallback Groq
+ * - Mọi key fail → throw RagAllKeysFailedError → caller hiển thị friendly message
  */
 async function callGeminiWithRetry<T>(
   fn: (key: KeyState) => Promise<T>,
@@ -74,7 +78,7 @@ async function callGeminiWithRetry<T>(
     try {
       state = pool.pickKey();
     } catch (err) {
-      // Hết key → throw ra, fallback Groq do caller
+      // Hết key → throw ra, caller hiển thị friendly message
       throw err;
     }
 
@@ -145,7 +149,12 @@ async function geminiFetch(
   key: string,
   body: unknown,
 ): Promise<unknown> {
-  const res = await fetch(`${API_BASE}${pathWithKey(key)}`, {
+  const path = pathWithKey(key);
+  // Log endpoint (không log key) để user thấy mỗi lần tốn quota.
+  const endpoint = path.split('?')[0];
+  // eslint-disable-next-line no-console
+  console.log(`[Gemini] ${endpoint}`);
+  const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -276,6 +285,8 @@ export async function chatStream(
   if (pool.size() === 0) throw new RagNoTokenError();
 
   return callGeminiWithRetry(async (state) => {
+    // eslint-disable-next-line no-console
+    console.log(`[Gemini] /models/${CHAT_MODEL}:streamGenerateContent`);
     const res = await fetch(
       `${API_BASE}/models/${CHAT_MODEL}:streamGenerateContent?alt=sse&key=${encodeURIComponent(state.key)}`,
       {

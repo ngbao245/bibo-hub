@@ -522,11 +522,9 @@ export default function PdfReader({ book, initialPage }: { book: Book; initialPa
     if (!selection) return;
     const quoted = selection.text.trim();
     if (!quoted) return;
-    // Đẩy prompt vào ragStore + mở RAG modal. ChatTab sẽ tự gửi.
-    useRagStore.getState().setPendingPrompt(
-      `Về đoạn này (trang ${selection.page}):\n\n> ${quoted}\n\nHãy giải thích / tóm tắt giúp.`,
-      { preferBookMode: true },
-    );
+    // Đẩy raw context vào ragStore + mở RAG modal.
+    // ChatTab render ContextCard + QuickActions cho user chọn action, KHÔNG auto-send.
+    useRagStore.getState().setPendingContext(quoted, selection.page);
     useModalStore.getState().open('rag');
     window.getSelection()?.removeAllRanges();
     setSelection(null);

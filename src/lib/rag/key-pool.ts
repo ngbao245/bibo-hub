@@ -82,6 +82,43 @@ export class GeminiKeyPool {
     return this.states.filter((s) => s.enabled).length;
   }
 
+  /**
+   * Tính thông tin đợi cho friendly error message khi tất cả key exhausted.
+   * Return null nếu có key active (không cần đợi).
+   */
+  computeWaitInfo(): { type: 'rpm' | 'rpd' | 'invalid'; waitMs: number; resetAt: number } | null {
+    this.tickResets();
+    const now = Date.now();
+    const enabledStates = this.states.filter((s) => s.enabled);
+    if (enabledStates.length === 0) {
+      return { type: 'invalid', waitMs: 0, resetAt: 0 };
+    }
+    const active = enabledStates.filter((s) => this.statusOf(s) === 'active');
+    if (active.length > 0) return null;
+
+    // Ưu tiên: cooldown ngắn < 1h → RPM issue. Ngược lại RPD (đợi qua ngày).
+    let minCooldown = Infinity;
+    let minRpdReset = Infinity;
+    for (const s of enabledStates) {
+      if (s.cooldownUntil > now) {
+        minCooldown = Math.min(minCooldown, s.cooldownUntil);
+      }
+      if (s.rpdCount >= RPD_LIMIT) {
+        minRpdReset = Math.min(minRpdReset, s.rpdResetAt);
+      }
+    }
+    if (minCooldown !== Infinity && minCooldown - now < 60 * 60 * 1000) {
+      return { type: 'rpm', waitMs: minCooldown - now, resetAt: minCooldown };
+    }
+    if (minRpdReset !== Infinity) {
+      return { type: 'rpd', waitMs: minRpdReset - now, resetAt: minRpdReset };
+    }
+    if (minCooldown !== Infinity) {
+      return { type: 'rpm', waitMs: minCooldown - now, resetAt: minCooldown };
+    }
+    return null;
+  }
+
   /** Snapshot cho UI hiển thị status. */
   snapshot(): Array<KeyState & { status: KeyStatus }> {
     this.tickResets();

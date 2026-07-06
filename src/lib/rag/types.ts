@@ -86,36 +86,23 @@ export const DEFAULT_RAG_CONFIG: RagConfig = {
 /**
  * API tokens cho RAG.
  *
- * - Phải có ít nhất 1 trong 3 Gemini keys (validation trong UI).
- * - Mỗi key từ 1 Google account riêng → tăng quota lên N×1500 RPD.
- * - Groq fallback dùng khi tất cả Gemini keys exhausted.
+ * - `geminiApiKeys`: array dynamic, tối thiểu 1 key (validation UI).
+ * - Mỗi key từ 1 Google account riêng → tăng quota N×1500 RPD.
+ * - Storage: array được encode thành entries `{k:"geminiApiKey"+i, e, v}`
+ *   trong `config1`, backward compat với format cũ (3 field cứng).
  */
 export interface RagTokens {
-  geminiApiKey1: string;
-  geminiApiKey2: string;
-  geminiApiKey3: string;
-  groqApiKey: string;
+  geminiApiKeys: string[];
 }
 
 /** Token rỗng (default khi user chưa setup). */
 export const EMPTY_RAG_TOKENS: RagTokens = {
-  geminiApiKey1: '',
-  geminiApiKey2: '',
-  geminiApiKey3: '',
-  groqApiKey: '',
+  geminiApiKeys: [],
 };
-
-/** Trả về số Gemini key đã điền. */
-export function countGeminiKeys(tokens: RagTokens): number {
-  return [tokens.geminiApiKey1, tokens.geminiApiKey2, tokens.geminiApiKey3]
-    .filter((k) => k.trim().length > 0).length;
-}
 
 /** Trả về array Gemini keys non-empty (cho key pool). */
 export function activeGeminiKeys(tokens: RagTokens): string[] {
-  return [tokens.geminiApiKey1, tokens.geminiApiKey2, tokens.geminiApiKey3]
-    .map((k) => k.trim())
-    .filter((k) => k.length > 0);
+  return tokens.geminiApiKeys.map((k) => k.trim()).filter((k) => k.length > 0);
 }
 
 // ------------------------------------------------------------

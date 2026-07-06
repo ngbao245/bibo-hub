@@ -101,7 +101,20 @@ export default function RagAssistantModal() {
     >
       <DialogContent
         className="flex h-[min(85vh,720px)] max-w-3xl flex-col gap-0 overflow-hidden p-0 sm:p-0"
-        // Tắt close button mặc định của shadcn vì Kiro tự render close compact ở header
+        onPointerDownOutside={(e) => {
+          // Ignore click vào SessionContextMenu portal (render outside dialog).
+          // Không close modal khi user click item trong menu chuột phải.
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[data-rag-ctx-menu]')) {
+            e.preventDefault();
+          }
+        }}
+        onInteractOutside={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (target?.closest('[data-rag-ctx-menu]')) {
+            e.preventDefault();
+          }
+        }}
       >
         {/* Hidden cho a11y — Radix bắt buộc có Title/Description */}
         <DialogTitle className="sr-only">AI Assistant</DialogTitle>
@@ -384,9 +397,9 @@ function HelpOverlay({ onClose }: { onClose: () => void }) {
             </li>
             <li>
               <strong className="text-foreground">AI trả lời chậm / drop job</strong>:
-              đang hit rate limit Gemini (15 RPM / 1500 RPD). Thêm 2-3 key từ
-              3 Google account riêng → pool tự rotate → total 4,500 RPD.
-              Fallback Groq nếu tất cả Gemini exhausted.
+              đang hit rate limit Gemini (15 RPM / 1500 RPD). Thêm nhiều key
+              từ các Google account riêng → pool tự rotate, tăng quota
+              (mỗi key +1,500 chat/ngày).
             </li>
             <li>
               <strong className="text-foreground">Search không thấy note mới</strong>:

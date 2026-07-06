@@ -378,4 +378,4 @@ function groupHunks(diff: DiffLine[]): Hunk[] {
   if (current.lines.length > 0) hunks.push(current);
 
   return hunks;
-}
+}

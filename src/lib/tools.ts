@@ -110,11 +110,11 @@ export const TOOLS: Tool[] = [
     description: 'Markdown editor + live preview, export PDF',
   },
   {
-    id: 'json-viewer',
-    label: 'JSON Viewer',
-    group: 'Productivity',
-    action: { kind: 'route', path: '/json-viewer' },
-    description: 'Visualize JSON/CSV bằng graph hoặc tree, import/export',
+    id: 'json-studio',
+    label: 'JSON Studio',
+    group: 'Developer',
+    action: { kind: 'route', path: '/json-studio' },
+    description: 'JSON toolkit — visualize, format, diff, convert, path, schema',
   },
   {
     id: 'rag',
@@ -217,6 +217,13 @@ export const TOOLS: Tool[] = [
   },
 
   // Admin
+  {
+    id: 'portfolio-landing',
+    label: 'Portfolio',
+    group: 'Admin',
+    action: { kind: 'route', path: '/portfolio' },
+    description: 'Public landing page bán dịch vụ — polygon 3D hero',
+  },
   {
     id: 'backup',
     label: 'Backup',

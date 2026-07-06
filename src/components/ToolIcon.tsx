@@ -52,7 +52,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   crypto: ShieldCheck,
   'code-compare': GitCompareArrows,
   'markdown-preview': FileText,
-  'json-viewer': Network,
+  'json-studio': Network,
   audio: Music,
 };
 

@@ -1,14 +1,16 @@
 
 import { lazy, Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { useBootstrapShortcutOverrides } from './hooks/useBootstrapShortcutOverrides';
 import { useBootstrapRag } from './hooks/useBootstrapRag';
+import { useLandingShortcut } from './hooks/useLandingShortcut';
 
 // ============================================================
 // Lazy routes - mỗi page load chunk riêng khi navigate tới.
 // Giảm initial bundle từ ~300KB xuống ~100KB.
 // ============================================================
+const Landing = lazy(() => import('./routes/Landing'));
 const Hub = lazy(() => import('./routes/HubPro'));
 const Notes = lazy(() => import('./routes/Notes'));
 const Tasks = lazy(() => import('./routes/Tasks'));
@@ -22,7 +24,7 @@ const Setting = lazy(() => import('./routes/Setting'));
 const CodeCompare = lazy(() => import('./routes/CodeCompare'));
 const MarkdownPreview = lazy(() => import('./routes/MarkdownPreview'));
 const ReaderApp = lazy(() => import('./routes/reader'));
-const JsonViewer = lazy(() => import('./routes/JsonViewer'));
+const JsonStudio = lazy(() => import('./routes/JsonStudio'));
 // Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
 import Calculator from './modals/Calculator';
 import Translate from './modals/Translate';
@@ -51,16 +53,24 @@ function PageLoader() {
   );
 }
 
+/** Legacy /json-viewer → /json-studio redirect, giữ query string cho bookmark cũ. */
+function LegacyJsonViewerRedirect() {
+  const { search, hash } = useLocation();
+  return <Navigate to={`/json-studio${search}${hash}`} replace />;
+}
+
 export default function App() {
   useGlobalShortcuts();
   useBootstrapShortcutOverrides();
   useBootstrapRag();
+  useLandingShortcut(); // Alt+H → /portfolio (mở landing từ hub cho owner)
 
   return (
     <AudioProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/" element={<Hub />} />
+          <Route path="/portfolio" element={<Landing />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/tasks" element={<Tasks />} />
           <Route path="/sources" element={<Sources />} />
@@ -72,7 +82,9 @@ export default function App() {
           <Route path="/setting" element={<Setting />} />
           <Route path="/code-compare" element={<CodeCompare />} />
           <Route path="/markdown" element={<MarkdownPreview />} />
-          <Route path="/json-viewer" element={<JsonViewer />} />
+          <Route path="/json-studio" element={<JsonStudio />} />
+          {/* Legacy redirect: /json-viewer → /json-studio, giữ query nếu có. */}
+          <Route path="/json-viewer" element={<LegacyJsonViewerRedirect />} />
           <Route path="/reader/*" element={<ReaderApp />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

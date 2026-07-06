@@ -57,7 +57,7 @@ function uniqStrings(arr: Array<string | undefined | null>): string[] {
  *   - không tìm thấy record group=RAG, type=SettingInfor
  *   - tất cả candidate passphrase đều decrypt fail
  *
- * Trả về RagTokens (có thể có field rỗng nếu user chưa điền key #2, #3, groq).
+ * Trả về RagTokens với `geminiApiKeys` là array các key non-empty (có thể rỗng nếu user chưa setup).
  */
 export async function loadRagTokens(passphrase?: string): Promise<RagTokens> {
   const sessionKey = useCryptoStore.getState().passphrase;
@@ -99,32 +99,34 @@ export async function loadRagTokens(passphrase?: string): Promise<RagTokens> {
   // Flatten tất cả entries từ config1..config10
   const entries = CONFIG_KEYS.flatMap((k) => decodeFieldSlots(record[k] ?? '', k));
 
-  // Lookup từng field cần thiết (case-insensitive)
-  const findEntry = (name: string) =>
-    entries.find((e) => e.k.toLowerCase() === name.toLowerCase());
+  // Filter entries có key match pattern geminiApiKeyN (N = 1, 2, 3, ...)
+  // Backward compat: format cũ dùng 'geminiApiKey1', 'geminiApiKey2', ...
+  // Format mới cũng cùng convention → không cần migrate data.
+  // Bỏ qua entry `groqApiKey` (feature đã bỏ).
+  const geminiEntries = entries
+    .filter((e) => /^geminiApiKey\d+$/i.test(e.k))
+    .sort((a, b) => {
+      const nA = parseInt(a.k.replace(/^geminiApiKey/i, ''), 10) || 0;
+      const nB = parseInt(b.k.replace(/^geminiApiKey/i, ''), 10) || 0;
+      return nA - nB;
+    });
 
-  const fieldNames: Array<keyof RagTokens> = [
-    'geminiApiKey1',
-    'geminiApiKey2',
-    'geminiApiKey3',
-    'groqApiKey',
-  ];
+  // Nếu không có entry nào → tokens rỗng
+  if (geminiEntries.length === 0) {
+    return { ...EMPTY_RAG_TOKENS };
+  }
 
-  // Decrypt từng field với candidate đầu tiên match được
-  // Lý do: 4 field có thể được encrypt bởi cùng 1 passphrase, không cần loop riêng.
+  // Tìm passphrase đúng bằng cách thử decrypt entry đầu tiên có encrypted
   let workingKey: string | null = null;
   let lastErr: unknown = null;
-  const out: RagTokens = { ...EMPTY_RAG_TOKENS };
+  const firstEncrypted = geminiEntries.find(
+    (e) => e.e === 1 || isEncrypted(e.v),
+  );
 
-  // Tìm passphrase đúng bằng cách thử decrypt field đầu tiên có content + encrypted
-  const firstEncryptedField = fieldNames
-    .map((name) => ({ name, entry: findEntry(name) }))
-    .find(({ entry }) => entry && (entry.e === 1 || isEncrypted(entry.v)));
-
-  if (firstEncryptedField?.entry) {
+  if (firstEncrypted) {
     for (const candidate of candidates) {
       try {
-        await decryptText(firstEncryptedField.entry.v, candidate);
+        await decryptText(firstEncrypted.v, candidate);
         workingKey = candidate;
         break;
       } catch (err) {
@@ -142,29 +144,25 @@ export async function loadRagTokens(passphrase?: string): Promise<RagTokens> {
     }
   }
 
-  // Decrypt tất cả fields với workingKey
-  for (const name of fieldNames) {
-    const entry = findEntry(name);
-    if (!entry) {
-      out[name] = '';
-      continue;
-    }
+  // Decrypt tất cả entry với workingKey, tạo array (giữ non-empty)
+  const geminiApiKeys: string[] = [];
+  for (const entry of geminiEntries) {
+    let plaintext = '';
     if (entry.e === 1 || isEncrypted(entry.v)) {
-      if (workingKey === null) {
-        // Không nên xảy ra (đã check ở trên)
-        out[name] = '';
+      if (workingKey === null) continue;
+      try {
+        plaintext = await decryptText(entry.v, workingKey);
+      } catch {
+        // Entry encrypt bằng key khác → skip
         continue;
       }
-      try {
-        out[name] = await decryptText(entry.v, workingKey);
-      } catch {
-        // Field này encrypt bằng key khác? Skip, để rỗng.
-        out[name] = '';
-      }
     } else {
-      out[name] = entry.v ?? '';
+      plaintext = entry.v ?? '';
+    }
+    if (plaintext.trim().length > 0) {
+      geminiApiKeys.push(plaintext);
     }
   }
 
-  return out;
+  return { geminiApiKeys };
 }

@@ -33,4 +33,5 @@ export const API = {
   TASKS: `${BASE}/tasks`,
   TAGS: `${BASE}/tags`,
   CONFIGS: `${CONFIG_BASE}/Config`,
-} as const;
+  RAG_SESSIONS: `${CONFIG_BASE}/RagSession`,
+} as const;
