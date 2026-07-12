@@ -83,6 +83,37 @@ export default function Sources() {
     setListOpenMobile(false);
   }
 
+  async function handleDeleteAll() {
+    if (sources.length === 0) return;
+
+    const confirmMsg = `XÓA HẾT ${sources.length} SOURCE?\n\nHành động này KHÔNG THỂ HOÀN TÁC!\n\nNhấn OK để xác nhận xóa tất cả.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      const { fetchJson } = await import('@/api/client');
+      const { API } = await import('@/lib/config');
+
+      let deleted = 0;
+      for (const source of sources) {
+        try {
+          await fetchJson(`${API.NOTES}/${source.id}`, { method: 'DELETE' });
+          deleted++;
+        } catch {
+          // Continue nếu có lỗi
+        }
+      }
+
+      toast.success(`Đã xóa ${deleted}/${sources.length} source${sources.length > 1 ? 's' : ''}`);
+      setSelectedId(null);
+
+      // Invalidate query để refresh list
+      notesQuery.refetch();
+    } catch (e) {
+      toast.error('Không xóa được');
+      console.error(e);
+    }
+  }
+
   return (
     <div className="flex h-full">
       {/* Source list panel */}
@@ -99,6 +130,7 @@ export default function Sources() {
           selectedId={selectedId}
           onSelect={handleSelect}
           onNew={handleNew}
+          onDeleteAll={handleDeleteAll}
         />
       </aside>
 

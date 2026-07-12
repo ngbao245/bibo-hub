@@ -458,6 +458,66 @@ export default function PackPanel() {
   }
 
   // ============================================================
+  // Lưu tất cả parts vào Source (mỗi part = 1 source riêng)
+  // ============================================================
+  async function handleSaveToSource(parts: PackPart[]) {
+    if (parts.length === 0) return;
+    setBusyMessage(`Đang lưu ${parts.length} part vào Source...`);
+    await new Promise((r) => setTimeout(r, 0));
+
+    try {
+      const { fetchJson } = await import('@/api/client');
+      const { API } = await import('@/lib/config');
+      const now = new Date().toISOString();
+
+      // Tạo pack ID chung cho tất cả parts (để sau này group lại)
+      const packId = `pack_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+      const baseTitle = `Project Packed - ${new Date().toLocaleString('vi-VN')}`;
+
+      let successCount = 0;
+
+      // Lưu từng part thành 1 source riêng (tránh vượt giới hạn MockAPI)
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i];
+        try {
+          await fetchJson(API.NOTES, {
+            method: 'POST',
+            body: JSON.stringify({
+              type: 'source',
+              title: parts.length === 1 ? baseTitle : `${baseTitle} (${i + 1}/${parts.length})`,
+              content: part.content,
+              tags: `packed, pack-id:${packId}, part:${i + 1}/${parts.length}, ${selectedFileCount} files`,
+              source: 'project-packer',
+              createdAt: now,
+              updatedAt: now,
+            }),
+          });
+          successCount++;
+          log(`✓ Đã lưu part ${i + 1}/${parts.length}`, 'success');
+        } catch (e) {
+          log(`✗ Lỗi lưu part ${i + 1}: ${String(e)}`, 'error');
+        }
+
+        // Yield để tránh spam API quá nhanh
+        if (i < parts.length - 1) {
+          await new Promise((r) => setTimeout(r, 100));
+        }
+      }
+
+      if (successCount === parts.length) {
+        toast.success(`Đã lưu ${parts.length} part vào Source! Vào trang Sources để download.`);
+      } else {
+        toast.warning(`Chỉ lưu được ${successCount}/${parts.length} part`);
+      }
+      setBusyMessage(null);
+    } catch (e) {
+      toast.error('Không lưu được vào Source');
+      log(`Lỗi save to source: ${String(e)}`, 'error');
+      setBusyMessage(null);
+    }
+  }
+
+  // ============================================================
   // Folder input — scan tên, build tree, KHÔNG đọc content
   // ============================================================
   async function handleFolderInput(e: React.ChangeEvent<HTMLInputElement>) {
@@ -839,6 +899,14 @@ export default function PackPanel() {
                   </span> ký tự
                 </span>
                 <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    onClick={() => handleSaveToSource(parts)}
+                    className="h-7 gap-1.5 px-2 text-xs"
+                  >
+                    <Package className="h-3 w-3" />
+                    Lưu vào Source
+                  </Button>
                   <Button
                     size="sm"
                     onClick={() => handleDownloadAllAsZip(parts)}

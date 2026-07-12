@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus, X } from 'lucide-react';
+import { Search, Plus, X, Trash2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +22,7 @@ interface SourceListProps {
   selectedId: string | null;
   onSelect: (id: string) => void;
   onNew: () => void;
+  onDeleteAll?: () => void;
 }
 
 export default function SourceList({
@@ -30,6 +31,7 @@ export default function SourceList({
   selectedId,
   onSelect,
   onNew,
+  onDeleteAll,
 }: SourceListProps) {
   const [query, setQuery] = useState('');
 
@@ -57,9 +59,22 @@ export default function SourceList({
         <h3 className="text-sm font-medium uppercase tracking-wider text-secondary-foreground">
           Sources
         </h3>
-        <Button size="icon" variant="ghost" onClick={onNew} title="Tạo source mới" className="h-7 w-7">
-          <Plus className="h-4 w-4" />
-        </Button>
+        <div className="flex gap-1">
+          {sources.length > 0 && onDeleteAll && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={onDeleteAll}
+              title="Xóa hết sources"
+              className="h-7 w-7 text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          <Button size="icon" variant="ghost" onClick={onNew} title="Tạo source mới" className="h-7 w-7">
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="border-b border-border p-2">
