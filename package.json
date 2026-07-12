@@ -8,7 +8,10 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "migrate:config": "tsx --env-file=.env.migration.local scripts/migrate-config-to-supabase.ts",
+    "migrate:library": "tsx --env-file=.env.migration.local scripts/migrate-library-to-project-a.ts",
+    "migrate:library:verify": "tsx --env-file=.env.migration.local scripts/verify-library-migration.ts"
   },
   "dependencies": {
     "@codemirror/autocomplete": "^6.18.4",
@@ -91,7 +94,8 @@
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.9",
     "tailwindcss": "^3.4.16",
+    "tsx": "^4.23.0",
     "typescript": "^5.7.2",
     "vite": "^6.0.3"
   }
-}
+}

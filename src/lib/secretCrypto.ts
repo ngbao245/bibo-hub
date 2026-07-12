@@ -1,16 +1,15 @@
-
 // ============================================================
-// Secret notes encryption helpers
+// Secret notes obfuscation helpers
 // ============================================================
 //
 // Cùng thuật toán v1: UTF-8 → bytes → reverse → base64.
 // KHÔNG phải mã hoá thật (không có key), chỉ obfuscation.
 // User nào access MockAPI cũng có thể decode được.
-// Để bảo mật thật, nên migrate sang AES-GCM với key từ password.
-// Giữ thuật toán cũ để tương thích data v1.
+//
+// Gate access: chỉ admin (`profile.role === 'admin'`) mở được modal.
 // ============================================================
 
-import { APP_SECRET } from './appSecret';
+import { isAdmin } from '@/stores/authStore';
 
 export function encryptSecret(text: string): string {
   if (!text) return '';
@@ -36,7 +35,6 @@ export function decryptSecret(encoded: string): string {
     }
     return new TextDecoder().decode(bytes);
   } catch {
-    // Fallback cho data plain text cũ
     try {
       return atob(encoded).split('').reverse().join('');
     } catch {
@@ -46,10 +44,12 @@ export function decryptSecret(encoded: string): string {
 }
 
 /**
- * Verify password mở Secret Notes. Password lấy từ APP_SECRET
- * (lib/appSecret.ts) — đây không phải bảo mật mạnh, chỉ là khoá
- * mềm tương thích v1.
+ * Verify quyền mở Secret Notes.
+ *
+ * Phase 1 gate đơn giản: chỉ admin mở được (thay cho APP_SECRET check cũ).
+ * Password input trong modal chỉ là confirmation UX, không phải secret thật —
+ * ai đã login role='admin' mới có quyền click Unlock button.
  */
-export function verifySecretPassword(input: string): boolean {
-  return input === APP_SECRET;
+export function verifySecretPassword(_input: string): boolean {
+  return isAdmin();
 }

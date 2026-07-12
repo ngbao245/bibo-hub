@@ -11,7 +11,7 @@
 import { fetchJson } from '@/api/client';
 import { API } from '@/lib/config';
 import { parseSettingList, CONFIG_KEYS } from '@/lib/setting';
-import { decodeFieldSlots } from '@/lib/cryptoFields';
+import { decodeFieldSlots } from '@/lib/fieldSlots';
 import type { NoteType } from '@/schemas/note';
 
 import {

@@ -31,10 +31,11 @@ function normalizeKey(e: KeyboardEvent): string {
   if (e.metaKey) parts.push('meta');
 
   // Lấy key chính (bỏ qua nếu chỉ bấm modifier)
-  const key = e.key.toLowerCase();
-  if (!['control', 'alt', 'shift', 'meta'].includes(key)) {
-    parts.push(key);
+  const key = (e.key ?? '').toLowerCase();
+  if (!key || ['control', 'alt', 'shift', 'meta'].includes(key)) {
+    return parts.join('+');
   }
+  parts.push(key);
   return parts.join('+');
 }
 

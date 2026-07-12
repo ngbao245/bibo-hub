@@ -10,6 +10,7 @@ import {
 } from '@/api/toolCategories';
 
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/cn';
 
@@ -115,6 +116,16 @@ export default function ToolCategoryManager({
     () => TOOLS.filter((t) => !mapping[t.id] || !categories.includes(mapping[t.id])),
     [mapping, categories],
   );
+
+  if (catQuery.isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col overflow-hidden">

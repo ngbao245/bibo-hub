@@ -6,7 +6,7 @@
 // Khi đổi schema phải sync với:
 //   - rag-config.ts (parse/serialize)
 //   - rag-vault.ts (decrypt tokens)
-//   - RagTokensManager.tsx + RagConfigManager.tsx (UI)
+//   - components/setting/RagTokensTab.tsx (admin UI edit tokens)
 // ============================================================
 
 import type { NoteType } from '@/schemas/note';

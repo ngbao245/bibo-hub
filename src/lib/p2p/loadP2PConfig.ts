@@ -1,37 +1,18 @@
-
 // ============================================================
-// Loader — Firebase config + TURN credential từ Setting tool
+// Loader — Firebase config + TURN credential từ Supabase app_settings
 // ============================================================
 //
-// Lấy 2 record trong group "P2P":
-//   - type = "Firebase"             → 7 field firebase config
-//   - type = "TURN Server Metered"  → username + credential
+// Refactored: đọc từ app_settings.p2p_config Supabase (plaintext, RLS chặn).
+// Không còn APP_SECRET / cryptoFields / cryptoStore.
 //
-// Field được mã hoá AES-GCM (xem lib/cryptoFields). Cần passphrase
-// trong cryptoStore. Nếu chưa nhập → throw lỗi rõ ràng.
-//
-// Memoize 1 lần per session — passphrase đổi (logout/clear) thì
-// reset cache để load lại với passphrase mới.
+// Schema value trong app_settings:
+//   {
+//     firebase: { apiKey, authDomain, databaseURL, projectId, storageBucket, messagingSenderId, appId },
+//     turn: { username, credential }
+//   }
 // ============================================================
 
-import { fetchJson } from '@/api/client';
-import { API } from '@/lib/config';
-import { parseSettingList, type Setting } from '@/lib/setting';
-import { decodeFieldSlots, decryptText, isEncrypted } from '@/lib/cryptoFields';
-import { useCryptoStore } from '@/stores/cryptoStore';
-import { APP_SECRET } from '@/lib/appSecret';
-
-// ----------------------------------------------------------
-// App secret — passphrase mặc định để decrypt config P2P
-// ----------------------------------------------------------
-//
-// User thường không cần nhập gì. Chỉ admin (sửa Setting) mới cần
-// nhập passphrase trong Crypto modal — passphrase này phải khớp
-// app secret để app load được data sau đó.
-//
-// Passphrase plain + encoded được tập trung tại lib/appSecret.ts
-// để rotate chỉ cần sửa 1 chỗ.
-// ----------------------------------------------------------
+import { authClient } from '@/lib/authClient';
 
 export interface FirebaseConfig {
   apiKey: string;
@@ -53,55 +34,21 @@ export interface P2PConfig {
   turn: TurnCredential;
 }
 
-// ----------------------------------------------------------
-// Cache promise — đảm bảo concurrent calls share cùng kết quả
-// ----------------------------------------------------------
+const KEY = 'p2p_config';
 
 let cache: Promise<P2PConfig> | null = null;
-let cachedPassphrase: string | null = null;
 
-/** Reset cache khi passphrase thay đổi hoặc cần reload từ API. */
+/** Reset cache khi user thay đổi (logout / re-login). */
 export function resetP2PConfigCache() {
   cache = null;
-  cachedPassphrase = null;
 }
 
-// ----------------------------------------------------------
-// Helpers
-// ----------------------------------------------------------
-
-async function decodeRecord(
-  setting: Setting,
-  passphrase: string,
-): Promise<Record<string, string>> {
-  const out: Record<string, string> = {};
-  for (const key of [
-    'config1',
-    'config2',
-    'config3',
-    'config4',
-    'config5',
-    'config6',
-    'config7',
-    'config8',
-    'config9',
-    'config10',
-  ] as const) {
-    const raw = setting[key];
-    if (!raw) continue;
-    const entries = decodeFieldSlots(raw, key);
-    for (const e of entries) {
-      let value = e.v;
-      if (e.e === 1 && isEncrypted(value)) {
-        value = await decryptText(value, passphrase);
-      }
-      out[e.k] = value;
-    }
-  }
-  return out;
+interface P2PConfigRow {
+  firebase?: Partial<FirebaseConfig>;
+  turn?: Partial<TurnCredential>;
 }
 
-function pickFirebase(map: Record<string, string>): FirebaseConfig {
+function validateFirebase(fb: Partial<FirebaseConfig> | undefined): FirebaseConfig {
   const required: (keyof FirebaseConfig)[] = [
     'apiKey',
     'authDomain',
@@ -111,99 +58,64 @@ function pickFirebase(map: Record<string, string>): FirebaseConfig {
     'messagingSenderId',
     'appId',
   ];
-  const missing = required.filter((k) => !map[k]);
+  const missing = required.filter((k) => !fb?.[k]);
   if (missing.length) {
     throw new Error(
-      `Firebase config thiếu field: ${missing.join(', ')}. Mở Setting → group "P2P" → record type "Firebase".`,
+      `p2p_config.firebase thiếu field: ${missing.join(', ')}. Mở Setting → P2P Config để cập nhật.`,
     );
   }
   return {
-    apiKey: map.apiKey,
-    authDomain: map.authDomain,
-    databaseURL: map.databaseURL,
-    projectId: map.projectId,
-    storageBucket: map.storageBucket,
-    messagingSenderId: map.messagingSenderId,
-    appId: map.appId,
+    apiKey: fb!.apiKey!,
+    authDomain: fb!.authDomain!,
+    databaseURL: fb!.databaseURL!,
+    projectId: fb!.projectId!,
+    storageBucket: fb!.storageBucket!,
+    messagingSenderId: fb!.messagingSenderId!,
+    appId: fb!.appId!,
   };
 }
 
-function pickTurn(map: Record<string, string>): TurnCredential {
-  const username = map.userName ?? '';
-  const credential = map.credential ?? '';
-  if (!username || !credential) {
+function validateTurn(turn: Partial<TurnCredential> | undefined): TurnCredential {
+  if (!turn?.username || !turn?.credential) {
     throw new Error(
-      'TURN credential thiếu username/credential. Mở Setting → group "P2P" → record type "TURN Server Metered".',
+      'p2p_config.turn thiếu username/credential. Mở Setting → P2P Config.',
     );
   }
-  return { username, credential };
-}
-
-// ----------------------------------------------------------
-// Public loader
-// ----------------------------------------------------------
-
-// Tự reset cache khi passphrase trong store thay đổi
-useCryptoStore.subscribe((state, prev) => {
-  if (state.passphrase !== prev.passphrase) {
-    resetP2PConfigCache();
-    // Lazy import để tránh circular dep
-    void import('./firebase').then((m) => m.resetFirebase());
-  }
-});
-
-/**
- * Resolve passphrase dùng để decrypt:
- *   - User đã nhập trong Crypto modal → ưu tiên (cho admin override).
- *   - Không thì dùng APP_SECRET hardcode (default cho mọi visitor).
- */
-function resolvePassphrase(): string {
-  return APP_SECRET;
+  return { username: turn.username, credential: turn.credential };
 }
 
 export function loadP2PConfig(): Promise<P2PConfig> {
-  const passphrase = resolvePassphrase();
-  if (!passphrase) {
-    return Promise.reject(
-      new Error(
-        'App secret chưa cấu hình. Báo dev cập nhật APP_SECRET_ENCODED trong loadP2PConfig.ts.',
-      ),
-    );
-  }
-  if (cache && cachedPassphrase === passphrase) return cache;
+  if (cache) return cache;
 
-  cachedPassphrase = passphrase;
   cache = (async () => {
-    const raw = await fetchJson<unknown>(API.CONFIGS);
-    const list = parseSettingList(raw).filter((s) => s.group.trim() === 'P2P');
+    const { data, error } = await authClient
+      .from('app_settings')
+      .select('value')
+      .eq('key', KEY)
+      .maybeSingle();
 
-    const firebaseRecord = list.find((s) => s.type.trim() === 'Firebase');
-    const turnRecord = list.find((s) => s.type.trim() === 'TURN Server Metered');
-
-    if (!firebaseRecord) {
-      throw new Error(
-        'Chưa có record Firebase trong Setting → group "P2P" → type "Firebase".',
-      );
-    }
-    if (!turnRecord) {
-      throw new Error(
-        'Chưa có record TURN trong Setting → group "P2P" → type "TURN Server Metered".',
-      );
+    if (error) {
+      if (error.code === '42501' || error.code === 'PGRST116') {
+        throw new Error('Bạn không có quyền dùng P2P Transfer. Liên hệ admin.');
+      }
+      throw new Error(`Load p2p_config failed: ${error.message}`);
     }
 
-    const firebaseMap = await decodeRecord(firebaseRecord, passphrase);
-    const turnMap = await decodeRecord(turnRecord, passphrase);
+    if (!data || !data.value) {
+      throw new Error(
+        'Chưa có p2p_config. Mở Setting → P2P Config để setup Firebase + TURN.',
+      );
+    }
 
+    const row = data.value as P2PConfigRow;
     return {
-      firebase: pickFirebase(firebaseMap),
-      turn: pickTurn(turnMap),
+      firebase: validateFirebase(row.firebase),
+      turn: validateTurn(row.turn),
     };
   })();
 
-  // Nếu fail → clear cache để lần sau load lại
   cache.catch(() => {
     cache = null;
-    cachedPassphrase = null;
   });
 
   return cache;

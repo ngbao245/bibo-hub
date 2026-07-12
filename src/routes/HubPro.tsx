@@ -1,6 +1,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Keyboard, ChevronDown, Pin, PinOff } from 'lucide-react';
+import { Keyboard, ChevronDown, Pin, PinOff, User, LogOut } from 'lucide-react';
+import { PencilSparkles } from '@/components/icons/PencilSparkles';
+import { useNavigate } from 'react-router-dom';
 
 import { TOOLS, TOOL_GROUPS, type Tool, type ToolGroup } from '@/lib/tools';
 import { useToolAction } from '@/hooks/useToolAction';
@@ -9,6 +11,9 @@ import { useHubFavorites, useSaveHubFavorites } from '@/api/hubFavorites';
 import { useToolCategories } from '@/api/toolCategories';
 import { cn } from '@/lib/cn';
 import FocusLayer from '@/components/FocusLayer';
+import { useAuthStore } from '@/stores/authStore';
+import { authClient } from '@/lib/authClient';
+import { getAvatarUrl } from '@/api/avatars';
 
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -48,6 +53,15 @@ const MAX_FAVORITES = 24;
 export default function HubPro() {
   const handleClick = useToolAction();
   const [focusVisible, setFocusVisible] = useLocalStorage('hubpro_focusVisible', true);
+
+  // Filter tools theo profile.allowed_tools. Admin → all tools.
+  const profile = useAuthStore((s) => s.profile);
+  const visibleTools = useMemo(() => {
+    if (!profile) return [] as Tool[];
+    if (profile.role === 'admin') return TOOLS;
+    if (profile.allowed_tools.includes('*')) return TOOLS;
+    return TOOLS.filter((t) => profile.allowed_tools.includes(t.id));
+  }, [profile]);
 
   // Favorites — lưu /Config (group __system), trống nếu chưa có record
   const favQuery = useHubFavorites();
@@ -108,10 +122,11 @@ export default function HubPro() {
     [favQuery.data?.recordId],
   );
 
+  const visibleToolIds = useMemo(() => new Set(visibleTools.map((t) => t.id)), [visibleTools]);
   const favoriteSet = new Set(favoriteIds);
   const favorites: Tool[] = favoriteIds
     .map((id) => TOOLS.find((t) => t.id === id))
-    .filter((t): t is Tool => !!t)
+    .filter((t): t is Tool => !!t && visibleToolIds.has(t.id))
     .slice(0, MAX_FAVORITES); // hard limit khi render
 
   // Categories — lưu /Config. Mapping tool → category hoàn toàn dynamic.
@@ -131,7 +146,7 @@ export default function HubPro() {
 
     const unassigned: Tool[] = [];
     const mapping = catData?.mapping ?? {};
-    for (const tool of TOOLS) {
+    for (const tool of visibleTools) {
       const cat = mapping[tool.id];
       if (cat && grouped[cat]) {
         grouped[cat].push(tool);
@@ -145,7 +160,7 @@ export default function HubPro() {
       toolsByCategory: grouped,
       unassignedTools: unassigned,
     };
-  }, [catQuery.data]);
+  }, [catQuery.data, visibleTools]);
 
   function toggleFavorite(id: string) {
     if (favoriteSet.has(id)) {
@@ -453,6 +468,22 @@ function Header({
   focusVisible: boolean;
   onShowFocus: () => void;
 }) {
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const profile = useAuthStore((s) => s.profile);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!userMenuOpen) return;
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [userMenuOpen]);
+
   return (
     <header className="flex items-center justify-between border-b border-border bg-background px-[clamp(1rem,4vw,4rem)] py-4">
       <div className="flex items-baseline gap-2">
@@ -470,12 +501,87 @@ function Header({
 
         <Tooltip>
           <TooltipTrigger asChild>
+            <button
+              onClick={() => toast.info('Tính năng góp ý đang phát triển')}
+              className="relative inline-flex h-9 w-9 items-center justify-center text-foreground transition-colors hover:text-primary"
+            >
+              {/* Triangle border shape */}
+              <svg
+                className="absolute inset-0 h-full w-full"
+                viewBox="0 0 36 36"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M18 2L33 10V26L18 34L3 26V10L18 2Z"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  className="text-border"
+                />
+              </svg>
+              <PencilSparkles className="relative h-3.5 w-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>Góp ý</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
             <Button variant="outline" size="icon" onClick={() => useModalStore.getState().open('shortcuts')}>
               <Keyboard className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
           <TooltipContent>Phím tắt (Alt+K)</TooltipContent>
         </Tooltip>
+
+        {/* User menu */}
+        <div className="relative" ref={menuRef}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="overflow-hidden rounded-full"
+            onClick={() => setUserMenuOpen((v) => !v)}
+          >
+            {profile?.avatar_url ? (
+              <img
+                src={getAvatarUrl(profile.avatar_url) ?? ''}
+                alt=""
+                className="h-full w-full rounded-full object-cover"
+              />
+            ) : (
+              <User className="h-4 w-4" />
+            )}
+          </Button>
+          {userMenuOpen && (
+            <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] border border-border bg-popover py-1 shadow-md">
+              {profile?.username && (
+                <div className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
+                  {profile.username}
+                </div>
+              )}
+              <button
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  navigate('/account');
+                }}
+              >
+                <User className="h-3.5 w-3.5" />
+                My account
+              </button>
+              <button
+                className="flex w-full items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-muted"
+                onClick={() => {
+                  setUserMenuOpen(false);
+                  authClient.auth.signOut();
+                }}
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                Sign out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   );

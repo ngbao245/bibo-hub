@@ -11,7 +11,7 @@
 //   - group: nhóm cấp 1 (ví dụ "firebase", "api", "p2p"...)
 //   - type:  nhóm cấp 2 trong group (ví dụ "production", "staging")
 //   - configN: 10 slot tự do, mỗi slot có thể là FieldEntry JSON
-//     (xem lib/cryptoFields.ts) hoặc plain string.
+//     (xem lib/fieldSlots.ts) hoặc plain string.
 // ============================================================
 
 export const CONFIG_KEYS = [

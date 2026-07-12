@@ -5,6 +5,8 @@ import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { useBootstrapShortcutOverrides } from './hooks/useBootstrapShortcutOverrides';
 import { useBootstrapRag } from './hooks/useBootstrapRag';
 import { useLandingShortcut } from './hooks/useLandingShortcut';
+import AuthGuard from './components/auth/AuthGuard';
+import ToolGuard from './components/auth/ToolGuard';
 
 // ============================================================
 // Lazy routes - mỗi page load chunk riêng khi navigate tới.
@@ -12,6 +14,7 @@ import { useLandingShortcut } from './hooks/useLandingShortcut';
 // ============================================================
 const Landing = lazy(() => import('./routes/Landing'));
 const Hub = lazy(() => import('./routes/HubPro'));
+const Login = lazy(() => import('./routes/Login'));
 const Notes = lazy(() => import('./routes/Notes'));
 const Tasks = lazy(() => import('./routes/Tasks'));
 const Sources = lazy(() => import('./routes/Sources'));
@@ -21,10 +24,13 @@ const Keycap = lazy(() => import('./routes/Keycap'));
 const ProjectPacker = lazy(() => import('./routes/ProjectPacker'));
 const P2PTransfer = lazy(() => import('./routes/P2PTransfer'));
 const Setting = lazy(() => import('./routes/Setting'));
+const Account = lazy(() => import('./routes/Account'));
 const CodeCompare = lazy(() => import('./routes/CodeCompare'));
 const MarkdownPreview = lazy(() => import('./routes/MarkdownPreview'));
-const ReaderApp = lazy(() => import('./routes/reader'));
+const LibraryApp = lazy(() => import('./routes/library'));
 const JsonStudio = lazy(() => import('./routes/JsonStudio'));
+const AgencyStudio = lazy(() => import('./routes/AgencyStudio'));
+const AgencyUnsubscribe = lazy(() => import('./routes/AgencyStudio/Unsubscribe'));
 // Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
 import Calculator from './modals/Calculator';
 import Translate from './modals/Translate';
@@ -69,24 +75,55 @@ export default function App() {
     <AudioProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          <Route path="/" element={<Hub />} />
+          {/* Public routes — không cần auth */}
+          <Route path="/login" element={<Login />} />
           <Route path="/portfolio" element={<Landing />} />
-          <Route path="/notes" element={<Notes />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/sources" element={<Sources />} />
-          <Route path="/movies" element={<Movies />} />
-          <Route path="/expense" element={<Expense />} />
-          <Route path="/keycap" element={<Keycap />} />
-          <Route path="/project-packer" element={<ProjectPacker />} />
-          <Route path="/p2p" element={<P2PTransfer />} />
-          <Route path="/setting" element={<Setting />} />
-          <Route path="/code-compare" element={<CodeCompare />} />
-          <Route path="/markdown" element={<MarkdownPreview />} />
-          <Route path="/json-studio" element={<JsonStudio />} />
-          {/* Legacy redirect: /json-viewer → /json-studio, giữ query nếu có. */}
-          <Route path="/json-viewer" element={<LegacyJsonViewerRedirect />} />
-          <Route path="/reader/*" element={<ReaderApp />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="/agency-studio/unsubscribe" element={<AgencyUnsubscribe />} />
+
+          {/* Protected routes — wrap AuthGuard */}
+          <Route
+            path="*"
+            element={
+              <AuthGuard>
+                <Routes>
+                  <Route path="/" element={<Hub />} />
+                  <Route path="/notes" element={<Notes />} />
+                  <Route path="/tasks" element={<Tasks />} />
+                  <Route path="/sources" element={<Sources />} />
+                  <Route path="/movies" element={<Movies />} />
+                  <Route path="/expense" element={<Expense />} />
+                  <Route path="/keycap" element={<Keycap />} />
+                  <Route path="/project-packer" element={<ProjectPacker />} />
+                  <Route
+                    path="/p2p"
+                    element={
+                      <ToolGuard toolId="p2p-transfer">
+                        <P2PTransfer />
+                      </ToolGuard>
+                    }
+                  />
+                  <Route path="/config" element={<Setting />} />
+                  <Route path="/account" element={<Account />} />
+                  <Route path="/code-compare" element={<CodeCompare />} />
+                  <Route path="/markdown" element={<MarkdownPreview />} />
+                  <Route path="/json-studio" element={<JsonStudio />} />
+                  <Route path="/json-viewer" element={<LegacyJsonViewerRedirect />} />
+                  <Route path="/agency-studio/*" element={<AgencyStudio />} />
+                  {/* Legacy redirect: /setting → /config */}
+                  <Route path="/setting" element={<Navigate to="/config" replace />} />
+                  <Route
+                    path="/library/*"
+                    element={
+                      <ToolGuard toolId="library">
+                        <LibraryApp />
+                      </ToolGuard>
+                    }
+                  />
+                  <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+              </AuthGuard>
+            }
+          />
         </Routes>
       </Suspense>
 

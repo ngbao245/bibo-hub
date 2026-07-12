@@ -1,15 +1,17 @@
 ---
-status: candidate-for-deprecation
-last_verified: 2026-07-02
-verified_against: src/lib/appSecret.ts, src/lib/reader/vault.ts, src/lib/rag/rag-vault.ts, src/routes/Setting.tsx
-reason: planning note chưa qua Pha 1 elicit, không phải spec code-ready
-replacement: khi refactor thật → gen spec đầy đủ vào .kiro/specs/setting-auth-refactor/ qua Planner Mode
+status: frozen
+last_verified: 2026-07-06
+replacement: .kiro/specs/setting-auth-refactor/
+reason: implemented — plan này giữ làm lịch sử ý tưởng ban đầu
 ---
 
-# Setting Auth Refactor — Planning Note
+# Setting Auth Refactor — Planning Note (historical)
 
-> **Lịch sử**: từng nằm ở `.kiro/specs/setting-auth-refactor/` (2026-07-02), move sang `docs/` vì spec chưa qua Pha 1 → không đủ điều kiện chiếm slot trong `.kiro/specs/` (rule 3 file bắt buộc + elicit trước).  
-> **Cách promote thành spec**: khi bắt đầu refactor thật → chạy Planner Mode Pha 1 elicit, sau đó gen spec đầy đủ vào `.kiro/specs/setting-auth-refactor/`, xoá file này.
+> **Status**: FROZEN. Đã implement dưới hướng khác với plan gốc.
+>
+> Spec thực tế: `.kiro/specs/setting-auth-refactor/` (requirements + design + tasks).
+>
+> Plan gốc dưới đây giả định derive-key-from-password (D1). Implementation cuối cùng chọn Supabase Auth + `user_secrets` server-side (D3-variant), rồi refined thành clean design: Supabase Auth + `app_settings` plaintext + RLS + hybrid admin/app-user model. Xem spec để biết chi tiết cuối.
 
 ## Mục tiêu
 

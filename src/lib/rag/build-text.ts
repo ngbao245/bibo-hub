@@ -14,7 +14,7 @@
 
 import type { Note } from '@/schemas/note';
 import type { Task } from '@/schemas/task';
-import type { Highlight } from '@/lib/reader/types';
+import type { Highlight } from '@/lib/library/types';
 
 import { stripHtml } from './chunk';
 

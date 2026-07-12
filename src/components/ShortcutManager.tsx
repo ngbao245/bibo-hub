@@ -11,6 +11,7 @@ import {
 
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/cn';
 
@@ -115,6 +116,7 @@ export default function ShortcutManager({ onDirtyChange }: ShortcutManagerProps)
     for (const s of allShortcuts) {
       const r = resolve(s);
       if (!r.enabled) continue;
+      if (!r.key) continue; // chưa gán key → không tính conflict
       (counts[r.key] ||= []).push(s.id);
     }
     const result: Record<string, string[]> = {};
@@ -124,6 +126,16 @@ export default function ShortcutManager({ onDirtyChange }: ShortcutManagerProps)
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allShortcuts, overrides]);
+
+  if (ovQuery.isLoading) {
+    return (
+      <div className="space-y-3">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-10 w-full" />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col">

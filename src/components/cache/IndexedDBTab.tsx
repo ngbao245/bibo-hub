@@ -10,7 +10,7 @@ import {
   listEntries,
   deleteCached,
   clearStore,
-} from '@/lib/reader/blob-cache';
+} from '@/lib/library/blob-cache';
 import { toast } from '@/components/ui/sonner';
 
 // ============================================================

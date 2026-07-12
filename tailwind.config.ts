@@ -21,6 +21,8 @@ export default {
       screens: { '2xl': '1400px' },
     },
     // Override hoàn toàn: chỉ cho phép radius = 0
+    // Exception: `full` giữ = 9999px cho avatar tròn (avatar là data element,
+    // không phải chrome UI — theme "vuông vức" không áp dụng).
     borderRadius: {
       none: '0',
       DEFAULT: '0',
@@ -28,7 +30,7 @@ export default {
       md: '0',
       lg: '0',
       xl: '0',
-      full: '0',
+      full: '9999px',
     },
     extend: {
       colors: {
@@ -140,4 +142,4 @@ export default {
     },
   },
   plugins: [animate],
-} satisfies Config;
+} satisfies Config;

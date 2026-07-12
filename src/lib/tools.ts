@@ -96,11 +96,11 @@ export const TOOLS: Tool[] = [
     description: 'Notes mã hóa bằng password',
   },
   {
-    id: 'readest',
-    label: 'Reader',
+    id: 'library',
+    label: 'Library',
     group: 'Productivity',
-    action: { kind: 'route', path: '/reader' },
-    description: 'PDF reader với highlight, note, translate',
+    action: { kind: 'route', path: '/library' },
+    description: 'Thư viện sách shared — đọc, highlight, note, translate',
   },
   {
     id: 'markdown-preview',
@@ -154,6 +154,13 @@ export const TOOLS: Tool[] = [
     group: 'Tracking',
     action: { kind: 'route', path: '/movies' },
     description: 'Danh sách phim đã xem và muốn xem',
+  },
+  {
+    id: 'agency-studio',
+    label: 'Agency Studio',
+    group: 'Tracking',
+    action: { kind: 'route', path: '/agency-studio' },
+    description: 'Quản lý lead và email outreach — Lead → Template → Campaign → Track',
   },
 
   // Utilities
@@ -242,7 +249,7 @@ export const TOOLS: Tool[] = [
     id: 'setting',
     label: 'Config',
     group: 'Admin',
-    action: { kind: 'route', path: '/setting' },
+    action: { kind: 'route', path: '/config' },
     description: 'Quản lý setting dự án (CRUD qua mockapi)',
   },
   {

@@ -77,7 +77,7 @@ import SessionContextMenu from './SessionContextMenu';
 // Streaming: token-by-token vào message cuối (plaintext).
 // Khi stream xong: parse markdown + bind citation thành button click:
 //   - Auto/Internal: [n] → navigate tới note/task/highlight
-//   - Book: [p.X] → navigate tới /reader/:bookId?page=X
+//   - Book: [p.X] → navigate tới /library/read/:bookId?page=X
 // AbortController: nút Stop hủy generation.
 // Clear: xóa toàn bộ messages session-only.
 // ============================================================
@@ -1055,7 +1055,7 @@ function AssistantBody({ message }: { message: Message }) {
 //
 // Hai loại citation:
 //   - RAG: [1], [2], [1,2] → navigate tới source theo entityType
-//   - Book: [p.42] → navigate tới /reader/:bookId?page=42
+//   - Book: [p.42] → navigate tới /library/read/:bookId?page=42
 // ============================================================
 
 function MarkdownAnswer({
@@ -1117,7 +1117,7 @@ function MarkdownAnswer({
         if (!Number.isFinite(page)) return;
         closeModal();
         navigate(
-          `/reader/read/${encodeURIComponent(bookScope.bookId)}?page=${page}`,
+          `/library/read/${encodeURIComponent(bookScope.bookId)}?page=${page}`,
         );
         return;
       }
@@ -1306,10 +1306,10 @@ function NotReadyState({
         </p>
       </div>
       <a
-        href="/setting"
+        href="/config"
         className="border border-primary/40 bg-primary/5 px-3 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
       >
-        Mở Setting → group RAG
+        Mở Config → AI Agentic
       </a>
     </div>
   );
@@ -1412,18 +1412,18 @@ function buildSourceUrl(src: Source): string | null {
       const page = src.metadata.page;
       if (typeof bookId === 'string') {
         const pageParam = typeof page === 'number' ? `&page=${page}` : '';
-        return `/reader/read/${encodeURIComponent(bookId)}?highlightId=${encodeURIComponent(src.entityId)}${pageParam}`;
+        return `/library/read/${encodeURIComponent(bookId)}?highlightId=${encodeURIComponent(src.entityId)}${pageParam}`;
       }
-      return '/reader';
+      return '/library';
     }
     case 'book_chunk': {
       const bookId = src.metadata.bookId;
       const page = src.metadata.page;
       if (typeof bookId === 'string') {
         const pageParam = typeof page === 'number' ? `?page=${page}` : '';
-        return `/reader/read/${encodeURIComponent(bookId)}${pageParam}`;
+        return `/library/read/${encodeURIComponent(bookId)}${pageParam}`;
       }
-      return '/reader';
+      return '/library';
     }
     default:
       return null;

@@ -1,10 +1,12 @@
 ---
-status: active
-last_verified: 2026-07-02
-verified_against: src/lib/reader/vault.ts, src/lib/reader/supabase.ts, src/routes/reader/Login.tsx, src/lib/appSecret.ts
+status: frozen
+last_verified: 2026-07-08
+reason: Sau spec library-migrate-to-project-a, Library dùng chung `authClient` với app — không còn concept vault/reader_config/reinitializeSupabase. Doc này giữ làm history cho 2-project pattern.
 ---
 
-# Reader Vault Setup Guide
+# Reader Vault Setup Guide (historical)
+
+Setup guide cũ cho 2-project pattern. **Không còn áp dụng** sau khi Library merge về Project A (2026-07-08). Đọc để hiểu tại sao architecture cũ có vault, KHÔNG dùng cho code mới.
 
 Setup guide cho user tự cấu hình Supabase credentials của Reader qua Setting tool. Bổ sung cho `docs/reader-session-persist.md` (mô tả cache flow).
 
@@ -197,6 +199,6 @@ Network tab:
 ## Related
 
 - `docs/reader-session-persist.md` — Chi tiết Config Cache + Eager Init architecture
-- `docs/reader.md` — Reader tool overview
-- `src/lib/reader/vault.ts` — decrypt logic
+- `docs/library.md` — Library (Reader) tool overview
+- `src/lib/library/vault.ts` — decrypt logic
 - `src/lib/appSecret.ts` — APP_SECRET default passphrase

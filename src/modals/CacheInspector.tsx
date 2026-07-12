@@ -11,7 +11,7 @@ import { toast } from '@/components/ui/sonner';
 import QueryCacheTab from '@/components/cache/QueryCacheTab';
 import LocalStorageTab from '@/components/cache/LocalStorageTab';
 import IndexedDBTab from '@/components/cache/IndexedDBTab';
-import { clearStore, STORE_COVERS, STORE_FILES } from '@/lib/reader/blob-cache';
+import { clearStore, STORE_COVERS, STORE_FILES } from '@/lib/library/blob-cache';
 
 // ============================================================
 // Cache Inspector Modal

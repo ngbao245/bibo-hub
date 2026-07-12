@@ -2,8 +2,7 @@
 import { useState } from 'react';
 import { Copy, Lock, Unlock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 
-import { useCryptoStore } from '@/stores/cryptoStore';
-import { encryptText, decryptText, isEncrypted } from '@/lib/cryptoFields';
+import { encryptText, decryptText, isEncrypted } from '@/lib/crypto-utils';
 
 import ToolModal from '@/components/ToolModal';
 import { Button } from '@/components/ui/button';
@@ -31,8 +30,7 @@ export default function Crypto() {
 }
 
 function CryptoContent() {
-  const passphrase = useCryptoStore((s) => s.passphrase);
-  const setPassphrase = useCryptoStore((s) => s.setPassphrase);
+  const [passphrase, setPassphrase] = useState('');
 
   const [mode, setMode] = useState<Mode>('encrypt');
   const [showPass, setShowPass] = useState(false);
@@ -111,8 +109,7 @@ function CryptoContent() {
           className="font-mono text-xs"
         />
         <p className="text-[11px] text-muted-foreground">
-          Cùng passphrase được dùng trong tool Setting để mã hoá field. Quên = không
-          giải mã được.
+          Utility standalone — user tự chọn passphrase. Không share với auth/Setting.
         </p>
       </div>
 

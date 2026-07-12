@@ -21,6 +21,7 @@ import {
   FileText,
   Network,
   Music,
+  Library,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -54,6 +55,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
   'markdown-preview': FileText,
   'json-studio': Network,
   audio: Music,
+  library: Library,
 };
 
 interface ToolIconProps {

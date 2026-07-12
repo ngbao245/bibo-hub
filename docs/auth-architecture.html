@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Auth Architecture — Bibo Tools</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --surface: #14171c;
+    --surface-2: #1c2028;
+    --border: #2a2f38;
+    --text: #e6e8eb;
+    --text-muted: #8d94a0;
+    --primary: #7dd3fc;
+    --warning: #fcd34d;
+    --danger: #fca5a5;
+    --success: #86efac;
+    --accent-a: #a78bfa;
+    --accent-b: #22d3ee;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    line-height: 1.6;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px 80px; }
+  header { border-bottom: 1px solid var(--border); padding-bottom: 20px; margin-bottom: 32px; }
+  h1 { font-size: 28px; margin: 0 0 8px; letter-spacing: -0.5px; }
+  h2 { font-size: 20px; margin: 40px 0 12px; color: var(--primary); }
+  h3 { font-size: 16px; margin: 24px 0 8px; color: var(--text); }
+  p { color: var(--text-muted); margin: 0 0 12px; }
+  code {
+    font-family: ui-monospace, monospace;
+    background: var(--surface-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    color: var(--accent-b);
+  }
+  .subtitle { color: var(--text-muted); font-size: 14px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 18px; }
+  .card h3 { margin-top: 0; }
+  .card .tag {
+    display: inline-block;
+    background: var(--surface-2);
+    color: var(--text-muted);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .card.a { border-left: 3px solid var(--accent-a); }
+  .card.b { border-left: 3px solid var(--accent-b); }
+  ul { padding-left: 20px; color: var(--text-muted); margin: 8px 0; }
+  li { margin: 4px 0; }
+  li strong { color: var(--text); }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 24px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  th { background: var(--surface-2); color: var(--text); font-weight: 600; font-size: 13px; }
+  td { color: var(--text-muted); }
+  td:first-child { color: var(--text); }
+  .note {
+    background: var(--surface-2);
+    border-left: 3px solid var(--warning);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 16px 0;
+    color: var(--text);
+    font-size: 14px;
+  }
+  .note strong { color: var(--warning); }
+  footer { margin-top: 60px; padding-top: 20px; border-top: 1px solid var(--border); color: var(--text-muted); font-size: 12px; }
+
+  .diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+    margin: 16px 0;
+    overflow-x: auto;
+  }
+  .diagram svg { display: block; margin: 0 auto; max-width: 100%; height: auto; }
+
+  .flow-row { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin: 12px 0; }
+  .flow-col { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .flow-arrow-down { color: var(--text-muted); font-size: 20px; text-align: center; }
+  .step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    min-width: 260px;
+    text-align: left;
+  }
+  .step-num {
+    display: inline-block;
+    background: var(--accent-a);
+    color: #0b0d10;
+    border-radius: 50%;
+    width: 22px;
+    height: 22px;
+    line-height: 22px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 12px;
+    margin-right: 8px;
+  }
+  .step.b .step-num { background: var(--accent-b); }
+  .step.warn .step-num { background: var(--warning); }
+  .step-title { color: var(--text); font-weight: 600; font-size: 14px; }
+  .step-desc { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
+  .step-desc code { font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>Auth Architecture</h1>
+  <p class="subtitle">Bibo Tools — 2 Supabase project riêng biệt, phân chia vai trò rõ ràng.</p>
+</header>
+
+<h2>1. 2 Project độc lập</h2>
+<p>Hệ thống chạy trên 2 Supabase project song song, không share session, không share user database.</p>
+
+<div class="grid">
+  <div class="card a">
+    <span class="tag">Project A — mới</span>
+    <h3>bibo-tools-auth</h3>
+    <p><code>fghrcpfxgdfibascmase.supabase.co</code></p>
+    <p><strong>Vai trò:</strong> Auth + User Management chính của hub.</p>
+    <ul>
+      <li><strong>auth.users</strong> — email/password</li>
+      <li><strong>public.profiles</strong> — role, allowed_tools</li>
+      <li><strong>public.app_settings</strong> — config sensitive</li>
+      <li><strong>Edge Functions:</strong> create-user, delete-user</li>
+    </ul>
+  </div>
+  <div class="card b">
+    <span class="tag">Project B — cũ</span>
+    <h3>bibo-old</h3>
+    <p><code>vlerovujjjsxlsxylrue.supabase.co</code></p>
+    <p><strong>Vai trò:</strong> Library + RAG storage, còn dùng cho tool cũ.</p>
+    <ul>
+      <li><strong>Storage bucket</strong> books (Library PDFs, shared cho mọi authenticated user)</li>
+      <li>Config runtime cho Library/RAG vault</li>
+      <li>Có session login riêng</li>
+    </ul>
+  </div>
+</div>
+
+<h2>2. Frontend kết nối 2 Supabase client</h2>
+<p>App dùng 2 Supabase client tách biệt, mỗi cái persist session localStorage với key khác nhau.</p>
+
+<div class="diagram">
+<svg viewBox="0 0 900 460" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#8d94a0"/>
+    </marker>
+  </defs>
+
+  <!-- Frontend cluster -->
+  <rect x="20" y="20" width="380" height="180" rx="8" fill="#14171c" stroke="#2a2f38"/>
+  <text x="40" y="45" fill="#8d94a0" font-size="12" font-family="ui-monospace">Frontend — localhost:3000</text>
+
+  <!-- authClient -->
+  <rect x="50" y="70" width="150" height="110" rx="6" fill="#1c2028" stroke="#a78bfa" stroke-width="2"/>
+  <text x="125" y="100" fill="#e6e8eb" font-size="14" font-weight="600" text-anchor="middle">authClient</text>
+  <text x="125" y="120" fill="#8d94a0" font-size="11" font-family="ui-monospace" text-anchor="middle">src/lib/</text>
+  <text x="125" y="135" fill="#8d94a0" font-size="11" font-family="ui-monospace" text-anchor="middle">authClient.ts</text>
+  <text x="125" y="160" fill="#a78bfa" font-size="10" text-anchor="middle">Project A</text>
+
+  <!-- readerClient -->
+  <rect x="220" y="70" width="150" height="110" rx="6" fill="#1c2028" stroke="#22d3ee" stroke-width="2"/>
+  <text x="295" y="100" fill="#e6e8eb" font-size="14" font-weight="600" text-anchor="middle">libraryClient</text>
+  <text x="295" y="120" fill="#8d94a0" font-size="11" font-family="ui-monospace" text-anchor="middle">src/lib/library/</text>
+  <text x="295" y="135" fill="#8d94a0" font-size="11" font-family="ui-monospace" text-anchor="middle">supabase.ts</text>
+  <text x="295" y="160" fill="#22d3ee" font-size="10" text-anchor="middle">Project B</text>
+
+  <!-- localStorage cluster -->
+  <rect x="20" y="220" width="380" height="140" rx="8" fill="#14171c" stroke="#2a2f38"/>
+  <text x="40" y="245" fill="#8d94a0" font-size="12" font-family="ui-monospace">localStorage</text>
+
+  <rect x="50" y="260" width="150" height="80" rx="6" fill="#1c2028" stroke="#a78bfa"/>
+  <text x="125" y="285" fill="#e6e8eb" font-size="12" text-anchor="middle" font-weight="600">Session A</text>
+  <text x="125" y="305" fill="#8d94a0" font-size="10" font-family="ui-monospace" text-anchor="middle">sb-fghrcp...</text>
+  <text x="125" y="320" fill="#8d94a0" font-size="10" font-family="ui-monospace" text-anchor="middle">-auth-token</text>
+
+  <rect x="220" y="260" width="150" height="80" rx="6" fill="#1c2028" stroke="#22d3ee"/>
+  <text x="295" y="285" fill="#e6e8eb" font-size="12" text-anchor="middle" font-weight="600">Session B</text>
+  <text x="295" y="305" fill="#8d94a0" font-size="10" font-family="ui-monospace" text-anchor="middle">sb-vlerovuj...</text>
+  <text x="295" y="320" fill="#8d94a0" font-size="10" font-family="ui-monospace" text-anchor=""ddle">-auth-token</text>
+
+  <!-- Arrows client → storage -->
+  <line x1="125" y1="180" x2="125" y2="260" stroke="#8d94a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="295" y1="180" x2="295" y2="260" stroke="#8d94a0" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Project A cluster -->
+  <rect x="480" y="20" width="380" height="180" rx="8" fill="#14171c" stroke="#a78bfa" stroke-width="2"/>
+  <text x="500" y="45" fill="#a78bfa" font-size="12" font-family="ui-monospace">Project A — bibo-tools-auth</text>
+  <rect x="510" y="65" width="140" height="40" rx="4" fill="#1c2028" stroke="#2a2f38"/>
+  <text x="580" y="90" fill="#e6e8eb" font-size="12" text-anchor="middle">Auth API</text>
+  <rect x="670" y="65" width="170" height="40" rx="4" fill="#1c2028" stroke="#2a2f38"/>
+  <text x="755" y="90" fill="#e6e8eb" font-size="12" text-anchor="middle">profiles + app_settings</text>
+  <rect x="510" y="120" width="330" height="60" rx="4" fill="#1c2028" stroke="#2a2f38"/>
+  <text x="675" y="145" fill="#e6e8eb" font-size="12" text-anchor="middle">Edge Functions</text>
+  <text x="675" y="165" fill="#8d94a0" font-size="11" font-family="ui-monospace" text-anchor="middle">create-user · delete-user</text>
+
+  <!-- Project B cluster -->
+  <rect x="480" y="220" width="380" height="140" rx="8" fill="#14171c" stroke="#22d3ee" stroke-width="2"/>
+  <text x="500" y="245" fill="#22d3ee" font-size="12" font-family="ui-monospace">Project B — bibo-old</text>
+  <rect x="510" y="265" width="150" height="70" rx="4" fill="#1c2028" stroke="#2a2f38"/>
+  <text x="585" y="295" fill="#e6e8eb" font-size="12" text-anchor="middle">Storage: books</text>
+  <text x="585" y="312" fill="#8d94a0" font-size="11" text-anchor="middle">Library (shared)</text>
+  <rect x="680" y="265" width="160" height="70" rx="4" fill="#1c2028" stroke="#2a2f38"/>
+  <text x="760" y="295" fill="#e6e8eb" font-size="12" text-anchor="middle">Config vault</text>
+  <text x="760" y="312" fill="#8d94a0" font-size="11" text-anchor="middle">Library / RAG</text>
+
+  <!-- Arrows client → project -->
+  <line x1="200" y1="120" x2="480" y2="120" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="370" y1="140" x2="480" y2="290" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>
+</div>
+
+<div class="note">
+  <strong>Chú ý:</strong> 1 user login Project A KHÔNG tự động login Project B. Library/RAG có flow login vault riêng nếu cần.
+</div>
+""
+<h2>
+3. Luồng Login</h2>
+<p>User mở app lần đầu, chưa có session hợp lệ, đi qua Login page rồi vào HubPro.</p>
+
+<div class="flow-col" style="margin-top: 20px;">
+  <div class="step">
+    <div><span class="step-num">1</span><span class="step-title">User mở localhost:3000</span></div>
+    <div class="step-desc">Browser load React app, AuthGuard mount trước mọi route.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step">
+    <div><span class="step-num">2</span><span class="step-title">AuthGuard check session</span></div>
+    <div class="step-desc"><code>authClient.getSession()</code> đọc localStorage key <code>sb-fghrcp...-auth-token</code>. Chưa login → <code>null</code>.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step warn">
+    <div><span class="step-num">3</span><span class="step-title">Redirect /login?next=...</span></div>
+    <div class="step-desc">Login page hiện form email + password. URL giữ <code>?next=</code> để redirect về sau login.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step">
+    <div><span class="step-num">4</span><span class="step-title">Submit → signInWithPassword()</span></div>
+    <div class="step-desc">Gửi <code>POST /auth/v1/token</code> tới Project A với email + password.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step">
+    <div><span class="step-num">5</span><span class="step-title">Project A trả JWT</span></div>
+    <div class="step-desc">Response gồm <code>access_token</code> (JWT) + <code>refresh_token</code>. Client lưu vào localStorage.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step">
+    <div><span class="step-num">6</span><span class="step-title">AuthGuard fetch profile</span></div>
+    <div class="step-desc"><code>SELECT role, allowed_tools FROM profiles WHERE id = user_id</code>. Role <code>authenticated</code>, RLS pass vì user đọc profile của chính mình.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step b">
+    <div><span class="step-num">7</span><span class="step-title">Render HubPro</span></div>
+    <div class="step-desc">Admin → full tool list. User → chỉ tool trong <code>allowed_tools</code>.</div>
+  </div>
+</div>
+
+<h2>4. Luồng Create User</h2>
+<p>Admin dùng Setting → User Management → nút "Create user". Frontend gọi Edge Function, function chạy dưới role service_role.</p>
+
+<div class="flow-col" style="margin-top: 20px;">
+  <div class="step">
+    <div><span class="step-num">1</span><span class="step-title">Admin điền form</span></div>
+    <div class="step-desc">Email, password, tick tool cho user mới → Save.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step">
+    <div><span class="step-num">2</span><span class="step-title">POST /functions/v1/create-user</span></div>
+    <div class="step-desc">Header <code>Authorization: Bearer &lt;admin JWT&gt;</code>. Body JSON email + password + tools.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step warn">
+    <div><span class="step-num">3</span><span class="step-title">verifyAdmin trong function</span></div>
+    <div class="step-desc">Decode JWT → user_id. Query <code>SELECT role FROM profiles</code> dưới role <code>service_role</code>. Nếu <code>role !== 'admin'</code> → 403.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step">
+    <div><span class="step-num">4</span><span class="step-title">adminClient.auth.admin.createUser()</span></div>
+    <div class="step-desc">Tạo row <code>auth.users</code> với password hash. Trả về UUID mới.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step">
+    <div><span class="step-num">5</span><span class="step-title">INSERT INTO profiles</span></div>
+    <div class="step-desc"><code>id = UUID mới</code>, <code>role</code>, <code>allowed_tools</code>. Nếu fail → rollback bằng cách xoá row auth.users.</div>
+  </div>
+  <div class="flow-arrow-down">↓</div>
+  <div class="step b">
+    <div><span class="step-num">6</span><span class="step-title">200 OK</span></div>
+    <div class="step-desc">Frontend refresh user list, user mới xuất hiện.</div>
+  </div>
+</div>
+
+<h3>Verify admin — 2 tầng permission</h3>
+<table>
+  <thead><tr><th>Tầng</th><th>Câu hỏi</th><th>Cơ chế</th><th>Fix khi fail</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>Tầng 1: Privilege</td>
+      <td>Role service_role có được đụng bảng profiles không?</td>
+      <td><code>GRANT SELECT ON TABLE profiles TO service_role</code></td>
+      <td>Chạy GRANT trong SQL Editor</td>
+    </tr>
+    <tr>
+      <td>Tầng 2: RLS</td>
+      <td>Role được đọc row nào trong bảng?</td>
+      <td><code>CREATE POLICY ON profiles</code></td>
+      <td>service_role bypass RLS, không cần policy</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>5. Role trong PostgreSQL / Supabase</h2>
+<table>
+  <thead>
+    <tr><th>Role</th><th>Ai dùng</th><th>Key</th><th>Quyền</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>anon</td>
+      <td>Visitor chưa login</td>
+      <td>anon key (public, ok expose FE)</td>
+      <td>Đọc public data, giới hạn</td>
+    </tr>
+    <tr>
+      <td>authenticated</td>
+      <td>User login qua Supabase Auth</td>
+      <td>JWT access_token</td>
+      <td>Đọc/ghi theo RLS policy</td>
+    </tr>
+    <tr>
+      <td>service_role</td>
+      <td>Backend / Edge Function</td>
+      <td>service_role key (SECRET)</td>
+      <td>Bypass RLS, cần GRANT tay</td>
+    </tr>
+    <tr>
+      <td>supabase_admin / postgres</td>
+      <td>Supabase internal</td>
+      <td>Không expose ra ngoài</td>
+      <td>Superuser, DDL toàn quyền</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>Rule cứng:</strong> <code>service_role</code> key KHÔNG bao giờ paste vào frontend, không commit git. Chỉ đặt trong Edge Function Secrets ở Supabase Dashboard. Leak = attacker toàn quyền DB.
+</div>
+
+<h2>6. Storage của session</h2>
+<p>Sau login, Supabase client lưu session trong localStorage của browser. Mỗi project 1 key riêng, không đè nhau.</p>
+
+<div class="grid">
+  <div class="card a">
+    <span class="tag">Project A</span>
+    <h3>sb-fghrcp...-auth-token</h3>
+    <p>Chứa: JWT access_token, refresh_token, user object. Auto-refresh token khi expire.</p>
+  </div>
+  <div class="card b">
+    <span class="tag">Project B</span>
+    <h3>sb-vlerovuj...-auth-token</h3>
+    <p>Session riêng cho Library/RAG nếu tool đó cần login vault. Có thể null nếu Library dùng public bucket.</p>
+  </div>
+</div>
+
+<div class="note">
+  <strong>Debug tip:</strong> nếu app confuse session, F12 → Application → Local Storage → xoá hết key có prefix <code>sb-</code>, sau đó reload + login lại. Session tự tạo mới clean.
+</div>
+
+<h2>7. File config quan trọng</h2>
+<table>
+  <thead><tr><th>File</th><th>Vai trò</th></tr></thead>
+  <tbody>
+    <tr><td><code>.env</code>d><td>URL + anon key Project A, load lúc Vite build/dev</td></tr>
+    <tr><td><code>src/lib/authClient.ts</code></td><td>Tạo Supabase client cho Project A</td></tr>
+    <tr><td><code>src/lib/library/supabase.ts</code></td><td>Tạo Supabase client cho Project B</td></tr>
+    <tr><td><code>src/stores/authStore.ts</code></td><td>Zustand store, subscribe session Project A</td></tr>
+    <tr><td><code>src/components/auth/AuthGuard.tsx</code></td><td>Route guard, redirect /login nếu chưa auth</td></tr>
+    <tr><td><code>supabase/migrations/20260706000000_init_schema.sql</code></td><td>Schema Project A: profiles, app_settings, GRANT, RLS</td></tr>
+    <tr><td><code>supabase/functions/create-user/</code></td><td>Edge Function tạo user mới (chạy Project A)</td></tr>
+    <tr><td><code>supabase/functions/delete-user/</code></td><td>Edge Function xoá user (chạy Project A)</td></tr>
+  </tbody>
+</table>
+
+<h2>8. Trạng thái hiện tại</h2>
+<ul>
+  <li><strong>Project A</strong> đầy đủ: schema migrated, 1 admin bootstrap, 2 Edge Function deployed, đã test Create/Delete user end-to-end pass.</li>
+  <li><strong>Project B</strong> còn dùng cho Library + RAG. Không đụng vào cấu trúc.</li>
+  <li><strong>Cần dọn optional:</strong> 2 function nhầm ở Project B (deploy ban đầu do chọn nhầm project) — xoá qua Dashboard, không ảnh hưởng gì.</li>
+</ul>
+
+<footer>
+  Sinh bởi Kiro, ngày 07/07/2026. Update file khi kiến trúc auth thay đổi.
+</footer>
+
+</div>
+</body>
+</html>

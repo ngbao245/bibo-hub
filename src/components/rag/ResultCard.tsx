@@ -12,7 +12,7 @@ import { cn } from '@/lib/cn';
 // Click → navigate tới source:
 //   note → /notes?id=<id>   (Notes page có thể tự handle query param)
 //   task → /tasks
-//   highlight → /reader (book detail nếu metadata.bookId có)
+//   highlight → /library (book detail nếu metadata.bookId có)
 // ============================================================
 
 const ICONS = {
@@ -174,18 +174,18 @@ function buildSourceUrl(result: RagSearchResult): string | null {
     case 'highlight': {
       const bookId = result.metadata.bookId;
       if (typeof bookId === 'string') {
-        return `/reader/${encodeURIComponent(bookId)}?highlightId=${encodeURIComponent(result.id)}`;
+        return `/library/read/${encodeURIComponent(bookId)}?highlightId=${encodeURIComponent(result.id)}`;
       }
-      return '/reader';
+      return '/library';
     }
     case 'book_chunk': {
       const bookId = result.metadata.bookId;
       const page = result.metadata.page;
       if (typeof bookId === 'string') {
         const pageParam = typeof page === 'number' ? `?page=${page}` : '';
-        return `/reader/${encodeURIComponent(bookId)}${pageParam}`;
+        return `/library/read/${encodeURIComponent(bookId)}${pageParam}`;
       }
-      return '/reader';
+      return '/library';
     }
     default:
       return null;

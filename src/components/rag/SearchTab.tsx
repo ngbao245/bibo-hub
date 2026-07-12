@@ -119,10 +119,10 @@ function Body({
         message="Cần ít nhất 1 Gemini API key để dùng semantic search."
         cta={
           <a
-            href="/setting"
+            href="/config"
             className="text-primary hover:underline"
           >
-            Mở Setting → group RAG
+            Mở Config → AI Agentic
           </a>
         }
       />

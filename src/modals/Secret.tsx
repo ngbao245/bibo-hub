@@ -1,13 +1,10 @@
 
 import { useMemo, useState } from 'react';
-import { Lock, Eye, EyeOff, Plus, Trash2, Save, Copy } from 'lucide-react';
+import { Lock, Plus, Trash2, Save, Copy } from 'lucide-react';
 
 import { useNotes, useCreateNote, useUpdateNote, useDeleteNote } from '@/api/notes';
-import {
-  encryptSecret,
-  decryptSecret,
-  verifySecretPassword,
-} from '@/lib/secretCrypto';
+import { encryptSecret, decryptSecret } from '@/lib/secretCrypto';
+import { useAuthStore } from '@/stores/authStore';
 import { cn } from '@/lib/cn';
 
 import ToolModal from '@/components/ToolModal';
@@ -31,69 +28,22 @@ export default function Secret() {
 }
 
 function SecretContent() {
-  const [unlocked, setUnlocked] = useState(false);
+  const profile = useAuthStore((s) => s.profile);
+  const isAdmin = profile?.role === 'admin';
 
-  if (!unlocked) {
-    return <PasswordPrompt onUnlock={() => setUnlocked(true)} />;
-  }
-  return <SecretApp />;
-}
-
-// ============================================================
-// Password prompt
-// ============================================================
-function PasswordPrompt({ onUnlock }: { onUnlock: () => void }) {
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState(false);
-
-  function verify() {
-    if (verifySecretPassword(password)) {
-      setError(false);
-      onUnlock();
-    } else {
-      setError(true);
-      setPassword('');
-    }
-  }
-
-  return (
-    <div className="flex flex-col items-center justify-center py-8">
-      <Lock className="mb-3 h-12 w-12 text-primary" />
-      <h2 className="mb-2 text-lg font-semibold text-foreground">Đăng nhập</h2>
-      <p className="mb-6 text-sm text-muted-foreground">Nhập mật khẩu để truy cập secret notes</p>
-
-      <div className="flex w-full max-w-sm flex-col gap-3">
-        <div className="relative">
-          <Input
-            type={showPassword ? 'text' : 'password'}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && verify()}
-            placeholder="Nhập mật khẩu..."
-            className={cn('pr-10', error && 'border-destructive')}
-            autoFocus
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-
-        {error && (
-          <p className="text-xs text-destructive">Mật khẩu không đúng</p>
-        )}
-
-        <Button onClick={verify} className="w-full gap-1.5">
-          <Lock className="h-4 w-4" />
-          Mở khoá
-        </Button>
+  if (!isAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8">
+        <Lock className="mb-3 h-12 w-12 text-destructive" />
+        <h2 className="mb-2 text-lg font-semibold text-foreground">Chỉ dành cho admin</h2>
+        <p className="text-sm text-muted-foreground">
+          Secret Notes yêu cầu quyền admin. Liên hệ admin để được cấp.
+        </p>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <SecretApp />;
 }
 
 // ============================================================

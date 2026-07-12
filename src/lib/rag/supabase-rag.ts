@@ -2,14 +2,14 @@
 // Supabase RAG client — upsert / delete / query embeddings
 // ============================================================
 //
-// Dùng chung Supabase client với Reader (src/lib/reader/supabase.ts).
+// Dùng chung Supabase client với Library (src/lib/library/supabase.ts).
 // Table: `rag_embeddings`. RPC search: `rag_match_embeddings`.
 //
 // RLS đã filter theo auth.uid() → mọi query chỉ thấy row của user
 // hiện tại. user_id phải lấy từ session khi upsert.
 // ============================================================
 
-import { supabase } from '@/lib/reader/supabase';
+import { supabase } from '@/lib/library/supabase';
 import type { EntityType, RagMatchRow } from './types';
 
 // ------------------------------------------------------------

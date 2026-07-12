@@ -483,7 +483,7 @@ Highlights:
 **Internal:**
 
 - [`docs/database.md`](./database.md) — schema MockAPI.
-- [`docs/reader.md`](./reader.md) — Reader architecture, pdfjs.
+- [`docs/library.md`](./library.md) — Library (Reader) architecture, pdfjs.
 - [`docs/optimistic-ui.md`](./optimistic-ui.md) — pattern dual-write.
 - [`docs/modal-system.md`](./modal-system.md) — pattern modal + shortcut.
 - [`scripts/rag-migration.sql`](../scripts/rag-migration.sql) — SQL migration.

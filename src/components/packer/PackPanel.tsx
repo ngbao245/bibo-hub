@@ -462,8 +462,8 @@ export default function PackPanel() {
   // ============================================================
   async function handleSaveToSource(parts: PackPart[]) {
     if (parts.length === 0) return;
-    setBusyMessage(`Đang lưu ${parts.length} part vào Source...`);
-    await new Promise((r) => setTimeout(r, 0));
+
+    log(`Bắt đầu lưu ${parts.length} part vào Source...`);
 
     try {
       const { fetchJson } = await import('@/api/client');
@@ -505,15 +505,15 @@ export default function PackPanel() {
       }
 
       if (successCount === parts.length) {
+        log(`✓ Hoàn tất! Đã lưu ${parts.length} part vào Source`, 'success');
         toast.success(`Đã lưu ${parts.length} part vào Source! Vào trang Sources để download.`);
       } else {
+        log(`⚠ Chỉ lưu được ${successCount}/${parts.length} part`, 'warning');
         toast.warning(`Chỉ lưu được ${successCount}/${parts.length} part`);
       }
-      setBusyMessage(null);
     } catch (e) {
       toast.error('Không lưu được vào Source');
       log(`Lỗi save to source: ${String(e)}`, 'error');
-      setBusyMessage(null);
     }
   }
 

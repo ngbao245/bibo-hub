@@ -1,21 +1,16 @@
 // ============================================================
-// RAG vault — đọc record `group=RAG, type=SettingInfor` từ
-// MockAPI `/Config`. Tokens encrypted bằng AES-GCM (cryptoFields).
+// RAG vault — đọc tokens từ Supabase app_settings.gemini_credit_pool
+// ============================================================
 //
-// Pattern giống `src/lib/reader/vault.ts`:
-//   - Chained candidate passphrases (param > APP_SECRET > persisted > session).
-//   - Mỗi field có thể encrypted (e=1) hoặc plain (e=0), tự detect.
+// Refactored: bỏ APP_SECRET / cryptoStore / cryptoFields.
+// Data nay ở Supabase (project auth mới), plaintext, RLS chặn access
+// theo profile.allowed_tools.
 //
-// Khi record không tồn tại → throw RagVaultError('no_record').
-// App boot sẽ catch lỗi này và set status='needs_setup'.
+// Backward-compat signature: `loadRagTokens(passphrase?)` giữ nguyên,
+// param `passphrase` bị ignore.
 // ============================================================
 
-import { fetchJson } from '@/api/client';
-import { API } from '@/lib/config';
-import { parseSettingList, CONFIG_KEYS } from '@/lib/setting';
-import { decodeFieldSlots, decryptText, isEncrypted } from '@/lib/cryptoFields';
-import { APP_SECRET } from '@/lib/appSecret';
-import { useCryptoStore } from '@/stores/cryptoStore';
+import { authClient } from '@/lib/authClient';
 
 import {
   EMPTY_RAG_TOKENS,
@@ -23,146 +18,71 @@ import {
   type RagTokens,
 } from './types';
 
-const RAG_GROUP = 'RAG';
-const TOKENS_TYPE = 'SettingInfor';
+// Credit pool key dùng chung — RAG + Agency AI generate.
+// Trước 2026-07-12 tên là 'rag_tokens' — migration rename qua
+// gemini_credit_pool. Nếu deploy chưa chạy migration, fallback đọc key cũ.
+const KEY = 'gemini_credit_pool';
+const LEGACY_KEY = 'rag_tokens';
 
-/** Persistent passphrase chia sẻ với Reader (cùng key localStorage). */
-const PERSIST_KEY = 'reader_vault_passphrase';
-
-function readPersistedKey(): string {
-  try {
-    return localStorage.getItem(PERSIST_KEY) ?? '';
-  } catch {
-    return '';
-  }
-}
-
-function uniqStrings(arr: Array<string | undefined | null>): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const s of arr) {
-    if (!s) continue;
-    if (seen.has(s)) continue;
-    seen.add(s);
-    out.push(s);
-  }
-  return out;
+interface RagTokensRow {
+  keys?: unknown;
 }
 
 /**
- * Load RAG tokens từ vault.
+ * Load RAG tokens từ app_settings Supabase.
  *
  * Throw RagVaultError nếu:
- *   - fetch /Config fail
- *   - không tìm thấy record group=RAG, type=SettingInfor
- *   - tất cả candidate passphrase đều decrypt fail
+ *   - Query fail (network, RLS deny với error rõ ràng)
  *
- * Trả về RagTokens với `geminiApiKeys` là array các key non-empty (có thể rỗng nếu user chưa setup).
+ * Trả về RagTokens với `geminiApiKeys` non-empty array. Rỗng nếu chưa setup.
+ * RLS deny (permission_denied) → trả empty tokens (không throw), UI xử lý "chưa có quyền".
  */
-export async function loadRagTokens(passphrase?: string): Promise<RagTokens> {
-  const sessionKey = useCryptoStore.getState().passphrase;
-  const persistedKey = readPersistedKey();
-  const candidates = uniqStrings([
-    passphrase,
-    APP_SECRET,
-    persistedKey,
-    sessionKey,
-  ]);
+export async function loadRagTokens(_passphrase?: string): Promise<RagTokens> {
+  // Try key mới trước, fallback legacy key nếu migration chưa chạy.
+  let { data, error } = await authClient
+    .from('app_settings')
+    .select('value')
+    .eq('key', KEY)
+    .maybeSingle();
 
-  if (candidates.length === 0) {
-    throw new RagVaultError('decrypt_failed', 'No passphrase available');
+  if ((!data || !data.value) && !error) {
+    const legacy = await authClient
+      .from('app_settings')
+      .select('value')
+      .eq('key', LEGACY_KEY)
+      .maybeSingle();
+    data = legacy.data;
+    error = legacy.error;
   }
 
-  let list;
-  try {
-    list = parseSettingList(await fetchJson<unknown>(API.CONFIGS));
-  } catch (err) {
+  if (error) {
+    // RLS deny → trả empty, UI xử theo status needs_setup
+    if (error.code === '42501' || error.code === 'PGRST116') {
+      return { ...EMPTY_RAG_TOKENS };
+    }
     throw new RagVaultError(
       'fetch_failed',
-      `Cannot fetch Setting records: ${err instanceof Error ? err.message : 'unknown'}`,
+      `Failed to load gemini_credit_pool: ${error.message}`,
     );
   }
 
-  const record = list.find(
-    (s) =>
-      s.group.trim().toLowerCase() === RAG_GROUP.toLowerCase() &&
-      s.type.trim().toLowerCase() === TOKENS_TYPE.toLowerCase(),
-  );
-
-  if (!record) {
-    throw new RagVaultError(
-      'no_record',
-      `No Setting record with group="${RAG_GROUP}" type="${TOKENS_TYPE}"`,
-    );
-  }
-
-  // Flatten tất cả entries từ config1..config10
-  const entries = CONFIG_KEYS.flatMap((k) => decodeFieldSlots(record[k] ?? '', k));
-
-  // Filter entries có key match pattern geminiApiKeyN (N = 1, 2, 3, ...)
-  // Backward compat: format cũ dùng 'geminiApiKey1', 'geminiApiKey2', ...
-  // Format mới cũng cùng convention → không cần migrate data.
-  // Bỏ qua entry `groqApiKey` (feature đã bỏ).
-  const geminiEntries = entries
-    .filter((e) => /^geminiApiKey\d+$/i.test(e.k))
-    .sort((a, b) => {
-      const nA = parseInt(a.k.replace(/^geminiApiKey/i, ''), 10) || 0;
-      const nB = parseInt(b.k.replace(/^geminiApiKey/i, ''), 10) || 0;
-      return nA - nB;
-    });
-
-  // Nếu không có entry nào → tokens rỗng
-  if (geminiEntries.length === 0) {
+  if (!data || !data.value) {
     return { ...EMPTY_RAG_TOKENS };
   }
 
-  // Tìm passphrase đúng bằng cách thử decrypt entry đầu tiên có encrypted
-  let workingKey: string | null = null;
-  let lastErr: unknown = null;
-  const firstEncrypted = geminiEntries.find(
-    (e) => e.e === 1 || isEncrypted(e.v),
-  );
-
-  if (firstEncrypted) {
-    for (const candidate of candidates) {
-      try {
-        await decryptText(firstEncrypted.v, candidate);
-        workingKey = candidate;
-        break;
-      } catch (err) {
-        lastErr = err;
-      }
-    }
-
-    if (workingKey === null) {
-      throw new RagVaultError(
-        'decrypt_failed',
-        `Decrypt failed with ${candidates.length} passphrase(s). Last: ${
-          lastErr instanceof Error ? lastErr.message : 'unknown'
-        }`,
-      );
-    }
+  const row = data.value as RagTokensRow;
+  if (!Array.isArray(row.keys)) {
+    return { ...EMPTY_RAG_TOKENS };
   }
 
-  // Decrypt tất cả entry với workingKey, tạo array (giữ non-empty)
-  const geminiApiKeys: string[] = [];
-  for (const entry of geminiEntries) {
-    let plaintext = '';
-    if (entry.e === 1 || isEncrypted(entry.v)) {
-      if (workingKey === null) continue;
-      try {
-        plaintext = await decryptText(entry.v, workingKey);
-      } catch {
-        // Entry encrypt bằng key khác → skip
-        continue;
-      }
-    } else {
-      plaintext = entry.v ?? '';
-    }
-    if (plaintext.trim().length > 0) {
-      geminiApiKeys.push(plaintext);
-    }
-  }
+  const geminiApiKeys = row.keys
+    .map((k: unknown) => {
+      if (typeof k === 'string') return k.trim(); // backward-compat old format
+      if (k && typeof k === 'object' && 'key' in k && typeof (k as { key: unknown }).key === 'string')
+        return ((k as { key: string }).key).trim();
+      return '';
+    })
+    .filter((v) => v.length > 0);
 
   return { geminiApiKeys };
-}
+}

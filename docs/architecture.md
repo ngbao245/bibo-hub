@@ -153,6 +153,23 @@ src/
 └── styles/
     ├── index.css          # Tailwind + CSS vars (theme tokens)
     └── editor.css         # Tiptap editor styles
+
+supabase/                  # Backend Supabase (project Auth mới)
+├── README.md              # Setup guide + migration steps
+├── migrations/            # SQL migrations
+│   └── 20260706000000_init_schema.sql  # profiles + app_settings + RLS
+└── functions/             # Edge Functions (Deno)
+    ├── _shared/
+    │   └── verify-admin.ts  # helper verify JWT + role
+    ├── create-user/       # POST admin tạo user (bypass signup)
+    │   ├── index.ts
+    │   └── deno.json
+    └── delete-user/       # POST admin xoá user
+        ├── index.ts
+        └── deno.json
+
+scripts/                   # Node scripts chạy manual
+└── migrate-config-to-supabase.ts  # /Config MockAPI → Supabase app_settings
 ```
 
 ## Data Flow
