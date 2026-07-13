@@ -24,8 +24,18 @@ import DeleteConfirmDialog from '@/components/library/DeleteConfirmDialog';
 import ReplaceBookDialog from '@/components/library/ReplaceBookDialog';
 import ImportNotesDialog from '@/components/library/ImportNotesDialog';
 import { useAuthStore } from '@/stores/authStore';
+import { evictExpiredEntries } from '@/lib/library/blob-cache';
+
+// Evict expired IndexedDB cache entries on library mount (fire-and-forget)
+let evicted = false;
+function runEvictOnce() {
+  if (evicted) return;
+  evicted = true;
+  void evictExpiredEntries();
+}
 
 export default function ReaderLibrary() {
+  runEvictOnce();
   const profile = useAuthStore((s) => s.profile);
   const isAdmin = profile?.role === 'admin';
   const booksQuery = useBooks();
@@ -491,7 +501,7 @@ function EmptyState() {
       <Upload className="mb-3 h-8 w-8 text-zinc-600" />
       <p className="text-sm text-zinc-400">Drop PDF files here, or click Upload</p>
       <p className="mt-1 text-xs text-zinc-600">
-        Sách bạn upload sẽ có trong thư viện chung cho mọi user
+        Sách bạn upload sẽ có trong thư viện chung cho mọi người
       </p>
     </div>
   );

@@ -31,6 +31,9 @@ const DEFAULT_BUDGET: Record<string, number> = {
   [STORE_COVERS]: 30 * 1024 * 1024, // 30MB cho cover thumbnails
 };
 
+/** TTL: xoá entries không đọc quá N ms. */
+const TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 ngày
+
 interface Entry {
   key: string;
   blob: Blob;
@@ -85,6 +88,11 @@ export async function getCached(store: string, key: string): Promise<Blob | null
   try {
     const entry = await tx<Entry | undefined>(store, 'readonly', (s) => s.get(key));
     if (!entry) return null;
+    // TTL check — expired = treat as miss
+    if (Date.now() - entry.last_accessed > TTL_MS) {
+      void deleteCached(store, key).catch(() => {});
+      return null;
+    }
     // Cập nhật last_accessed lazily để LRU đúng
     void touch(store, key).catch(() => {});
     return entry.blob;
@@ -228,4 +236,24 @@ export async function fetchThroughCache(
   const blob = await res.blob();
   void putCached(store, key, blob);
   return blob;
+}
+
+/**
+ * Xoá entries quá TTL (7 ngày không đọc). Gọi 1 lần khi app boot.
+ * Best-effort, không throw.
+ */
+export async function evictExpiredEntries(): Promise<void> {
+  const now = Date.now();
+  for (const store of [STORE_FILES, STORE_COVERS]) {
+    try {
+      const entries = await listEntries(store);
+      for (const e of entries) {
+        if (now - e.last_accessed > TTL_MS) {
+          await deleteCached(store, e.key);
+        }
+      }
+    } catch {
+      // best-effort
+    }
+  }
 }

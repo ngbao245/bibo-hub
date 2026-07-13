@@ -234,29 +234,24 @@ export default function PdfReader({ book, initialPage }: { book: Book; initialPa
     }
   }, [book.id]);
 
-  // Background prefetch: sau khi load xong lần đầu (streaming mode),
-  // tải full file ngầm + cache → lần sau instant load
+  // Background prefetch: cache ngay khi render streaming mode
+  // → lần sau mở lại sẽ instant từ IndexedDB
   useEffect(() => {
-    if (!docLoaded) return;
     if (fileData?.kind !== 'url') return;
 
     let cancelled = false;
-    const id = setTimeout(() => {
-      if (cancelled) return;
-      void fetchThroughCache(
-        STORE_FILES,
-        book.file_path,
-        () => getBookFileUrl(book.file_path),
-      ).catch(() => {
-        // best-effort, fail im lặng
-      });
-    }, 3000);
+    void fetchThroughCache(
+      STORE_FILES,
+      book.file_path,
+      () => getBookFileUrl(book.file_path),
+    ).catch(() => {
+      // best-effort, fail im lặng
+    });
 
     return () => {
       cancelled = true;
-      clearTimeout(id);
     };
-  }, [docLoaded, fileData, book.file_path]);
+  }, [fileData, book.file_path]);
 
   useEffect(() => {
     localStorage.setItem(ZOOM_KEY, String(scale));

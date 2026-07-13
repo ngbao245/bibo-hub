@@ -62,7 +62,12 @@ src/
 │   ├── cache/            # Cache Inspector tabs
 │   ├── polygon-3d/       # React wrapper Polygon scene — dùng cho Landing hero
 │   │   └── PolygonBackground.tsx
-│   └── json-studio/      # JSON Studio UI — GraphView + TreeView + DataEditor + IOPanel + toolbars
+│   ├── json-studio/      # JSON Studio UI — GraphView + TreeView + DataEditor + IOPanel + toolbars
+│   └── setting/
+│       └── service-registry/  # Config UI — provider/credential/binding management
+│           ├── ProviderDetail.tsx   # Main detail panel per provider
+│           ├── CredentialCards.tsx   # Card-based credential CRUD + dynamic form
+│           └── BindingManager.tsx    # Tool-service binding CRUD
 │
 ├── modals/               # Global modals (mount ở App level)
 │   ├── Calculator.tsx
@@ -147,6 +152,14 @@ src/
 │   │   ├── theme.ts
 │   │   ├── types.ts
 │   │   └── formats/      # JSON/YAML/XML/CSV parse+stringify
+│   ├── service-registry/  # Shared Service Provider/Credential Pool system
+│   │   ├── types.ts       # Entity interfaces + enums
+│   │   ├── schemas.ts     # Zod validation
+│   │   ├── strategies.ts  # Credential selection (round_robin, priority, least_used, available_first)
+│   │   ├── executor.ts    # serviceExecutor — resolve binding → select cred → failover
+│   │   ├── legacy-fallback.ts  # Read app_settings as fallback during transition
+│   │   ├── test-connection.ts  # Provider-specific connectivity tests
+│   │   └── index.ts       # Public exports
 │   └── editor/
 │       └── VocabBlock.tsx # Tiptap custom node
 │
@@ -157,7 +170,9 @@ src/
 supabase/                  # Backend Supabase (project Auth mới)
 ├── README.md              # Setup guide + migration steps
 ├── migrations/            # SQL migrations
-│   └── 20260706000000_init_schema.sql  # profiles + app_settings + RLS
+│   ├── 20260706000000_init_schema.sql  # profiles + app_settings + RLS
+│   ├── 20260714000000_service_registry.sql  # service_providers/profiles/credentials/bindings/tool_settings
+│   └── 20260714000001_migrate_data.sql  # Migrate app_settings → service registry tables
 └── functions/             # Edge Functions (Deno)
     ├── _shared/
     │   └── verify-admin.ts  # helper verify JWT + role

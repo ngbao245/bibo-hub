@@ -21,8 +21,9 @@ async function fetchUsersList(): Promise<AdminUserRow[]> {
   // không truy vấn được — nếu cần email, dùng Edge Function riêng.
   const { data, error } = await authClient
     .from('profiles')
-    .select('id, role, allowed_tools, created_at, username, avatar_url')
-    .order('created_at', { ascending: false });
+    .select('id, role, allowed_tools, created_at, username, avatar_url, last_login_at')
+    .order('role')
+    .order('username');
 
   if (error) throw new Error(error.message);
 
@@ -33,6 +34,7 @@ async function fetchUsersList(): Promise<AdminUserRow[]> {
     created_at: row.created_at,
     username: row.username ?? null,
     avatar_url: row.avatar_url ?? null,
+    last_login_at: row.last_login_at ?? null,
     email: null,
   }));
 }

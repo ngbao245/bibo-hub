@@ -78,6 +78,15 @@ export default function LoginPage() {
         return;
       }
 
+      // Update last_login_at
+      const { data: { user } } = await authClient.auth.getUser();
+      if (user) {
+        await authClient
+          .from('profiles')
+          .update({ last_login_at: new Date().toISOString() })
+          .eq('id', user.id);
+      }
+
       // onAuthStateChange sẽ update session → useEffect ở Navigate above redirect
       navigate(safeNext(params.get('next')), { replace: true });
     } catch (err) {

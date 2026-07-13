@@ -46,6 +46,48 @@ const COMPRESS_MIN_BYTES = 2 * 1024 * 1024;   // 2 MB
 const COMPRESS_MAX_BYTES = 30 * 1024 * 1024;  // 30 MB (Phase 1 limit)
 
 async function loadCompressConfig(): Promise<CompressConfigValue | null> {
+  // Try service registry first
+  try {
+    const { data: bindings } = await authClient
+      .from('tool_service_bindings')
+      .select('profile_id, overrides_json')
+      .eq('tool_code', 'library')
+      .eq('capability', 'pdf.compress')
+      .eq('enabled', true)
+      .order('priority')
+      .limit(1);
+
+    if (bindings?.length && bindings[0].profile_id) {
+      const { data: credentials } = await authClient
+        .from('service_credentials')
+        .select('secret_data_json')
+        .eq('profile_id', bindings[0].profile_id)
+        .eq('status', 'active')
+        .order('priority');
+
+      if (credentials?.length) {
+        const keys: { public_key: string; secret_key?: string }[] = [];
+        for (const c of credentials) {
+          const s = c.secret_data_json as { public_key?: string; secret_key?: string } | null;
+          if (s?.public_key) {
+            keys.push({ public_key: s.public_key, secret_key: s.secret_key });
+          }
+        }
+
+        if (keys.length > 0) {
+          const overrides = bindings[0].overrides_json as { compressionLevel?: string } | null;
+          return {
+            keys,
+            compression_level: (overrides?.compressionLevel as CompressConfigValue['compression_level']) ?? 'recommended',
+          };
+        }
+      }
+    }
+  } catch {
+    // Fall through to legacy
+  }
+
+  // Legacy fallback
   const { data, error } = await authClient
     .from('app_settings')
     .select('value')
@@ -65,6 +107,48 @@ async function loadCompressConfig(): Promise<CompressConfigValue | null> {
 }
 
 async function loadDriveBackupConfig(): Promise<DriveBackupConfigValue | null> {
+  // Try service registry first
+  try {
+    const { data: bindings } = await authClient
+      .from('tool_service_bindings')
+      .select('profile_id')
+      .eq('tool_code', 'library')
+      .eq('capability', 'storage.backup')
+      .eq('enabled', true)
+      .order('priority')
+      .limit(1);
+
+    if (bindings?.length && bindings[0].profile_id) {
+      const { data: credentials } = await authClient
+        .from('service_credentials')
+        .select('secret_data_json')
+        .eq('profile_id', bindings[0].profile_id)
+        .eq('status', 'active')
+        .order('priority')
+        .limit(1);
+
+      if (credentials?.length) {
+        const s = credentials[0].secret_data_json as {
+          client_id?: string;
+          client_secret?: string;
+          refresh_token?: string;
+          folder_id?: string;
+        } | null;
+        if (s?.client_id && s?.client_secret && s?.refresh_token && s?.folder_id) {
+          return {
+            client_id: s.client_id,
+            client_secret: s.client_secret,
+            refresh_token: s.refresh_token,
+            folder_id: s.folder_id,
+          };
+        }
+      }
+    }
+  } catch {
+    // Fall through to legacy
+  }
+
+  // Legacy fallback
   const { data, error } = await authClient
     .from('app_settings')
     .select('value')
@@ -164,6 +248,8 @@ function readSnapshot(): Book[] | undefined {
     if (!raw) return undefined;
     const s = JSON.parse(raw) as BooksSnapshot;
     if (Date.now() - s.saved_at > SNAPSHOT_TTL_MS) return undefined;
+    // Empty snapshot = useless, force fresh fetch
+    if (s.data.length === 0) return undefined;
     return s.data;
   } catch {
     return undefined;
@@ -182,7 +268,7 @@ function writeSnapshot(data: Book[]) {
 export function useBooks() {
   return useQuery({
     queryKey: ['reader', 'books'],
-    initialData: readSnapshot, // hydrate ngay từ localStorage
+    placeholderData: readSnapshot, // hiện tạm từ localStorage, luôn refetch fresh
     queryFn: async (): Promise<Book[]> => {
       const { data, error } = await supabase
         .from('books')
@@ -323,7 +409,7 @@ async function prepareAndUploadBook(
     await uploadWithProgress(finalPath, file, {
       contentType: 'application/pdf',
       cacheControl: '3600',
-      upsert: false,
+      upsert: true,
       onProgress: ({ percent }) => {
         report({
           stage: 'uploading-file',
@@ -351,7 +437,7 @@ async function prepareAndUploadBook(
       await uploadWithProgress(cPath, cover.blob, {
         contentType: 'image/png',
         cacheControl: '604800',
-        upsert: false,
+        upsert: true,
         onProgress: ({ percent }) => {
           report({
             stage: 'uploading-cover',

@@ -1,19 +1,22 @@
 // ============================================================
-// settingsApi — CRUD app_settings Supabase
+// settingsApi — CRUD app_settings Supabase (LEGACY)
 // ============================================================
 //
-// Well-known keys:
+// [!] DEPRECATED in favor of Service Registry tables.
+// New architecture: service_providers → service_profiles → service_credentials
+// + tool_service_bindings + tool_settings.
+// See: src/api/service-registry.ts, src/lib/service-registry/
+//
+// This file is kept for backward compatibility during gradual migration.
+// When VITE_LEGACY_SETTINGS_FALLBACK=false, consumers no longer read
+// from app_settings. Set the flag to 'false' after confirming all data
+// has been migrated via scripts/migrate-settings-to-service-registry.ts.
+//
+// Well-known keys (legacy):
 //   - 'gemini_credit_pool' → { keys: { name, key }[] }
-//     Credit pool Gemini dùng chung — RAG search + Agency Studio AI
-//     generate email. Trước đây gọi 'rag_tokens' nhưng scope đã mở rộng.
 //   - 'p2p_config'      → { ... } (schema tùy P2P tool)
 //   - 'compress_config' → { keys: { name, public_key, secret_key }[], compression_level }
-//                         (iLovePDF Developer API config)
 //   - 'drive_backup_config' → { name, client_id, client_secret, refresh_token, folder_id }
-//                              (OAuth2 personal account for Drive backup)
-//
-// (reader_config đã bỏ sau spec library-migrate-to-project-a — Library
-// dùng chung env authClient, không còn 2-project.)
 //
 // RLS backend đã chặn access theo allowed_tools. Client chỉ cần
 // query bình thường, error nếu không có quyền.

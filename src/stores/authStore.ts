@@ -26,6 +26,8 @@ export interface Profile {
   username: string | null;
   /** Path relative trong bucket avatars. NULL = chưa chọn. */
   avatar_url: string | null;
+  /** Timestamp lần login gần nhất. NULL nếu chưa login lần nào. */
+  last_login_at: string | null;
 }
 
 interface AuthState {

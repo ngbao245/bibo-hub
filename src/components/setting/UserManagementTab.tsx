@@ -93,6 +93,7 @@ export default function UserManagementTab() {
                 <th className="px-3 py-2 text-left font-medium">Role</th>
                 <th className="px-3 py-2 text-left font-medium">Username</th>
                 <th className="px-3 py-2 text-left font-medium">Allowed tools</th>
+                <th className="px-3 py-2 text-left font-medium">Last login</th>
                 <th className="px-3 py-2 text-left font-medium">Created</th>
                 <th className="px-3 py-2 text-right font-medium">Action</th>
               </tr>
@@ -108,7 +109,7 @@ export default function UserManagementTab() {
                       </span>
                     ) : (
                       <span className="bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                        user
+                        {user.role}
                       </span>
                     )}
                   </td>
@@ -123,7 +124,12 @@ export default function UserManagementTab() {
                       ? 'Tất cả'
                       : user.allowed_tools.length === 0
                         ? '—'
-                        : user.allowed_tools.join(', ')}
+                        : `${user.allowed_tools.length} tools`}
+                  </td>
+                  <td className="px-3 py-2 text-xs text-muted-foreground">
+                    {user.last_login_at
+                      ? new Date(user.last_login_at).toLocaleString()
+                      : 'Chưa login'}
                   </td>
                   <td className="px-3 py-2 text-xs text-muted-foreground">
                     {new Date(user.created_at).toLocaleDateString()}

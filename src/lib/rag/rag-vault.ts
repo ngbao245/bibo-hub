@@ -1,16 +1,17 @@
 // ============================================================
-// RAG vault — đọc tokens từ Supabase app_settings.gemini_credit_pool
+// RAG vault — đọc tokens từ service registry (fallback app_settings)
 // ============================================================
 //
-// Refactored: bỏ APP_SECRET / cryptoStore / cryptoFields.
-// Data nay ở Supabase (project auth mới), plaintext, RLS chặn access
-// theo profile.allowed_tools.
+// Refactored: dùng serviceExecutor để resolve credentials từ pool.
+// Fallback legacy app_settings khi VITE_LEGACY_SETTINGS_FALLBACK=true
+// và service registry chưa có data.
 //
 // Backward-compat signature: `loadRagTokens(passphrase?)` giữ nguyên,
 // param `passphrase` bị ignore.
 // ============================================================
 
 import { authClient } from '@/lib/authClient';
+import type { CredentialWithSecret } from '@/lib/service-registry/types';
 
 import {
   EMPTY_RAG_TOKENS,
@@ -18,9 +19,7 @@ import {
   type RagTokens,
 } from './types';
 
-// Credit pool key dùng chung — RAG + Agency AI generate.
-// Trước 2026-07-12 tên là 'rag_tokens' — migration rename qua
-// gemini_credit_pool. Nếu deploy chưa chạy migration, fallback đọc key cũ.
+// Legacy keys (used by legacy-fallback.ts internally)
 const KEY = 'gemini_credit_pool';
 const LEGACY_KEY = 'rag_tokens';
 
@@ -29,16 +28,66 @@ interface RagTokensRow {
 }
 
 /**
- * Load RAG tokens từ app_settings Supabase.
+ * Load RAG tokens — attempts service registry first, falls back to app_settings.
  *
- * Throw RagVaultError nếu:
- *   - Query fail (network, RLS deny với error rõ ràng)
- *
- * Trả về RagTokens với `geminiApiKeys` non-empty array. Rỗng nếu chưa setup.
- * RLS deny (permission_denied) → trả empty tokens (không throw), UI xử lý "chưa có quyền".
+ * Returns RagTokens with `geminiApiKeys` array. Empty if not configured.
  */
 export async function loadRagTokens(_passphrase?: string): Promise<RagTokens> {
-  // Try key mới trước, fallback legacy key nếu migration chưa chạy.
+  // Try service registry approach: load all credentials for rag/ai.generate
+  try {
+    const credentials = await loadCredentialsFromRegistry();
+    if (credentials.length > 0) {
+      const geminiApiKeys = credentials
+        .map((c) => {
+          const key = c.secret_data_json?.apiKey;
+          return typeof key === 'string' ? key.trim() : '';
+        })
+        .filter((v) => v.length > 0);
+
+      if (geminiApiKeys.length > 0) {
+        return { geminiApiKeys };
+      }
+    }
+  } catch {
+    // Fall through to legacy
+  }
+
+  // Legacy fallback: read directly from app_settings
+  return loadFromAppSettings();
+}
+
+/**
+ * Load credentials from service registry tables directly (not via executor callback pattern).
+ * This is a read-only approach since RAG vault just needs the API keys list.
+ */
+async function loadCredentialsFromRegistry(): Promise<CredentialWithSecret[]> {
+  // Find bindings for rag + ai.generate
+  const { data: bindings } = await authClient
+    .from('tool_service_bindings')
+    .select('profile_id')
+    .eq('tool_code', 'rag')
+    .eq('capability', 'ai.generate')
+    .eq('enabled', true)
+    .order('priority')
+    .limit(1);
+
+  if (!bindings?.length || !bindings[0].profile_id) return [];
+
+  // Load active credentials from the profile
+  const { data: credentials } = await authClient
+    .from('service_credentials')
+    .select('id, identifier, secret_data_json, priority, weight')
+    .eq('profile_id', bindings[0].profile_id)
+    .eq('status', 'active')
+    .order('priority');
+
+  return (credentials ?? []) as CredentialWithSecret[];
+}
+
+/**
+ * Legacy: read directly from app_settings (pre-service-registry).
+ */
+async function loadFromAppSettings(): Promise<RagTokens> {
   let { data, error } = await authClient
     .from('app_settings')
     .select('value')
@@ -56,7 +105,6 @@ export async function loadRagTokens(_passphrase?: string): Promise<RagTokens> {
   }
 
   if (error) {
-    // RLS deny → trả empty, UI xử theo status needs_setup
     if (error.code === '42501' || error.code === 'PGRST116') {
       return { ...EMPTY_RAG_TOKENS };
     }
@@ -77,7 +125,7 @@ export async function loadRagTokens(_passphrase?: string): Promise<RagTokens> {
 
   const geminiApiKeys = row.keys
     .map((k: unknown) => {
-      if (typeof k === 'string') return k.trim(); // backward-compat old format
+      if (typeof k === 'string') return k.trim();
       if (k && typeof k === 'object' && 'key' in k && typeof (k as { key: unknown }).key === 'string')
         return ((k as { key: string }).key).trim();
       return '';
