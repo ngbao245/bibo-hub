@@ -1,6 +1,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Keyboard, Pin, PinOff, User, LogOut, Sun, Moon, Sparkles, Box, Circle } from 'lucide-react';
+import { Keyboard, Pin, PinOff, User, LogOut } from 'lucide-react';
 import { PencilSparkles } from '@/components/icons/PencilSparkles';
 import { useNavigate } from 'react-router-dom';
 
@@ -8,11 +8,11 @@ import { TOOLS, TOOL_GROUPS, type Tool, type ToolGroup } from '@/lib/tools';
 import { useToolAction } from '@/hooks/useToolAction';
 import { useHubFavorites, useSaveHubFavorites } from '@/api/hubFavorites';
 import { useToolCategories } from '@/api/toolCategories';
-import { useSaveTheme } from '@/api/themeApi';
+import { useSaveTheme, useThemeStore } from '@/tools/theme';
+import type { ThemeId } from '@/tools/theme';
 import { cn } from '@/lib/cn';
 import WidgetArea from '@/tools/home-widgets/components/WidgetArea';
 import { useAuthStore } from '@/stores/authStore';
-import { useThemeStore, type ThemeId } from '@/stores/themeStore';
 import { authClient } from '@/lib/authClient';
 import { getAvatarUrl } from '@/api/avatars';
 
@@ -24,20 +24,20 @@ import { LoadingState, EmptyState } from '@/components/shared';
 import { useModalStore } from '@/stores/modalStore';
 
 // ============================================================
-// HubPro - bản REDESIGNED dùng shadcn/ui
+// HubPro - bß║ún REDESIGNED d├╣ng shadcn/ui
 // ============================================================
 //
 // Layout:
-//   Header → Focus Layer → Favorites (full viewport đầu) → Categories → Footer
+//   Header ΓåÆ Focus Layer ΓåÆ Favorites (full viewport ─æß║ºu) ΓåÆ Categories ΓåÆ Footer
 //
-// Favorites: shortcut nhanh, chiếm trọn 100vh đầu tiên (trừ header/focus).
-// Categories: hiển thị TẤT CẢ tools sắp theo group, scroll xuống sẽ thấy.
-// 1 tool có thể xuất hiện ở cả 2 chỗ — favorite chỉ là shortcut.
-// Tối đa 24 favorite slots.
+// Favorites: shortcut nhanh, chiß║┐m trß╗ìn 100vh ─æß║ºu ti├¬n (trß╗½ header/focus).
+// Categories: hiß╗ân thß╗ï Tß║ñT Cß║ó tools sß║»p theo group, scroll xuß╗æng sß║╜ thß║Ñy.
+// 1 tool c├│ thß╗â xuß║Ñt hiß╗çn ß╗ƒ cß║ú 2 chß╗ù ΓÇö favorite chß╗ë l├á shortcut.
+// Tß╗æi ─æa 24 favorite slots.
 // ============================================================
 
-// 6 category fix cứng — user không thêm/xoá được.
-// Thứ tự này là default order lần đầu vào app; user có thể reorder qua Setting.
+// 6 category fix cß╗⌐ng ΓÇö user kh├┤ng th├¬m/xo├í ─æ╞░ß╗úc.
+// Thß╗⌐ tß╗▒ n├áy l├á default order lß║ºn ─æß║ºu v├áo app; user c├│ thß╗â reorder qua Setting.
 const DEFAULT_GROUP_ORDER: ToolGroup[] = [
   'Productivity',
   'Finance',
@@ -54,7 +54,7 @@ const MAX_FAVORITES = 24;
 export default function HubPro() {
   const handleClick = useToolAction();
 
-  // Filter tools theo profile.allowed_tools. Admin → all tools.
+  // Filter tools theo profile.allowed_tools. Admin ΓåÆ all tools.
   const profile = useAuthStore((s) => s.profile);
   const visibleTools = useMemo(() => {
     if (!profile) return [] as Tool[];
@@ -63,7 +63,7 @@ export default function HubPro() {
     return TOOLS.filter((t) => profile.allowed_tools.includes(t.id));
   }, [profile]);
 
-  // Favorites — localStorage instant + Supabase sync
+  // Favorites ΓÇö localStorage instant + Supabase sync
   const favQuery = useHubFavorites();
   const saveMut = useSaveHubFavorites();
 
@@ -91,14 +91,14 @@ export default function HubPro() {
     const supabaseIds = favQuery.data.ids;
 
     if (localIds.length === 0 && supabaseIds.length > 0) {
-      // New device / cleared cache → pull from Supabase
+      // New device / cleared cache ΓåÆ pull from Supabase
       setFavoriteIdsLocal(supabaseIds);
       try { localStorage.setItem(LS_KEY, JSON.stringify(supabaseIds)); } catch {}
     } else if (localIds.length > 0 && supabaseIds.length === 0) {
-      // localStorage has data, Supabase empty → push up (retry sync)
+      // localStorage has data, Supabase empty ΓåÆ push up (retry sync)
       saveMut.mutate({ ids: localIds, recordId: null });
     }
-    // Both have data → localStorage wins (it's always updated on pin action)
+    // Both have data ΓåÆ localStorage wins (it's always updated on pin action)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favQuery.data]);
 
@@ -140,14 +140,14 @@ export default function HubPro() {
     .filter((t): t is Tool => !!t && visibleToolIds.has(t.id))
     .slice(0, MAX_FAVORITES); // hard limit khi render
 
-  // Categories — lưu /Config. Mapping tool → category hoàn toàn dynamic.
-  // Chưa config → dùng DEFAULT_GROUP_ORDER, mọi tool rơi vào Unassigned.
+  // Categories ΓÇö l╞░u /Config. Mapping tool ΓåÆ category ho├án to├án dynamic.
+  // Ch╞░a config ΓåÆ d├╣ng DEFAULT_GROUP_ORDER, mß╗ìi tool r╞íi v├áo Unassigned.
   const catQuery = useToolCategories();
   const { categoryOrder, toolsByCategory, unassignedTools } = useMemo(() => {
     const catData = catQuery.data?.data;
     const hasCustom = catData && catData.categories.length > 0;
 
-    // Thứ tự category
+    // Thß╗⌐ tß╗▒ category
     const order: string[] = hasCustom
       ? catData.categories
       : DEFAULT_GROUP_ORDER;
@@ -178,7 +178,7 @@ export default function HubPro() {
       setFavoriteIds(favoriteIds.filter((x) => x !== id));
     } else {
       if (favoriteIds.length >= MAX_FAVORITES) {
-        toast.error(`Tối đa ${MAX_FAVORITES} pin. Bỏ bớt rồi thêm lại.`);
+        toast.error(`Tß╗æi ─æa ${MAX_FAVORITES} pin. Bß╗Å bß╗¢t rß╗ôi th├¬m lß║íi.`);
         return;
       }
       setFavoriteIds([...favoriteIds, id]);
@@ -186,11 +186,11 @@ export default function HubPro() {
   }
 
   // ============================================================
-  // Drag-to-reorder favorites — LIVE reorder.
-  // Trong lúc đang kéo, mỗi lần dragOver cell mới sẽ ngay lập tức
-  // cập nhật `favoriteIds` → React re-render → FLIP animation chạy → các cell
-  // khác slide nhường chỗ ngay. Cell đang kéo (draggedId) bị mờ tại slot mới
-  // của nó. Khi dragEnd chỉ cần clear state.
+  // Drag-to-reorder favorites ΓÇö LIVE reorder.
+  // Trong l├║c ─æang k├⌐o, mß╗ùi lß║ºn dragOver cell mß╗¢i sß║╜ ngay lß║¡p tß╗⌐c
+  // cß║¡p nhß║¡t `favoriteIds` ΓåÆ React re-render ΓåÆ FLIP animation chß║íy ΓåÆ c├íc cell
+  // kh├íc slide nh╞░ß╗¥ng chß╗ù ngay. Cell ─æang k├⌐o (draggedId) bß╗ï mß╗¥ tß║íi slot mß╗¢i
+  // cß╗ºa n├│. Khi dragEnd chß╗ë cß║ºn clear state.
   // ============================================================
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
@@ -230,14 +230,14 @@ export default function HubPro() {
     setInsertIndex(null);
   }
 
-  // FLIP animation cho favorites khi reorder — đã bỏ, dùng insert indicator thay thế
+  // FLIP animation cho favorites khi reorder ΓÇö ─æ├ú bß╗Å, d├╣ng insert indicator thay thß║┐
 
   // ============================================================
   // Smooth section transition (JS-driven, easeOutCubic ~450ms).
   // Logic:
-  //   - Ở section 1 (top<10% viewport) + scroll DOWN → animate xuống section 2
-  //   - Ở section 2 đầu (top trong [0.9h, 1.1h]) + scroll UP → animate lên section 1
-  //   - Các trường hợp khác (scroll trong section 2) → browser native
+  //   - ß╗₧ section 1 (top<10% viewport) + scroll DOWN ΓåÆ animate xuß╗æng section 2
+  //   - ß╗₧ section 2 ─æß║ºu (top trong [0.9h, 1.1h]) + scroll UP ΓåÆ animate l├¬n section 1
+  //   - C├íc tr╞░ß╗¥ng hß╗úp kh├íc (scroll trong section 2) ΓåÆ browser native
   // ============================================================
   const scrollRef = useRef<HTMLDivElement>(null);
   const animatingRef = useRef(false);
@@ -254,7 +254,7 @@ export default function HubPro() {
     function step(now: number) {
       if (!el) return;
       const t = Math.min((now - t0) / duration, 1);
-      // easeOutCubic — fast start, mềm về cuối
+      // easeOutCubic ΓÇö fast start, mß╗üm vß╗ü cuß╗æi
       const eased = 1 - Math.pow(1 - t, 3);
       el.scrollTop = start + dist * eased;
       if (t < 1) {
@@ -279,10 +279,10 @@ export default function HubPro() {
       const h = el.clientHeight;
       const top = el.scrollTop;
 
-      // Trong vùng "biên giới" của 2 section đầu (top < 1.1h):
-      //  - scroll DOWN → snap về h (đầu section 2)
-      //  - scroll UP → snap về 0 (đầu section 1)
-      // Ngoài vùng đó (đã cuộn sâu trong section 2) → browser native.
+      // Trong v├╣ng "bi├¬n giß╗¢i" cß╗ºa 2 section ─æß║ºu (top < 1.1h):
+      //  - scroll DOWN ΓåÆ snap vß╗ü h (─æß║ºu section 2)
+      //  - scroll UP ΓåÆ snap vß╗ü 0 (─æß║ºu section 1)
+      // Ngo├ái v├╣ng ─æ├│ (─æ├ú cuß╗Ön s├óu trong section 2) ΓåÆ browser native.
       if (top < h * 1.1) {
         if (e.deltaY > 0 && top < h * 0.9) {
           e.preventDefault();
@@ -334,7 +334,7 @@ export default function HubPro() {
         className="flex-1 overflow-y-auto [scrollbar-gutter:stable]"
       >
         <div className="flex h-full flex-col px-[clamp(12px,4vw,8rem)]">
-          {/* Section 1: chiếm trọn container */}
+          {/* Section 1: chiß║┐m trß╗ìn container */}
           <div className="flex h-full shrink-0 flex-col gap-3 py-4 max-md:py-2">
             <WidgetArea />
 
@@ -349,7 +349,7 @@ export default function HubPro() {
                       'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))',
                   }}
                   onDragOver={(e) => {
-                    // Chỉ fire khi kéo vào vùng trống của grid (không phải child cell)
+                    // Chß╗ë fire khi k├⌐o v├áo v├╣ng trß╗æng cß╗ºa grid (kh├┤ng phß║úi child cell)
                     if (!draggedId) return;
                     if (e.target !== e.currentTarget) return;
                     e.preventDefault();
@@ -383,16 +383,16 @@ export default function HubPro() {
                 <EmptyState
                   compact
                   icon={Pin}
-                  title="Chưa có pin nào"
-                  description="Cuộn xuống và bấm biểu tượng pin ở tool bất kỳ để pin lên đây."
+                  title="Ch╞░a c├│ pin n├áo"
+                  description="Cuß╗Ön xuß╗æng v├á bß║Ñm biß╗âu t╞░ß╗úng pin ß╗ƒ tool bß║Ñt kß╗│ ─æß╗â pin l├¬n ─æ├óy."
                 />
               )}
             </section>
           </div>
 
-          {/* Section 2: content height tự nhiên.
-              Khi catQuery còn loading → skeleton grid, tránh flash mọi tool
-              vào Unassigned rồi ngay lập tức nhảy về category thật. */}
+          {/* Section 2: content height tß╗▒ nhi├¬n.
+              Khi catQuery c├▓n loading ΓåÆ skeleton grid, tr├ính flash mß╗ìi tool
+              v├áo Unassigned rß╗ôi ngay lß║¡p tß╗⌐c nhß║úy vß╗ü category thß║¡t. */}
           <div className="shrink-0 space-y-6 border-t border-border py-6">
             {catQuery.isLoading ? (
               <CategoriesSkeleton />
@@ -427,7 +427,7 @@ export default function HubPro() {
                   );
                 })}
 
-                {/* Unassigned — tool chưa được gán vào category nào */}
+                {/* Unassigned ΓÇö tool ch╞░a ─æ╞░ß╗úc g├ín v├áo category n├áo */}
                 {unassignedTools.length > 0 && (
                   <section>
                     <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-warning">
@@ -437,7 +437,7 @@ export default function HubPro() {
                       </span>
                     </h2>
                     <p className="mb-2 text-[11px] text-muted-foreground">
-                      Vào Config → Tool Categories để kéo các tool này vào category.
+                      V├áo Config ΓåÆ Tool Categories ─æß╗â k├⌐o c├íc tool n├áy v├áo category.
                     </p>
                     <div
                       className="grid gap-px bg-border"
@@ -500,7 +500,8 @@ function Header() {
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => toast.info('Tính năng góp ý đang phát triển')}
+              onClick={() => toast.info('T├¡nh n─âng g├│p ├╜ ─æang ph├ít triß╗ân')}
+              data-flat
               className="relative inline-flex h-9 w-9 items-center justify-center text-foreground transition-colors hover:text-primary"
             >
               {/* Triangle border shape */}
@@ -520,16 +521,16 @@ function Header() {
               <PencilSparkles className="relative h-3.5 w-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Góp ý</TooltipContent>
+          <TooltipContent>G├│p ├╜</TooltipContent>
         </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button variant="outline" size="icon" onClick={() => useModalStore.getState().open('shortcuts')}>
+            <Button variant="outline" size="icon" data-flat onClick={() => useModalStore.getState().open('shortcuts')}>
               <Keyboard className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Phím tắt (Alt+K)</TooltipContent>
+          <TooltipContent>Ph├¡m tß║»t (Alt+K)</TooltipContent>
         </Tooltip>
 
         {/* User menu */}
@@ -537,6 +538,7 @@ function Header() {
           <Button
             variant="outline"
             size="icon"
+            data-flat
             className="overflow-hidden rounded-full"
             onClick={() => setUserMenuOpen((v) => !v)}
           >
@@ -551,7 +553,7 @@ function Header() {
             )}
           </Button>
           {userMenuOpen && (
-            <div className="absolute right-0 top-full z-50 mt-1 min-w-[200px] border border-border bg-popover py-1 shadow-md">
+            <div data-flat className="absolute right-0 top-full z-50 mt-1 min-w-[200px] border border-border bg-popover py-1 shadow-md">
               {profile?.username && (
                 <div className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
                   {profile.username}
@@ -594,26 +596,32 @@ function Header() {
 // Theme menu section (inside user dropdown)
 // ============================================================
 
-const THEME_OPTIONS: { id: ThemeId; label: string; icon: typeof Sun }[] = [
-  { id: 'dark', label: 'Dark', icon: Moon },
-  { id: 'light', label: 'Light', icon: Sun },
-  { id: 'cute', label: 'Cute', icon: Sparkles },
+const THEME_PREVIEWS: { id: ThemeId; label: string; bg: string; accent: string; text: string; ring: string }[] = [
+  { id: 'dark', label: 'Dark', bg: '#1e1e1e', accent: '#007acc', text: '#d4d4d4', ring: '#007acc' },
+  { id: 'light', label: 'Light', bg: '#fafafa', accent: '#007acc', text: '#1a1a1e', ring: '#007acc' },
+  { id: 'cute', label: 'Cute', bg: '#faf6f8', accent: '#9333ea', text: '#3d1f4e', ring: '#9333ea' },
 ];
 
 function ThemeMenuSection() {
   const theme = useThemeStore((s) => s.theme);
   const is3d = useThemeStore((s) => s.is3d);
   const isRounded = useThemeStore((s) => s.isRounded);
+  const isRetro = useThemeStore((s) => s.isRetro);
+  const isPill = useThemeStore((s) => s.isPill);
   const setTheme = useThemeStore((s) => s.setTheme);
   const setIs3d = useThemeStore((s) => s.setIs3d);
   const setIsRounded = useThemeStore((s) => s.setIsRounded);
+  const setIsRetro = useThemeStore((s) => s.setIsRetro);
+  const setIsPill = useThemeStore((s) => s.setIsPill);
   const saveTheme = useSaveTheme();
 
-  const persist = (patch: Partial<{ theme: ThemeId; is3d: boolean; isRounded: boolean }>) => {
+  const persist = (patch: Partial<{ theme: ThemeId; is3d: boolean; isRounded: boolean; isRetro: boolean; isPill: boolean }>) => {
     const next = {
       theme: patch.theme ?? theme,
       is3d: patch.is3d ?? is3d,
       isRounded: patch.isRounded ?? isRounded,
+      isRetro: patch.isRetro ?? isRetro,
+      isPill: patch.isPill ?? isPill,
     };
     saveTheme.save(next);
   };
@@ -622,59 +630,163 @@ function ThemeMenuSection() {
     <div className="border-b border-border px-3 py-2 space-y-2">
       <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Theme</p>
 
-      {/* Theme selector */}
-      <div className="flex gap-1">
-        {THEME_OPTIONS.map((t) => (
+      {/* Theme preview cards */}
+      <div className="grid grid-cols-3 gap-2">
+        {THEME_PREVIEWS.map((t) => (
           <button
             key={t.id}
+            data-flat
             onClick={() => {
               setTheme(t.id);
               persist({ theme: t.id });
             }}
             className={cn(
-              'flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-all duration-150',
+              'relative flex flex-col items-center gap-1.5 rounded-lg p-1.5 transition-all duration-150',
               theme === t.id
-                ? 'bg-primary/15 text-primary'
-                : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+                ? 'ring-2'
+                : 'ring-1 ring-border hover:ring-foreground/20',
             )}
+            style={{
+              backgroundColor: t.bg,
+              ...(theme === t.id ? { '--tw-ring-color': t.ring } as React.CSSProperties : {}),
+            }}
           >
-            <t.icon className="h-3 w-3" />
-            {t.label}
+            <div
+              className="w-full aspect-[4/3] rounded overflow-hidden"
+            >
+              <div className="flex flex-col gap-[3px] p-1.5">
+                <div className="h-[3px] w-3/4 rounded-sm" style={{ backgroundColor: t.text, opacity: 0.6 }} />
+                <div className="h-[3px] w-1/2 rounded-sm" style={{ backgroundColor: t.text, opacity: 0.3 }} />
+                <div className="h-[4px] w-2/5 rounded-sm mt-0.5" style={{ backgroundColor: t.accent }} />
+              </div>
+            </div>
+            <span
+              className="text-[10px] font-medium"
+              style={{ color: t.text }}
+            >
+              {t.label}
+            </span>
           </button>
         ))}
       </div>
 
-      {/* Toggles */}
-      <div className="flex gap-2">
+      {/* Effect toggles ΓÇö bordered cards with themed preview */}
+      <div className="grid grid-cols-2 gap-2">
+        {/* Lift */}
         <button
+          data-flat
           onClick={() => {
             setIs3d(!is3d);
             persist({ is3d: !is3d });
           }}
           className={cn(
-            'flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-all duration-150',
+            'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
             is3d
-              ? 'bg-primary/15 text-primary'
-              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+              ? 'ring-2 ring-primary bg-primary/5'
+              : 'ring-1 ring-border hover:ring-foreground/20',
           )}
         >
-          <Box className="h-3 w-3" />
-          3D
+          {/* Preview: flat button vs raised button */}
+          <div className="flex items-end gap-1.5 h-4">
+            <div className="h-3 w-8 rounded-sm bg-primary/20" />
+            <div className="h-3 w-8 rounded-sm bg-primary/40" style={{ boxShadow: '0 2px 0 0 hsl(var(--primary) / 0.6)' }} />
+          </div>
+          <span className={cn(
+            'text-[10px] font-medium',
+            is3d ? 'text-primary' : 'text-muted-foreground',
+          )}>
+            Lift
+          </span>
         </button>
+
+        {/* Subtle (was Rounded) ΓÇö radio with Pill */}
         <button
+          data-flat
           onClick={() => {
-            setIsRounded(!isRounded);
-            persist({ isRounded: !isRounded });
+            const next = !isRounded;
+            setIsRounded(next);
+            if (next) { setIsPill(false); }
+            persist({ isRounded: next, isPill: next ? false : isPill });
           }}
           className={cn(
-            'flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-all duration-150',
+            'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
             isRounded
-              ? 'bg-primary/15 text-primary'
-              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+              ? 'ring-2 ring-primary bg-primary/5'
+              : 'ring-1 ring-border hover:ring-foreground/20',
           )}
         >
-          <Circle className="h-3 w-3" />
-          Rounded
+          {/* Preview: square vs subtle rounded */}
+          <div className="flex items-center gap-1.5 h-4">
+            <div className="h-4 w-6 border border-primary/30 bg-primary/10" />
+            <div className="h-4 w-6 border border-primary/50 bg-primary/20" style={{ borderRadius: '0.375rem' }} />
+          </div>
+          <span className={cn(
+            'text-[10px] font-medium',
+            isRounded ? 'text-primary' : 'text-muted-foreground',
+          )}>
+            Subtle
+          </span>
+        </button>
+      </div>
+
+      {/* Retro + Pill toggles */}
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          data-flat
+          disabled={!is3d}
+          onClick={() => {
+            setIsRetro(!isRetro);
+            persist({ isRetro: !isRetro });
+          }}
+          className={cn(
+            'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
+            !is3d
+              ? 'opacity-40 cursor-not-allowed ring-1 ring-border'
+              : isRetro
+                ? 'ring-2 ring-primary bg-primary/5'
+                : 'ring-1 ring-border hover:ring-foreground/20',
+          )}
+        >
+          {/* Preview: colored shadow vs gray shadow */}
+          <div className="flex items-end gap-1.5 h-4">
+            <div className="h-3 w-7 rounded-sm bg-primary/30" style={{ boxShadow: '0 2px 0 0 hsl(var(--primary) / 0.5)' }} />
+            <div className="h-3 w-7 rounded-sm bg-primary/30" style={{ boxShadow: '0 2px 0 0 hsl(0 0% 0% / 0.4)' }} />
+          </div>
+          <span className={cn(
+            'text-[10px] font-medium',
+            isRetro ? 'text-primary' : 'text-muted-foreground',
+          )}>
+            Retro
+          </span>
+        </button>
+
+        {/* Pill ΓÇö radio with Subtle */}
+        <button
+          data-flat
+          onClick={() => {
+            const next = !isPill;
+            setIsPill(next);
+            if (next) { setIsRounded(false); }
+            persist({ isPill: next, isRounded: next ? false : isRounded });
+          }}
+          className={cn(
+            'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
+            isPill
+              ? 'ring-2 ring-primary bg-primary/5'
+              : 'ring-1 ring-border hover:ring-foreground/20',
+          )}
+        >
+          {/* Preview: subtle rounded vs pill */}
+          <div className="flex items-center gap-1.5 h-4">
+            <div className="h-4 w-6 border border-primary/30 bg-primary/10" style={{ borderRadius: '0.375rem' }} />
+            <div className="h-4 w-6 border border-primary/50 bg-primary/20" style={{ borderRadius: '9999px' }} />
+          </div>
+          <span className={cn(
+            'text-[10px] font-medium',
+            isPill ? 'text-primary' : 'text-muted-foreground',
+          )}>
+            Pill
+          </span>
         </button>
       </div>
     </div>
@@ -682,15 +794,15 @@ function ThemeMenuSection() {
 }
 
 // ============================================================
-// Skeletons — beam sweep N hàng, mỗi hàng tốc độ khác nhau
+// Skeletons ΓÇö beam sweep N h├áng, mß╗ùi h├áng tß╗æc ─æß╗Ö kh├íc nhau
 // ============================================================
-// Mỗi row = 1 grid clip 1 hàng, có beam riêng. Stack nhiều row với duration
-// khác nhau → cảm giác "living", không đơn điệu.
+// Mß╗ùi row = 1 grid clip 1 h├áng, c├│ beam ri├¬ng. Stack nhiß╗üu row vß╗¢i duration
+// kh├íc nhau ΓåÆ cß║úm gi├íc "living", kh├┤ng ─æ╞ín ─æiß╗çu.
 
 const GRID_TEMPLATE_COLUMNS =
   'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))';
 
-// Duration cho từng row theo index. Beyond 4 rows dùng modulo (hiếm khi cần).
+// Duration cho tß╗½ng row theo index. Beyond 4 rows d├╣ng modulo (hiß║┐m khi cß║ºn).
 const ROW_DURATIONS = ['1.4s', '2.4s', '1.8s', '2s'];
 
 function SkeletonRows({ rows }: { rows: number }) {
@@ -717,8 +829,8 @@ function FavoritesSkeleton() {
 }
 
 function CategoriesSkeleton() {
-  // Số section = số category fix cứng (`TOOL_GROUPS`). Nếu tương lai thêm
-  // category → tự sync, không phải nhớ update chỗ này.
+  // Sß╗æ section = sß╗æ category fix cß╗⌐ng (`TOOL_GROUPS`). Nß║┐u t╞░╞íng lai th├¬m
+  // category ΓåÆ tß╗▒ sync, kh├┤ng phß║úi nhß╗¢ update chß╗ù n├áy.
   return (
     <>
       {TOOL_GROUPS.map((g) => (
@@ -738,7 +850,7 @@ function Footer({ total, favorites }: { total: number; favorites: number }) {
   return (
     <footer className="flex items-center justify-between border-t border-border bg-card px-[clamp(1rem,4vw,4rem)] py-2 text-xs text-muted-foreground">
       <span>
-        {favorites}/{total} đã pin
+        {favorites}/{total} ─æ├ú pin
       </span>
       <span className="font-mono max-md:hidden">v2.0.0</span>
     </footer>
@@ -746,8 +858,8 @@ function Footer({ total, favorites }: { total: number; favorites: number }) {
 }
 
 // ============================================================
-// ToolCell - card từng tool, hover hiện nút pin/unpin.
-// Khi `draggable=true` (favorites) hỗ trợ drag để reorder.
+// ToolCell - card tß╗½ng tool, hover hiß╗çn n├║t pin/unpin.
+// Khi `draggable=true` (favorites) hß╗ù trß╗ú drag ─æß╗â reorder.
 // ============================================================
 function ToolCell({
   tool,
@@ -822,8 +934,8 @@ function ToolCell({
                 ? 'text-primary opacity-70 hover:opacity-100'
                 : 'text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground',
             )}
-            title={isFavorite ? 'Bỏ pin' : 'Pin lên đầu'}
-            aria-label={isFavorite ? 'Bỏ pin' : 'Pin'}
+            title={isFavorite ? 'Bß╗Å pin' : 'Pin l├¬n ─æß║ºu'}
+            aria-label={isFavorite ? 'Bß╗Å pin' : 'Pin'}
           >
             {isFavorite ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
           </button>
@@ -842,4 +954,4 @@ function ToolCell({
       </TooltipContent>
     </Tooltip>
   );
-}
+}

@@ -5,14 +5,14 @@ import { useGlobalShortcuts } from './hooks/useGlobalShortcuts';
 import { useBootstrapShortcutOverrides } from './hooks/useBootstrapShortcutOverrides';
 import { useBootstrapRag } from './hooks/useBootstrapRag';
 import { useLandingShortcut } from './tools/portfolio/hooks/useLandingShortcut';
-import { useThemeHydration } from './api/themeApi';
-import { useThemeStore } from './stores/themeStore';
+import { useThemeHydration } from './tools/theme';
+import { useThemeStore } from './tools/theme';
 import AuthGuard from './components/auth/AuthGuard';
 import ToolGuard from './components/auth/ToolGuard';
 
 // ============================================================
-// Lazy routes - mỗi page load chunk riêng khi navigate tới.
-// Giảm initial bundle từ ~300KB xuống ~100KB.
+// Lazy routes - mß╗ùi page load chunk ri├¬ng khi navigate tß╗¢i.
+// Giß║úm initial bundle tß╗½ ~300KB xuß╗æng ~100KB.
 // ============================================================
 const Landing = lazy(() => import('./tools/portfolio/route'));
 const Hub = lazy(() => import('./routes/HubPro'));
@@ -33,7 +33,7 @@ const AgencyStudio = lazy(() => import('./routes/AgencyStudio'));
 const AgencyUnsubscribe = lazy(() => import('./routes/AgencyStudio/Unsubscribe'));
 const Vault = lazy(() => import('./tools/vault/route'));
 const DesignSystem = lazy(() => import('./routes/DesignSystem'));
-// Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
+// Modals - vß║½n eager load v├¼ ch├║ng mount ß╗ƒ App level + cß║ºn shortcut l├║c n├áo c┼⌐ng sß║╡n.
 import Calculator from './tools/calculator/modal';
 import Translate from './tools/translate/modal';
 import Encoder from './tools/encoder/modal';
@@ -43,7 +43,7 @@ import Crypto from './tools/crypto/modal';
 import Audio from './tools/audio/modal';
 import RagAssistantModal from './components/rag/RagAssistantModal';
 
-// Audio player toàn cục (provider + floating window mount 1 lần)
+// Audio player to├án cß╗Ñc (provider + floating window mount 1 lß║ºn)
 import { AudioProvider } from './tools/audio/lib/audio-context';
 import AudioFloatingHost from './tools/audio/components/AudioFloatingHost';
 
@@ -56,7 +56,7 @@ function PageLoader() {
   );
 }
 
-/** Legacy /json-viewer → /json-studio redirect, giữ query string cho bookmark cũ. */
+/** Legacy /json-viewer ΓåÆ /json-studio redirect, giß╗» query string cho bookmark c┼⌐. */
 function LegacyJsonViewerRedirect() {
   const { search, hash } = useLocation();
   return <Navigate to={`/json-studio${search}${hash}`} replace />;
@@ -67,6 +67,8 @@ function useApplyThemeAttributes() {
   const theme = useThemeStore((s) => s.theme);
   const is3d = useThemeStore((s) => s.is3d);
   const isRounded = useThemeStore((s) => s.isRounded);
+  const isRetro = useThemeStore((s) => s.isRetro);
+  const isPill = useThemeStore((s) => s.isPill);
 
   useEffect(() => {
     const el = document.documentElement;
@@ -88,14 +90,26 @@ function useApplyThemeAttributes() {
     } else {
       el.removeAttribute('data-rounded');
     }
-  }, [theme, is3d, isRounded]);
+
+    if (isPill) {
+      el.setAttribute('data-pill', '');
+    } else {
+      el.removeAttribute('data-pill');
+    }
+
+    if (isRetro) {
+      el.setAttribute('data-retro', '');
+    } else {
+      el.removeAttribute('data-retro');
+    }
+  }, [theme, is3d, isRounded, isPill, isRetro]);
 }
 
 export default function App() {
   useGlobalShortcuts();
   useBootstrapShortcutOverrides();
   useBootstrapRag();
-  useLandingShortcut(); // Alt+H → /portfolio (mở landing từ hub cho owner)
+  useLandingShortcut(); // Alt+H ΓåÆ /portfolio (mß╗ƒ landing tß╗½ hub cho owner)
   useThemeHydration();
   useApplyThemeAttributes();
 
@@ -103,12 +117,12 @@ export default function App() {
     <AudioProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Public routes — không cần auth */}
+          {/* Public routes ΓÇö kh├┤ng cß║ºn auth */}
           <Route path="/login" element={<Login />} />
           <Route path="/portfolio" element={<Landing />} />
           <Route path="/agency-studio/unsubscribe" element={<AgencyUnsubscribe />} />
 
-          {/* Protected routes — wrap AuthGuard */}
+          {/* Protected routes ΓÇö wrap AuthGuard */}
           <Route
             path="*"
             element={
@@ -139,7 +153,7 @@ export default function App() {
                   <Route path="/agency-studio/*" element={<AgencyStudio />} />
                   <Route path="/vault" element={<Vault />} />
                   <Route path="/design-system" element={<DesignSystem />} />
-                  {/* Legacy redirect: /setting → /config */}
+                  {/* Legacy redirect: /setting ΓåÆ /config */}
                   <Route path="/setting" element={<Navigate to="/config" replace />} />
                   <Route
                     path="/library/*"
@@ -157,7 +171,7 @@ export default function App() {
         </Routes>
       </Suspense>
 
-      {/* Modal toàn cục */}
+      {/* Modal to├án cß╗Ñc */}
       <Calculator />
       <Translate />
       <Encoder />
@@ -167,8 +181,8 @@ export default function App() {
       <Audio />
       <RagAssistantModal />
 
-      {/* Player host (YT iframe ẩn) + floating UI — mount global, không unmount khi đóng modal */}
+      {/* Player host (YT iframe ß║⌐n) + floating UI ΓÇö mount global, kh├┤ng unmount khi ─æ├│ng modal */}
       <AudioFloatingHost />
     </AudioProvider>
   );
-}
+}

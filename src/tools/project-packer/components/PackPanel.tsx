@@ -19,18 +19,18 @@ import { downloadBlob } from '@/tools/project-packer/lib/unpack';
 import type { LogEntry, PackOptions, PackPart } from '@/tools/project-packer/lib/types';
 
 // ============================================================
-// PackPanel - hiển thị cây thư mục, không crash
+// PackPanel - hiß╗ân thß╗ï c├óy th╞░ mß╗Ñc, kh├┤ng crash
 // ============================================================
 //
-// Tránh crash bằng cách:
-// 1. File[] lưu trong useRef (KHÔNG vào React state) → không trigger re-render khổng lồ
-// 2. Tree state chỉ chứa metadata (path, type) → nhẹ
-// 3. Lazy render: folder collapsed → không render children
+// Tr├ính crash bß║▒ng c├ích:
+// 1. File[] l╞░u trong useRef (KH├öNG v├áo React state) ΓåÆ kh├┤ng trigger re-render khß╗òng lß╗ô
+// 2. Tree state chß╗ë chß╗⌐a metadata (path, type) ΓåÆ nhß║╣
+// 3. Lazy render: folder collapsed ΓåÆ kh├┤ng render children
 //
-// Persist (cứu khi crash):
+// Persist (cß╗⌐u khi crash):
 // - Options: localStorage 'packer.options'
 // - Selection paths: localStorage 'packer.selectedPaths'
-//   → user mở folder lại, app tự restore tick từ paths cũ.
+//   ΓåÆ user mß╗ƒ folder lß║íi, app tß╗▒ restore tick tß╗½ paths c┼⌐.
 // ============================================================
 
 const REACT_PRESET = PRESETS[0];
@@ -49,15 +49,15 @@ const HIDDEN_FOLDERS = new Set([
 ]);
 
 // ============================================================
-// Drag-drop traverse — skip HIDDEN_FOLDERS NGAY tại folder entry
-// (tận dụng webkitGetAsEntry — KHÔNG scan node_modules)
+// Drag-drop traverse ΓÇö skip HIDDEN_FOLDERS NGAY tß║íi folder entry
+// (tß║¡n dß╗Ñng webkitGetAsEntry ΓÇö KH├öNG scan node_modules)
 // ============================================================
 async function traverseEntry(
   entry: FileSystemEntry,
   parentPath: string,
   out: { file: File; path: string }[],
 ): Promise<void> {
-  // Skip ngay nếu folder name nằm trong blacklist → không vào!
+  // Skip ngay nß║┐u folder name nß║▒m trong blacklist ΓåÆ kh├┤ng v├áo!
   if (entry.isDirectory && HIDDEN_FOLDERS.has(entry.name)) return;
 
   const path = parentPath ? `${parentPath}/${entry.name}` : entry.name;
@@ -72,7 +72,7 @@ async function traverseEntry(
 
   if (entry.isDirectory) {
     const reader = (entry as FileSystemDirectoryEntry).createReader();
-    // readEntries chỉ trả max 100 entries 1 lần, phải loop
+    // readEntries chß╗ë trß║ú max 100 entries 1 lß║ºn, phß║úi loop
     const entries: FileSystemEntry[] = [];
     while (true) {
       const batch = await new Promise<FileSystemEntry[]>((resolve, reject) => {
@@ -91,24 +91,24 @@ async function traverseEntry(
 // Tree types
 // ============================================================
 interface TreeNode {
-  name: string;          // tên file/folder
-  path: string;          // full path từ root
+  name: string;          // t├¬n file/folder
+  path: string;          // full path tß╗½ root
   isFolder: boolean;
-  children: TreeNode[];  // chỉ folder mới có children
-  fileCount: number;     // tổng số file con (folder), 1 (file)
-  descendantPaths: string[]; // cache: tất cả path con (cho toggle nhanh)
+  children: TreeNode[];  // chß╗ë folder mß╗¢i c├│ children
+  fileCount: number;     // tß╗òng sß╗æ file con (folder), 1 (file)
+  descendantPaths: string[]; // cache: tß║Ñt cß║ú path con (cho toggle nhanh)
 }
 
 /**
- * Selection store — Set<string> + per-path subscriptions.
+ * Selection store ΓÇö Set<string> + per-path subscriptions.
  *
- * Lý do KHÔNG dùng React state cho selectedPaths:
- *   - Mỗi tick → setState → re-render TOÀN BỘ tree (5000 row).
- *   - Mỗi folder phải re-compute count = O(descendants) × O(folders) = O(n²).
+ * L├╜ do KH├öNG d├╣ng React state cho selectedPaths:
+ *   - Mß╗ùi tick ΓåÆ setState ΓåÆ re-render TO├ÇN Bß╗ÿ tree (5000 row).
+ *   - Mß╗ùi folder phß║úi re-compute count = O(descendants) ├ù O(folders) = O(n┬▓).
  *
- * Cách dùng: row subscribe vào path của mình, chỉ row đó re-render.
- * Folder count vẫn là O(descendants) NHƯNG chỉ chạy khi count đổi
- * (không phải mỗi setState).
+ * C├ích d├╣ng: row subscribe v├áo path cß╗ºa m├¼nh, chß╗ë row ─æ├│ re-render.
+ * Folder count vß║½n l├á O(descendants) NH╞»NG chß╗ë chß║íy khi count ─æß╗òi
+ * (kh├┤ng phß║úi mß╗ùi setState).
  */
 class SelectionStore {
   private set: Set<string>;
@@ -123,7 +123,7 @@ class SelectionStore {
     return this.set.has(path);
   }
 
-  /** Snapshot toàn bộ — dùng để persist localStorage hoặc count. */
+  /** Snapshot to├án bß╗Ö ΓÇö d├╣ng ─æß╗â persist localStorage hoß║╖c count. */
   getAll(): string[] {
     return [...this.set];
   }
@@ -132,7 +132,7 @@ class SelectionStore {
     return this.set.size;
   }
 
-  /** Toggle nhiều path 1 lần, fire chỉ những path đổi. */
+  /** Toggle nhiß╗üu path 1 lß║ºn, fire chß╗ë nhß╗»ng path ─æß╗òi. */
   toggle(paths: string[], checked: boolean) {
     const changed: string[] = [];
     for (const p of paths) {
@@ -174,7 +174,7 @@ class SelectionStore {
     this.allListeners.forEach((cb) => cb());
   }
 
-  /** Subscribe vào 1 path — return unsubscribe */
+  /** Subscribe v├áo 1 path ΓÇö return unsubscribe */
   subscribePath(path: string, cb: () => void): () => void {
     let s = this.listeners.get(path);
     if (!s) {
@@ -188,7 +188,7 @@ class SelectionStore {
     };
   }
 
-  /** Subscribe mọi thay đổi (cho folder count, summary) */
+  /** Subscribe mß╗ìi thay ─æß╗òi (cho folder count, summary) */
   subscribeAll(cb: () => void): () => void {
     this.allListeners.add(cb);
     return () => this.allListeners.delete(cb);
@@ -197,7 +197,7 @@ class SelectionStore {
 
 const SelectionContext = createContext<SelectionStore | null>(null);
 
-/** Hook: subscribe checked status của 1 path — chỉ row đó re-render khi đổi */
+/** Hook: subscribe checked status cß╗ºa 1 path ΓÇö chß╗ë row ─æ├│ re-render khi ─æß╗òi */
 function useIsSelected(path: string): boolean {
   const store = useContext(SelectionContext);
   if (!store) throw new Error('SelectionContext missing');
@@ -207,7 +207,7 @@ function useIsSelected(path: string): boolean {
   );
 }
 
-/** Hook: count selected trong descendants — chỉ folder render khi store đổi */
+/** Hook: count selected trong descendants ΓÇö chß╗ë folder render khi store ─æß╗òi */
 function useFolderCount(allDescendants: string[]): { checked: number; total: number } {
   const store = useContext(SelectionContext);
   if (!store) throw new Error('SelectionContext missing');
@@ -225,9 +225,9 @@ function useFolderCount(allDescendants: string[]): { checked: number; total: num
 }
 
 /**
- * Restore selection từ paths cũ:
- *   - Có overlap với paths mới → giữ overlap
- *   - Không overlap → select all (lần đầu hoặc folder khác hoàn toàn)
+ * Restore selection tß╗½ paths c┼⌐:
+ *   - C├│ overlap vß╗¢i paths mß╗¢i ΓåÆ giß╗» overlap
+ *   - Kh├┤ng overlap ΓåÆ select all (lß║ºn ─æß║ºu hoß║╖c folder kh├íc ho├án to├án)
  */
 function restoreSelection(currentPaths: string[], previousPaths: string[]): string[] {
   if (previousPaths.length === 0) return currentPaths;
@@ -243,7 +243,7 @@ async function buildTree(paths: string[]): Promise<TreeNode> {
   map.set('', root);
 
   for (let idx = 0; idx < paths.length; idx++) {
-    // Yield mỗi 1000 paths để main thread không block
+    // Yield mß╗ùi 1000 paths ─æß╗â main thread kh├┤ng block
     if (idx % 1000 === 0 && idx > 0) {
       await new Promise((r) => setTimeout(r, 0));
     }
@@ -274,7 +274,7 @@ async function buildTree(paths: string[]): Promise<TreeNode> {
     }
   }
 
-  // Tính fileCount + descendantPaths đệ quy + sort folder trước file
+  // T├¡nh fileCount + descendantPaths ─æß╗ç quy + sort folder tr╞░ß╗¢c file
   function compute(node: TreeNode): number {
     if (!node.isFolder) {
       node.fileCount = 1;
@@ -289,7 +289,7 @@ async function buildTree(paths: string[]): Promise<TreeNode> {
     }
     node.fileCount = total;
     node.descendantPaths = allPaths;
-    // Sort: folder trước, sau đó alphabet
+    // Sort: folder tr╞░ß╗¢c, sau ─æ├│ alphabet
     node.children.sort((a, b) => {
       if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
       return a.name.localeCompare(b.name);
@@ -304,14 +304,14 @@ async function buildTree(paths: string[]): Promise<TreeNode> {
 // PackPanel
 // ============================================================
 export default function PackPanel() {
-  // File objects giữ trong ref — KHÔNG vào state
+  // File objects giß╗» trong ref ΓÇö KH├öNG v├áo state
   const filesRef = useRef<{ file: File; path: string }[]>([]);
 
-  // State chỉ chứa data nhẹ
+  // State chß╗ë chß╗⌐a data nhß║╣
   const [tree, setTree] = useState<TreeNode | null>(null);
 
-  // Selection store — không qua React state để tránh re-render toàn cây.
-  // Persist qua localStorage: load 1 lần lúc mount, save khi store đổi.
+  // Selection store ΓÇö kh├┤ng qua React state ─æß╗â tr├ính re-render to├án c├óy.
+  // Persist qua localStorage: load 1 lß║ºn l├║c mount, save khi store ─æß╗òi.
   const selectionStore = useMemo(() => {
     let initial: string[] = [];
     try {
@@ -321,7 +321,7 @@ export default function PackPanel() {
     return new SelectionStore(Array.isArray(initial) ? initial : []);
   }, []);
 
-  // Persist khi store đổi (debounce 200ms để không spam localStorage khi tick nhanh)
+  // Persist khi store ─æß╗òi (debounce 200ms ─æß╗â kh├┤ng spam localStorage khi tick nhanh)
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
     return selectionStore.subscribeAll(() => {
@@ -352,16 +352,26 @@ export default function PackPanel() {
   const [isPacking, setIsPacking] = useState(false);
   const [progress, setProgress] = useState<{ current: number; total: number; path: string } | null>(null);
   const [parts, setParts] = useState<PackPart[]>([]);
-  // Loading indicator cho các thao tác nặng (scan, toggle, zip)
+  // Loading indicator cho c├íc thao t├íc nß║╖ng (scan, toggle, zip)
   const [busyMessage, setBusyMessage] = useState<string | null>(null);
+  // Save-to-source state ΓÇö persist qua c├íc lß║ºn click ─æß╗â resume phß║ºn fail.
+  // packId d├╣ng chung giß╗»a lß║ºn ─æß║ºu + lß║ºn retry ΓåÆ kh├┤ng tß║ío dupe khi user click "L╞░u tiß║┐p".
+  const [saveState, setSaveState] = useState<{
+    isSaving: boolean;
+    packId: string | null;
+    savedIndices: number[]; // d├╣ng array cho stable identity (Set g├óy re-render infinite)
+    failedIndices: number[];
+    saved: number;
+    total: number;
+  }>({ isSaving: false, packId: null, savedIndices: [], failedIndices: [], saved: 0, total: 0 });
   const logIdRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const progressRef = useRef<HTMLDivElement>(null);
 
-  // Progress hiển thị (smooth animated). Khác với `progress.current` là raw value.
+  // Progress hiß╗ân thß╗ï (smooth animated). Kh├íc vß╗¢i `progress.current` l├á raw value.
   const [displayProgress, setDisplayProgress] = useState(0);
 
-  // Tween displayProgress về `progress.current` mỗi animation frame
+  // Tween displayProgress vß╗ü `progress.current` mß╗ùi animation frame
   useEffect(() => {
     if (!progress || progress.total === 0) {
       setDisplayProgress(0);
@@ -373,7 +383,7 @@ export default function PackPanel() {
       setDisplayProgress((current) => {
         const diff = target - current;
         if (Math.abs(diff) < 0.1) return target;
-        // Ease: di chuyển 8% khoảng cách mỗi frame → mượt + đuổi kịp
+        // Ease: di chuyß╗ân 8% khoß║úng c├ích mß╗ùi frame ΓåÆ m╞░ß╗út + ─æuß╗òi kß╗ïp
         return current + diff * 0.08;
       });
       raf = requestAnimationFrame(tick);
@@ -396,15 +406,16 @@ export default function PackPanel() {
     setLogs([]);
     setParts([]);
     setIsPacking(false);
+    setSaveState({ isSaving: false, packId: null, savedIndices: [], failedIndices: [], saved: 0, total: 0 });
     if (inputRef.current) inputRef.current.value = '';
   }
 
   // ============================================================
-  // Download all parts as 1 ZIP (chứa nhiều .txt files)
+  // Download all parts as 1 ZIP (chß╗⌐a nhiß╗üu .txt files)
   // ============================================================
   async function handleDownloadAllAsZip(parts: PackPart[]) {
     if (parts.length === 0) return;
-    setBusyMessage(`Đang tạo ZIP với ${parts.length} part...`);
+    setBusyMessage(`─Éang tß║ío ZIP vß╗¢i ${parts.length} part...`);
     await new Promise((r) => setTimeout(r, 0));
     try {
       // Lazy import JSZip
@@ -423,25 +434,25 @@ export default function PackPanel() {
       const blob = await zip.generateAsync({
         type: 'blob',
         compression: 'DEFLATE',
-        compressionOptions: { level: 3 }, // level thấp = nén nhanh, ít block CPU
+        compressionOptions: { level: 3 }, // level thß║Ñp = n├⌐n nhanh, ├¡t block CPU
       });
 
       downloadBlob(blob, 'project-packed.zip');
-      toast.success(`Đã tải ZIP (${(blob.size / 1024).toFixed(1)} KB)`);
-      // Hiển thị thông báo reload, sau 1.5s reload page
-      setBusyMessage('Đã tải xong. Đang reload để clear cache...');
+      toast.success(`─É├ú tß║úi ZIP (${(blob.size / 1024).toFixed(1)} KB)`);
+      // Hiß╗ân thß╗ï th├┤ng b├ío reload, sau 1.5s reload page
+      setBusyMessage('─É├ú tß║úi xong. ─Éang reload ─æß╗â clear cache...');
       setTimeout(() => {
         window.location.reload();
       }, 1500);
-      return; // KHÔNG vào finally để giữ busyMessage tới khi reload
+      return; // KH├öNG v├áo finally ─æß╗â giß╗» busyMessage tß╗¢i khi reload
     } catch (e) {
-      toast.error('Không tạo được ZIP');
-      log(`Lỗi tạo ZIP: ${String(e)}`, 'error');
+      toast.error('Kh├┤ng tß║ío ─æ╞░ß╗úc ZIP');
+      log(`Lß╗ùi tß║ío ZIP: ${String(e)}`, 'error');
       setBusyMessage(null);
     }
   }
 
-  // Download mỗi part thành file .txt riêng (loop downloadBlob)
+  // Download mß╗ùi part th├ánh file .txt ri├¬ng (loop downloadBlob)
   function handleDownloadAllAsTxt(parts: PackPart[]) {
     const padLen = String(parts.length).length;
     for (const part of parts) {
@@ -452,65 +463,216 @@ export default function PackPanel() {
       const blob = new Blob([part.content], { type: 'text/plain' });
       downloadBlob(blob, filename);
     }
-    toast.success(`Đã tải ${parts.length} file .txt`);
-    setBusyMessage('Đã tải xong. Đang reload để clear cache...');
+    toast.success(`─É├ú tß║úi ${parts.length} file .txt`);
+    setBusyMessage('─É├ú tß║úi xong. ─Éang reload ─æß╗â clear cache...');
     setTimeout(() => window.location.reload(), 1500);
   }
 
   // ============================================================
-  // Lưu tất cả parts vào Source (mỗi part = 1 source riêng)
+  // L╞░u tß║Ñt cß║ú parts v├áo Source (mß╗ùi part = 1 source ri├¬ng)
+  //
+  // Idempotency:
+  //  - packId + partIndex l├á identity duy nhß║Ñt, tag l╞░u trong `tags` field.
+  //  - Tr╞░ß╗¢c khi retry (attempt >= 1), verify vß╗¢i server: GET /notes ΓåÆ filter
+  //    theo pack-id ΓåÆ parse part index tß╗½ tag "part:N/M" ΓåÆ mark nhß╗»ng part
+  //    ─æ├ú c├│ tr├¬n server l├á saved. Xß╗¡ l├╜ case AbortError-nh╞░ng-server-─æ├ú-tß║ío
+  //    (timeout 45s vß║½n c├│ thß╗â xß║úy ra vß╗¢i MockAPI free tier).
+  //
+  // Resume:
+  //  - Khi user click lß║ºn 2 m├á saveState c├▓n failedIndices ΓåÆ reuse packId c┼⌐,
+  //    chß╗ë POST index ch╞░a done. Kh├┤ng tß║ío pack mß╗¢i.
+  //  - Khi ho├án th├ánh 100% ΓåÆ set failedIndices=[] ─æß╗â lß║ºn click sau (nß║┐u c├│
+  //    parts mß╗¢i) lß║íi l├á save mß╗¢i.
+  //
+  // Timeout: 45s (MockAPI free tier P99 latency ~20-30s).
   // ============================================================
   async function handleSaveToSource(parts: PackPart[]) {
-    if (parts.length === 0) return;
+    if (parts.length === 0 || saveState.isSaving) return;
 
-    log(`Bắt đầu lưu ${parts.length} part vào Source...`);
+    const { fetchJson } = await import('@/api/client');
+    const { API } = await import('@/lib/config');
+    const now = new Date().toISOString();
+
+    // Resume: nß║┐u c├│ packId + savedIndices tß╗½ lß║ºn tr╞░ß╗¢c cho c├╣ng bß╗Ö parts
+    //         (sß╗æ l╞░ß╗úng part khß╗¢p) ΓåÆ chß╗ë save phß║ºn thiß║┐u.
+    const isResume =
+      saveState.packId !== null &&
+      saveState.total === parts.length &&
+      saveState.failedIndices.length > 0;
+
+    const packId = isResume
+      ? saveState.packId!
+      : `pack_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+    const baseTitle = `Project Packed - ${new Date().toLocaleString('vi-VN')}`;
+
+    let savedSet = new Set<number>(isResume ? saveState.savedIndices : []);
+    let pendingIndices: number[] = isResume
+      ? [...saveState.failedIndices]
+      : parts.map((_, i) => i);
+
+    setSaveState({
+      isSaving: true,
+      packId,
+      savedIndices: [...savedSet],
+      failedIndices: [],
+      saved: savedSet.size,
+      total: parts.length,
+    });
+
+    if (isResume) {
+      log(`Resume l╞░u Source: c├▓n ${pendingIndices.length}/${parts.length} part`, 'info');
+    } else {
+      log(`Bß║»t ─æß║ºu l╞░u ${parts.length} part v├áo Source...`);
+    }
+
+    const TIMEOUT_MS = 45_000;
+    const MAX_RETRIES = 2;
+
+    // Helper: verify vß╗¢i server nhß╗»ng index n├áo thß╗▒c sß╗▒ ─æ├ú l╞░u (dedupe).
+    async function verifyServer(): Promise<void> {
+      try {
+        const raw = await fetchJson<unknown[]>(API.NOTES);
+        const foundIndices = new Set<number>();
+        for (const item of Array.isArray(raw) ? raw : []) {
+          const tags =
+            item && typeof item === 'object' && 'tags' in item
+              ? (item as { tags?: unknown }).tags
+              : null;
+          if (typeof tags !== 'string') continue;
+          if (!tags.includes(`pack-id:${packId}`)) continue;
+          const m = tags.match(/part:(\d+)\//);
+          if (m) foundIndices.add(parseInt(m[1], 10) - 1);
+        }
+        // Merge v├áo savedSet
+        let newlyFound = 0;
+        for (const idx of foundIndices) {
+          if (!savedSet.has(idx)) {
+            savedSet.add(idx);
+            newlyFound++;
+          }
+        }
+        if (newlyFound > 0) {
+          log(`Verify server: ${newlyFound} part thß╗▒c ra ─æ├ú l╞░u (skip dupe)`, 'info');
+        }
+        pendingIndices = pendingIndices.filter((i) => !savedSet.has(i));
+        setSaveState((s) => ({
+          ...s,
+          savedIndices: [...savedSet],
+          saved: savedSet.size,
+        }));
+      } catch (e) {
+        log(`Verify server fail: ${String(e)} ΓÇö vß║½n retry b├¼nh th╞░ß╗¥ng`, 'warning');
+      }
+    }
+
+    // Nß║┐u resume: verify tr╞░ß╗¢c ─æß╗â tß║¡n dß╗Ñng th├¬m nhß╗»ng part ─æ├ú l╞░u ngß║ºm
+    // (case user F5 giß╗»a chß╗½ng, hoß║╖c pass ─æß║ºu bß╗ï timeout nh╞░ng server nhß║¡n).
+    if (isResume) {
+      await verifyServer();
+    }
 
     try {
-      const { workspaceInsert } = await import('@/lib/workspace/client');
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        if (pendingIndices.length === 0) break;
 
-      // Tạo pack ID chung cho tất cả parts (để sau này group lại)
-      const packId = `pack_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-      const baseTitle = `Project Packed - ${new Date().toLocaleString('vi-VN')}`;
-
-      let successCount = 0;
-
-      for (let i = 0; i < parts.length; i++) {
-        const part = parts[i];
-        try {
-          await workspaceInsert('notes', {
-            title: parts.length === 1 ? baseTitle : `${baseTitle} (${i + 1}/${parts.length})`,
-            content: part.content,
-            type: 'source',
-            tags: `packed, pack-id:${packId}, part:${i + 1}/${parts.length}, ${selectedFileCount} files`,
-            source: 'project-packer',
-          });
-          successCount++;
-          log(`✓ Đã lưu part ${i + 1}/${parts.length}`, 'success');
-        } catch (e) {
-          log(`✗ Lỗi lưu part ${i + 1}: ${String(e)}`, 'error');
+        if (attempt > 0) {
+          log(`Retry lß║ºn ${attempt}: ${pendingIndices.length} part ch╞░a l╞░u ─æ╞░ß╗úc...`, 'warning');
+          // Verify tr╞░ß╗¢c retry: c├│ thß╗â part fail lß║ºn tr╞░ß╗¢c l├á AbortError nh╞░ng
+          // server thß╗▒c sß╗▒ ─æ├ú tß║ío ΓåÆ kh├┤ng cß║ºn POST lß║íi.
+          await verifyServer();
+          if (pendingIndices.length === 0) break;
+          await new Promise((r) => setTimeout(r, 2000));
         }
 
-        // Yield để tránh spam API quá nhanh
-        if (i < parts.length - 1) {
-          await new Promise((r) => setTimeout(r, 100));
+        const stillFailed: number[] = [];
+
+        for (const i of pendingIndices) {
+          const part = parts[i];
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+            await fetchJson(API.NOTES, {
+              method: 'POST',
+              signal: controller.signal,
+              body: JSON.stringify({
+                type: 'source',
+                title: parts.length === 1 ? baseTitle : `${baseTitle} (${i + 1}/${parts.length})`,
+                content: part.content,
+                tags: `packed, pack-id:${packId}, part:${i + 1}/${parts.length}, ${selectedFileCount} files`,
+                source: 'project-packer',
+                createdAt: now,
+                updatedAt: now,
+              }),
+            });
+            clearTimeout(timeout);
+            savedSet.add(i);
+            log(`Γ£ô ─É├ú l╞░u part ${i + 1}/${parts.length}`, 'success');
+            setSaveState((s) => ({
+              ...s,
+              savedIndices: [...savedSet],
+              saved: savedSet.size,
+            }));
+          } catch (e) {
+            stillFailed.push(i);
+            if (attempt === MAX_RETRIES) {
+              log(`Γ£ù Part ${i + 1} fail sau ${MAX_RETRIES + 1} lß║ºn: ${String(e)}`, 'error');
+            }
+          }
+
+          // Delay 300ms giß╗»a mß╗ùi request (MockAPI rate limit ~100 req/min)
+          await new Promise((r) => setTimeout(r, 300));
         }
+
+        pendingIndices = stillFailed;
       }
+
+      // Verify lß║ºn cuß╗æi tr╞░ß╗¢c khi b├ío fail ΓÇö bß║»t case last-attempt c┼⌐ng abort
+      // nh╞░ng server ─æ├ú tß║ío.
+      if (pendingIndices.length > 0) {
+        await verifyServer();
+      }
+
+      const successCount = savedSet.size;
+      const finalFailed = pendingIndices;
+
+      setSaveState({
+        isSaving: false,
+        packId,
+        savedIndices: [...savedSet],
+        failedIndices: finalFailed,
+        saved: successCount,
+        total: parts.length,
+      });
 
       if (successCount === parts.length) {
-        log(`✓ Hoàn tất! Đã lưu ${parts.length} part vào Source`, 'success');
-        toast.success(`Đã lưu ${parts.length} part vào Source! Vào trang Sources để download.`);
+        log(`Γ£ô Ho├án tß║Ñt! ─É├ú l╞░u ${parts.length} part v├áo Source`, 'success');
+        toast.success(`─É├ú l╞░u ${parts.length} part v├áo Source. V├áo trang Sources ─æß╗â download.`);
+      } else if (successCount > 0) {
+        const missingParts = finalFailed.map((i) => i + 1).join(',');
+        log(`ΓÜá L╞░u ${successCount}/${parts.length} part. Thiß║┐u part: ${missingParts}`, 'warning');
+        toast.warning(
+          `L╞░u ${successCount}/${parts.length} part. Click "L╞░u tiß║┐p ${finalFailed.length} part c├▓n thiß║┐u" ─æß╗â retry.`,
+        );
       } else {
-        log(`⚠ Chỉ lưu được ${successCount}/${parts.length} part`, 'warning');
-        toast.warning(`Chỉ lưu được ${successCount}/${parts.length} part`);
+        log(`Γ£ù Kh├┤ng l╞░u ─æ╞░ß╗úc part n├áo`, 'error');
+        toast.error('Kh├┤ng l╞░u ─æ╞░ß╗úc v├áo Source. Kiß╗âm tra kß║┐t nß╗æi mß║íng.');
       }
     } catch (e) {
-      toast.error('Không lưu được vào Source');
-      log(`Lỗi save to source: ${String(e)}`, 'error');
+      setSaveState((s) => ({
+        ...s,
+        isSaving: false,
+        savedIndices: [...savedSet],
+        failedIndices: pendingIndices,
+        saved: savedSet.size,
+      }));
+      toast.error('Kh├┤ng l╞░u ─æ╞░ß╗úc v├áo Source');
+      log(`Lß╗ùi save to source: ${String(e)}`, 'error');
     }
   }
 
   // ============================================================
-  // Folder input — scan tên, build tree, KHÔNG đọc content
+  // Folder input ΓÇö scan t├¬n, build tree, KH├öNG ─æß╗ìc content
   // ============================================================
   async function handleFolderInput(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -519,8 +681,8 @@ export default function PackPanel() {
       return;
     }
 
-    setBusyMessage(`Đang xử lý ${files.length.toLocaleString('vi-VN')} file...`);
-    // Yield để UI render busy message trước khi block
+    setBusyMessage(`─Éang xß╗¡ l├╜ ${files.length.toLocaleString('vi-VN')} file...`);
+    // Yield ─æß╗â UI render busy message tr╞░ß╗¢c khi block
     await new Promise((r) => setTimeout(r, 0));
 
     // Filter hidden folders
@@ -531,17 +693,17 @@ export default function PackPanel() {
         return !parts.some((p) => HIDDEN_FOLDERS.has(p));
       });
 
-    // Lưu File[] vào ref (KHÔNG vào state)
+    // L╞░u File[] v├áo ref (KH├öNG v├áo state)
     filesRef.current = filtered;
 
-    // Build tree (chỉ paths) — async, yield mỗi 1000 paths
+    // Build tree (chß╗ë paths) ΓÇö async, yield mß╗ùi 1000 paths
     const paths = filtered.map((f) => f.path);
     const newTree = await buildTree(paths);
 
-    // Auto-select tất cả paths. Tách 2 setState bằng yield để React render mượt.
+    // Auto-select tß║Ñt cß║ú paths. T├ích 2 setState bß║▒ng yield ─æß╗â React render m╞░ß╗út.
     setTree(newTree);
     await new Promise((r) => setTimeout(r, 0));
-    // Restore selection từ localStorage nếu có overlap, không thì select all
+    // Restore selection tß╗½ localStorage nß║┐u c├│ overlap, kh├┤ng th├¼ select all
     const previousPaths = selectionStore.getAll();
     const restored = restoreSelection(paths, previousPaths);
     selectionStore.replace(restored);
@@ -550,8 +712,8 @@ export default function PackPanel() {
       id: ++logIdRef.current,
       message:
         restored.length === paths.length
-          ? `Đã quét ${filtered.length} file (chọn tất cả)`
-          : `Đã quét ${filtered.length} file (restore ${restored.length}/${paths.length} file đã chọn trước)`,
+          ? `─É├ú qu├⌐t ${filtered.length} file (chß╗ìn tß║Ñt cß║ú)`
+          : `─É├ú qu├⌐t ${filtered.length} file (restore ${restored.length}/${paths.length} file ─æ├ú chß╗ìn tr╞░ß╗¢c)`,
       type: 'info',
       timestamp: new Date(),
     }]);
@@ -559,21 +721,23 @@ export default function PackPanel() {
   }
 
   // ============================================================
-  // Pack — đọc content files đã chọn
+  // Pack ΓÇö ─æß╗ìc content files ─æ├ú chß╗ìn
   // ============================================================
   async function handlePack() {
     setIsPacking(true);
     setParts([]);
     setLogs([]);
     setProgress({ current: 0, total: 0, path: '' });
+    // Pack mß╗¢i ΓåÆ clear save state c┼⌐ (packId c┼⌐ kh├┤ng c├▓n valid)
+    setSaveState({ isSaving: false, packId: null, savedIndices: [], failedIndices: [], saved: 0, total: 0 });
 
-    // Scroll tới progress bar sau khi DOM render
+    // Scroll tß╗¢i progress bar sau khi DOM render
     requestAnimationFrame(() => {
       progressRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
 
-    // Lấy file từ ref, lọc theo selection + filter.
-    // Detect root prefix (nếu có): tất cả path cùng share segment đầu thì đó là root.
+    // Lß║Ñy file tß╗½ ref, lß╗ìc theo selection + filter.
+    // Detect root prefix (nß║┐u c├│): tß║Ñt cß║ú path c├╣ng share segment ─æß║ºu th├¼ ─æ├│ l├á root.
     const sample = filesRef.current[0]?.path ?? '';
     const firstSegment = sample.split('/')[0];
     const hasRootPrefix =
@@ -583,16 +747,16 @@ export default function PackPanel() {
     const stripRoot = (path: string): string =>
       hasRootPrefix ? path.split('/').slice(1).join('/') : path;
 
-    // Log chi tiết file bị filter để user biết tại sao bị loại.
+    // Log chi tiß║┐t file bß╗ï filter ─æß╗â user biß║┐t tß║íi sao bß╗ï loß║íi.
     const filteredOut: { path: string; reason: string }[] = [];
     const toRead = filesRef.current.filter((f) => {
       if (!selectionStore.has(f.path)) return false;
       const relativePath = stripRoot(f.path);
       const filename = relativePath.split('/').pop() ?? '';
 
-      // Whitelist file lớn (package-lock.json) — bypass exclude pattern.
-      // Lý do: user có thể có options cũ trong localStorage exclude file này.
-      // Packer đã tự chunk được nên không cần exclude nữa.
+      // Whitelist file lß╗¢n (package-lock.json) ΓÇö bypass exclude pattern.
+      // L├╜ do: user c├│ thß╗â c├│ options c┼⌐ trong localStorage exclude file n├áy.
+      // Packer ─æ├ú tß╗▒ chunk ─æ╞░ß╗úc n├¬n kh├┤ng cß║ºn exclude nß╗»a.
       const isWhitelisted = LARGE_FILE_WHITELIST.has(filename);
 
       if (!isWhitelisted && isExcluded(relativePath, options.excludePatterns)) {
@@ -600,59 +764,59 @@ export default function PackPanel() {
         return false;
       }
       if (!isExtensionAllowed(relativePath, options.includeExtensions)) {
-        filteredOut.push({ path: f.path, reason: 'extension không trong include list' });
+        filteredOut.push({ path: f.path, reason: 'extension kh├┤ng trong include list' });
         return false;
       }
       return true;
     });
 
-    // Log file bị filter (giới hạn 30 dòng để không spam)
+    // Log file bß╗ï filter (giß╗¢i hß║ín 30 d├▓ng ─æß╗â kh├┤ng spam)
     if (filteredOut.length > 0) {
-      log(`Filter: ${filteredOut.length} file bị loại (xem chi tiết bên dưới)`, 'warning');
+      log(`Filter: ${filteredOut.length} file bß╗ï loß║íi (xem chi tiß║┐t b├¬n d╞░ß╗¢i)`, 'warning');
       for (const f of filteredOut.slice(0, 30)) {
-        log(`  ✗ ${f.path} — ${f.reason}`, 'warning');
+        log(`  Γ£ù ${f.path} ΓÇö ${f.reason}`, 'warning');
       }
       if (filteredOut.length > 30) {
-        log(`  ... và ${filteredOut.length - 30} file khác`, 'warning');
+        log(`  ... v├á ${filteredOut.length - 30} file kh├íc`, 'warning');
       }
     }
 
     setProgress({ current: 0, total: toRead.length, path: '' });
-    log(`Bắt đầu đọc ${toRead.length} file...`);
+    log(`Bß║»t ─æß║ºu ─æß╗ìc ${toRead.length} file...`);
 
     const { files: packedFiles, failed } = await readFiles(
       toRead.map((f) => ({ file: f.file, path: stripRoot(f.path) })),
       (p) => {
         setProgress({ current: p.current, total: p.total, path: p.currentPath });
         if (p.current % 50 === 0 || p.current === p.total) {
-          log(`Đọc ${p.current}/${p.total}: ${p.currentPath}`);
+          log(`─Éß╗ìc ${p.current}/${p.total}: ${p.currentPath}`);
         }
       },
     );
 
     for (const f of failed.slice(0, 20)) {
-      log(`Bỏ qua: ${f.path} (${f.reason})`, 'warning');
+      log(`Bß╗Å qua: ${f.path} (${f.reason})`, 'warning');
     }
-    if (failed.length > 20) log(`... và ${failed.length - 20} file khác bị bỏ qua`, 'warning');
+    if (failed.length > 20) log(`... v├á ${failed.length - 20} file kh├íc bß╗ï bß╗Å qua`, 'warning');
 
     if (packedFiles.length === 0) {
-      log('Không đọc được file nào!', 'error');
+      log('Kh├┤ng ─æß╗ìc ─æ╞░ß╗úc file n├áo!', 'error');
       setIsPacking(false);
       setProgress(null);
       return;
     }
 
-    log(`Đã đọc ${packedFiles.length} file. Đang chia parts...`);
-    setProgress({ current: packedFiles.length, total: packedFiles.length, path: 'Đang chia parts...' });
+    log(`─É├ú ─æß╗ìc ${packedFiles.length} file. ─Éang chia parts...`);
+    setProgress({ current: packedFiles.length, total: packedFiles.length, path: '─Éang chia parts...' });
     const result = await packFiles(packedFiles, options);
-    log(`✓ Xong! ${result.length} part`, 'success');
+    log(`Γ£ô Xong! ${result.length} part`, 'success');
 
     setParts(result);
     setIsPacking(false);
     setProgress(null);
   }
 
-  // Đếm file đã chọn (chỉ file, không folder paths)
+  // ─Éß║┐m file ─æ├ú chß╗ìn (chß╗ë file, kh├┤ng folder paths)
   const selectedFileCount = useMemo(() => {
     if (!tree) return 0;
     let count = 0;
@@ -667,7 +831,7 @@ export default function PackPanel() {
 
   return (
     <div className="space-y-3">
-      {/* Loading overlay khi xử lý nặng */}
+      {/* Loading overlay khi xß╗¡ l├╜ nß║╖ng */}
       {busyMessage && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="flex items-center gap-3 border border-border bg-card px-6 py-4 shadow-lg">
@@ -680,23 +844,23 @@ export default function PackPanel() {
       {!tree && (
         <div
           onClick={() => {
-            // Hiển thị busy ngay vì browser sẽ block UI khi scan folder lớn
-            setBusyMessage('Đang mở dialog chọn folder...');
+            // Hiß╗ân thß╗ï busy ngay v├¼ browser sß║╜ block UI khi scan folder lß╗¢n
+            setBusyMessage('─Éang mß╗ƒ dialog chß╗ìn folder...');
             const input = inputRef.current;
             if (!input) return;
 
-            // Detect cancel/đóng dialog để clear busyMessage.
-            // - `cancel` event: modern browser fire khi user đóng dialog không chọn
-            //   (Chromium 113+, Firefox 91+). Không fire khi user chọn folder.
-            // - `focus` fallback: dialog đóng → focus về window. Onchange của
-            //   input sẽ fire TRƯỚC focus nên check `files.length` để biết user
-            //   thực sự chọn hay cancel.
+            // Detect cancel/─æ├│ng dialog ─æß╗â clear busyMessage.
+            // - `cancel` event: modern browser fire khi user ─æ├│ng dialog kh├┤ng chß╗ìn
+            //   (Chromium 113+, Firefox 91+). Kh├┤ng fire khi user chß╗ìn folder.
+            // - `focus` fallback: dialog ─æ├│ng ΓåÆ focus vß╗ü window. Onchange cß╗ºa
+            //   input sß║╜ fire TR╞»ß╗ÜC focus n├¬n check `files.length` ─æß╗â biß║┐t user
+            //   thß╗▒c sß╗▒ chß╗ìn hay cancel.
             const clearIfNoFiles = () => {
-              // Yield 1 tick để onChange (nếu có) chạy trước
+              // Yield 1 tick ─æß╗â onChange (nß║┐u c├│) chß║íy tr╞░ß╗¢c
               setTimeout(() => {
                 if ((input.files?.length ?? 0) === 0) {
                   setBusyMessage((m) =>
-                    m === 'Đang mở dialog chọn folder...' ? null : m,
+                    m === '─Éang mß╗ƒ dialog chß╗ìn folder...' ? null : m,
                   );
                 }
               }, 0);
@@ -718,7 +882,7 @@ export default function PackPanel() {
           onDrop={async (e) => {
             e.preventDefault();
             e.currentTarget.classList.remove('border-primary', 'bg-popover');
-            setBusyMessage('Đang quét thư mục...');
+            setBusyMessage('─Éang qu├⌐t th╞░ mß╗Ñc...');
             await new Promise((r) => setTimeout(r, 0));
             const items = Array.from(e.dataTransfer.items);
             const collected: { file: File; path: string }[] = [];
@@ -740,8 +904,8 @@ export default function PackPanel() {
                 id: ++logIdRef.current,
                 message:
                   restored.length === paths.length
-                    ? `Đã quét ${collected.length} file (drag-drop, chọn tất cả)`
-                    : `Đã quét ${collected.length} file (restore ${restored.length}/${paths.length})`,
+                    ? `─É├ú qu├⌐t ${collected.length} file (drag-drop, chß╗ìn tß║Ñt cß║ú)`
+                    : `─É├ú qu├⌐t ${collected.length} file (restore ${restored.length}/${paths.length})`,
                 type: 'info',
                 timestamp: new Date(),
               }]);
@@ -751,12 +915,12 @@ export default function PackPanel() {
           className="flex cursor-pointer flex-col items-center justify-center border-2 border-dashed border-border bg-card py-10 text-center transition-colors hover:border-primary hover:bg-popover"
         >
           <FolderOpen className="mb-2 h-8 w-8 text-primary" />
-          <p className="text-sm font-medium text-foreground">Kéo-thả thư mục vào đây</p>
+          <p className="text-sm font-medium text-foreground">K├⌐o-thß║ú th╞░ mß╗Ñc v├áo ─æ├óy</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Hoặc click để chọn (kéo-thả nhanh hơn, không bị lag với project lớn)
+            Hoß║╖c click ─æß╗â chß╗ìn (k├⌐o-thß║ú nhanh h╞ín, kh├┤ng bß╗ï lag vß╗¢i project lß╗¢n)
           </p>
           <p className="mt-2 text-[10px] text-warning/80">
-            Click chọn folder có thể lag nếu project lớn
+            Click chß╗ìn folder c├│ thß╗â lag nß║┐u project lß╗¢n
           </p>
           <input
             ref={inputRef}
@@ -779,12 +943,12 @@ export default function PackPanel() {
           <div className="border border-border bg-card">
             <div className="flex items-center justify-between border-b border-border bg-muted px-3 py-2">
               <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                Cây thư mục — {selectedFileCount}/{tree.fileCount} file đã chọn
+                C├óy th╞░ mß╗Ñc ΓÇö {selectedFileCount}/{tree.fileCount} file ─æ├ú chß╗ìn
               </span>
               <div className="flex gap-2">
                 <button
                   onClick={async () => {
-                    setBusyMessage('Đang chọn tất cả...');
+                    setBusyMessage('─Éang chß╗ìn tß║Ñt cß║ú...');
                     await new Promise((r) => setTimeout(r, 0));
                     const all: string[] = [];
                     function collect(node: TreeNode) {
@@ -797,18 +961,18 @@ export default function PackPanel() {
                   }}
                   className="text-xs text-primary hover:underline"
                 >
-                  Chọn tất cả
+                  Chß╗ìn tß║Ñt cß║ú
                 </button>
                 <button
                   onClick={async () => {
-                    setBusyMessage('Đang bỏ chọn...');
+                    setBusyMessage('─Éang bß╗Å chß╗ìn...');
                     await new Promise((r) => setTimeout(r, 0));
                     selectionStore.clear();
                     setBusyMessage(null);
                   }}
                   className="text-xs text-muted-foreground hover:underline"
                 >
-                  Bỏ chọn
+                  Bß╗Å chß╗ìn
                 </button>
               </div>
             </div>
@@ -829,7 +993,7 @@ export default function PackPanel() {
 
           <div className="flex items-center justify-between border border-border bg-card px-3 py-2 text-xs">
             <span className="text-muted-foreground">
-              {selectedFileCount} file sẽ được pack
+              {selectedFileCount} file sß║╜ ─æ╞░ß╗úc pack
             </span>
             <div className="flex gap-2">
               <Button variant="outline" size="sm" onClick={reset} className="gap-1.5">
@@ -847,19 +1011,19 @@ export default function PackPanel() {
                 ) : (
                   <Package className="h-3 w-3" />
                 )}
-                {isPacking ? 'Đang pack...' : 'Pack'}
+                {isPacking ? '─Éang pack...' : 'Pack'}
               </Button>
             </div>
           </div>
 
           <TerminalLog logs={logs} />
 
-          {/* Progress bar khi đang pack */}
+          {/* Progress bar khi ─æang pack */}
           {isPacking && progress && (
             <div ref={progressRef} className="border border-border bg-card p-3 space-y-2">
               <div className="flex items-center justify-between text-xs">
                 <span className="font-medium text-foreground">
-                  {progress.total > 0 ? `${progress.current}/${progress.total} file` : 'Đang chuẩn bị...'}
+                  {progress.total > 0 ? `${progress.current}/${progress.total} file` : '─Éang chuß║⌐n bß╗ï...'}
                 </span>
                 <span className="text-primary font-mono">
                   {progress.total > 0 ? `${Math.round((progress.current / progress.total) * 100)}%` : ''}
@@ -875,7 +1039,7 @@ export default function PackPanel() {
               </div>
               {progress.path && (
                 <p className="truncate text-[10px] text-muted-foreground font-mono">
-                  → {progress.path}
+                  ΓåÆ {progress.path}
                 </p>
               )}
             </div>
@@ -885,19 +1049,30 @@ export default function PackPanel() {
             <div className="space-y-3">
               <div className="flex items-center justify-between border border-border bg-card px-3 py-2 text-xs">
                 <span>
-                  Output: <span className="font-semibold">{parts.length}</span> part ·{' '}
-                  Tổng <span className="font-semibold">
+                  Output: <span className="font-semibold">{parts.length}</span> part ┬╖{' '}
+                  Tß╗òng <span className="font-semibold">
                     {parts.reduce((s, p) => s + p.charCount, 0).toLocaleString('vi-VN')}
-                  </span> ký tự
+                  </span> k├╜ tß╗▒
                 </span>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
                     onClick={() => handleSaveToSource(parts)}
+                    disabled={saveState.isSaving}
                     className="h-7 gap-1.5 px-2 text-xs"
                   >
-                    <Package className="h-3 w-3" />
-                    Lưu vào Source
+                    {saveState.isSaving ? (
+                      <PackerLoadingSpinner size="sm" />
+                    ) : (
+                      <Package className="h-3 w-3" />
+                    )}
+                    {saveState.isSaving
+                      ? `─Éang l╞░u ${saveState.saved}/${saveState.total}...`
+                      : saveState.failedIndices.length > 0
+                        ? `L╞░u tiß║┐p ${saveState.failedIndices.length} part c├▓n thiß║┐u`
+                        : saveState.saved === parts.length && saveState.saved > 0
+                          ? `─É├ú l╞░u ${saveState.saved}/${parts.length}`
+                          : 'L╞░u v├áo Source'}
                   </Button>
                   <Button
                     size="sm"
@@ -905,7 +1080,7 @@ export default function PackPanel() {
                     className="h-7 gap-1.5 px-2 text-xs"
                   >
                     <Archive className="h-3 w-3" />
-                    Tải ZIP ({parts.length} parts)
+                    Tß║úi ZIP ({parts.length} parts)
                   </Button>
                   <Button
                     variant="outline"
@@ -914,10 +1089,47 @@ export default function PackPanel() {
                     className="h-7 gap-1.5 px-2 text-xs"
                   >
                     <Download className="h-3 w-3" />
-                    Tải .txt riêng
+                    Tß║úi .txt ri├¬ng
                   </Button>
                 </div>
               </div>
+
+              {/* Save-to-Source progress bar ΓÇö hiß╗çn khi ─æang l╞░u hoß║╖c save dß╗ƒ */}
+              {(saveState.isSaving || saveState.saved > 0 || saveState.failedIndices.length > 0) && (
+                <div className="border border-border bg-card p-3 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground">
+                      {saveState.isSaving
+                        ? `─Éang l╞░u v├áo Source: ${saveState.saved}/${saveState.total} part`
+                        : saveState.failedIndices.length === 0
+                          ? `─É├ú l╞░u xong ${saveState.saved}/${saveState.total} part`
+                          : `─É├ú l╞░u ${saveState.saved}/${saveState.total} ΓÇö thiß║┐u part ${saveState.failedIndices.map((i) => i + 1).join(', ')}`}
+                    </span>
+                    <span className="font-mono text-primary">
+                      {saveState.total > 0
+                        ? `${Math.round((saveState.saved / saveState.total) * 100)}%`
+                        : ''}
+                    </span>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden bg-background">
+                    <div
+                      className={cn(
+                        'h-full transition-all',
+                        saveState.failedIndices.length > 0 && !saveState.isSaving
+                          ? 'bg-warning'
+                          : 'bg-primary',
+                      )}
+                      style={{
+                        width:
+                          saveState.total > 0
+                            ? `${(saveState.saved / saveState.total) * 100}%`
+                            : '0%',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
               {parts.map((p) => (
                 <PartOutput key={p.index} part={p} />
               ))}
@@ -930,7 +1142,7 @@ export default function PackPanel() {
 }
 
 // ============================================================
-// TreeNodeView - render 1 node, lazy children (collapsed mặc định nếu > 50 children)
+// TreeNodeView - render 1 node, lazy children (collapsed mß║╖c ─æß╗ïnh nß║┐u > 50 children)
 // ============================================================
 function TreeNodeView({
   node,
@@ -941,7 +1153,7 @@ function TreeNodeView({
   depth: number;
   onToggle: (paths: string[], checked: boolean) => void;
 }) {
-  // Folder lớn (>30 children) collapsed mặc định
+  // Folder lß╗¢n (>30 children) collapsed mß║╖c ─æß╗ïnh
   const [collapsed, setCollapsed] = useState(node.children.length > 30);
 
   if (!node.isFolder) {
@@ -959,7 +1171,7 @@ function TreeNodeView({
   );
 }
 
-/** File row — subscribe path mình → chỉ re-render khi tick state đổi */
+/** File row ΓÇö subscribe path m├¼nh ΓåÆ chß╗ë re-render khi tick state ─æß╗òi */
 function FileRow({
   node,
   depth,
@@ -989,7 +1201,7 @@ function FileRow({
   );
 }
 
-/** Folder row — subscribe all để re-count khi descendants đổi */
+/** Folder row ΓÇö subscribe all ─æß╗â re-count khi descendants ─æß╗òi */
 function FolderRow({
   node,
   depth,
@@ -1064,4 +1276,4 @@ function FolderRow({
       )}
     </div>
   );
-}
+}

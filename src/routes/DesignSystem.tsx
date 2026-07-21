@@ -2,7 +2,7 @@
 // Design System Premium SaaS Component Catalog
 // ============================================================
 // Route: /design-system (also embedded in /config)
-// Style: Linear · Vercel · Raycast calm, minimal, premium
+// Style: Linear ┬╖ Vercel ┬╖ Raycast calm, minimal, premium
 // ============================================================
 //
 // Structure:
@@ -31,17 +31,24 @@ import {
   Bookmark,
   Plus,
   Palette,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ChevronDown,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { LoadingState, EmptyState, ErrorState } from '@/components/shared';
 
 // ============================================================
-// Design tokens — cứng, không hard-code Tailwind classes rời rạc
+// Design tokens ΓÇö cß╗⌐ng, kh├┤ng hard-code Tailwind classes rß╗¥i rß║íc
 // ============================================================
 
-/** Border radius scale. Map cứng theo role — không tùy tiện. */
+/** Border radius scale. Map cß╗⌐ng theo role ΓÇö kh├┤ng t├╣y tiß╗çn. */
 const RADIUS = {
   chip: 'rounded-full', // badges, pills, avatars
   input: 'rounded-lg',  // buttons, inputs, small blocks
@@ -50,21 +57,21 @@ const RADIUS = {
   skel: 'rounded',      // default text/line skeletons
 } as const;
 
-/** Motion presets. Tất cả transitions ở 150ms để đồng bộ nhịp. */
+/** Motion presets. Tß║Ñt cß║ú transitions ß╗ƒ 150ms ─æß╗â ─æß╗ông bß╗Ö nhß╗ïp. */
 const MOTION = {
   fast: 'transition-all duration-150',
   fade: 'animate-in fade-in duration-150',
   pulse: 'animate-pulse [animation-duration:2s]',
 } as const;
 
-/** Icon size scale — chỉ 3 giá trị. */
+/** Icon size scale ΓÇö chß╗ë 3 gi├í trß╗ï. */
 const ICON = {
   sm: 'h-4 w-4',   // 16px inline, button icon
   md: 'h-5 w-5',   // 20px empty state, section header
   lg: 'h-6 w-6',   // 24px hero
 } as const;
 
-/** Text tokens hierarchy from spacing + weight, KHÃ”NG spam font-size. */
+/** Text tokens hierarchy from spacing + weight, KH├âΓÇ¥NG spam font-size. */
 const TEXT = {
   title: 'text-sm font-semibold tracking-tight text-foreground',
   subtitle: 'text-xs leading-relaxed text-muted-foreground',
@@ -74,32 +81,27 @@ const TEXT = {
   code: 'rounded bg-muted px-1.5 py-0.5 text-[11px] font-mono',
 } as const;
 
-/** Section gap nhất quán giữa tất cả tab. */
+/** Section gap nhß║Ñt qu├ín giß╗»a tß║Ñt cß║ú tab. */
 const SECTION_GAP = 'space-y-12';
 
 // ============================================================
 // Main component glass header + pill tabs + fade content
 // ============================================================
 
-type TabId = 'loading' | 'empty' | 'error' | 'skeleton' | 'tokens' | 'composite';
+type TabId = 'loading' | 'empty' | 'error' | 'skeleton' | 'inputs' | 'tokens' | 'composite';
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'loading', label: 'Loading' },
   { id: 'empty', label: 'Empty' },
   { id: 'error', label: 'Error' },
   { id: 'skeleton', label: 'Skeletons' },
+  { id: 'inputs', label: 'Inputs' },
   { id: 'tokens', label: 'Tokens' },
   { id: 'composite', label: 'Composite' },
 ];
 
-import { useThemeStore, type ThemeId } from '@/stores/themeStore';
-import { useSaveTheme } from '@/api/themeApi';
-
-const THEMES: { id: ThemeId; label: string }[] = [
-  { id: 'dark', label: 'Dark' },
-  { id: 'light', label: 'Light' },
-  { id: 'cute', label: 'Cute' },
-];
+import { useThemeStore, useSaveTheme, THEMES } from '@/tools/theme';
+import type { ThemeId } from '@/tools/theme';
 
 export default function DesignSystem({ embedded }: { embedded?: boolean } = {}) {
   const [activeTab, setActiveTab] = useState<TabId>('loading');
@@ -142,6 +144,7 @@ export default function DesignSystem({ embedded }: { embedded?: boolean } = {}) 
         {activeTab === 'empty' && <EmptySection />}
         {activeTab === 'error' && <ErrorSection />}
         {activeTab === 'skeleton' && <SkeletonSection />}
+        {activeTab === 'inputs' && <InputsSection />}
         {activeTab === 'tokens' && <TokensSection />}
         {activeTab === 'composite' && <CompositeSection />}
       </div>
@@ -181,16 +184,22 @@ function ThemeControls() {
   const theme = useThemeStore((s) => s.theme);
   const is3d = useThemeStore((s) => s.is3d);
   const isRounded = useThemeStore((s) => s.isRounded);
+  const isRetro = useThemeStore((s) => s.isRetro);
+  const isPill = useThemeStore((s) => s.isPill);
   const setTheme = useThemeStore((s) => s.setTheme);
   const setIs3d = useThemeStore((s) => s.setIs3d);
   const setIsRounded = useThemeStore((s) => s.setIsRounded);
+  const setIsRetro = useThemeStore((s) => s.setIsRetro);
+  const setIsPill = useThemeStore((s) => s.setIsPill);
   const saveTheme = useSaveTheme();
 
-  const persist = (patch: Partial<{ theme: ThemeId; is3d: boolean; isRounded: boolean }>) => {
+  const persist = (patch: Partial<{ theme: ThemeId; is3d: boolean; isRounded: boolean; isRetro: boolean; isPill: boolean }>) => {
     const next = {
       theme: patch.theme ?? theme,
       is3d: patch.is3d ?? is3d,
       isRounded: patch.isRounded ?? isRounded,
+      isRetro: patch.isRetro ?? isRetro,
+      isPill: patch.isPill ?? isPill,
     };
     saveTheme.save(next);
   };
@@ -221,7 +230,7 @@ function ThemeControls() {
       {/* Separator */}
       <div className="h-4 w-px bg-border" />
 
-      {/* 3D toggle */}
+      {/* Raised toggle */}
       <button
         onClick={() => {
           setIs3d(!is3d);
@@ -233,14 +242,16 @@ function ThemeControls() {
             : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
         }`}
       >
-        3D
+        Lift
       </button>
 
-      {/* Rounded toggle */}
+      {/* Subtle toggle (was Rounded) ΓÇö radio with Pill */}
       <button
         onClick={() => {
-          setIsRounded(!isRounded);
-          persist({ isRounded: !isRounded });
+          const next = !isRounded;
+          setIsRounded(next);
+          if (next) { setIsPill(false); }
+          persist({ isRounded: next, isPill: next ? false : isPill });
         }}
         className={`${RADIUS.chip} px-2.5 py-1 text-[11px] font-medium ${MOTION.fast} ${
           isRounded
@@ -248,7 +259,42 @@ function ThemeControls() {
             : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
         }`}
       >
-        Rounded
+        Subtle
+      </button>
+
+      {/* Pill toggle ΓÇö radio with Subtle */}
+      <button
+        onClick={() => {
+          const next = !isPill;
+          setIsPill(next);
+          if (next) { setIsRounded(false); }
+          persist({ isPill: next, isRounded: next ? false : isRounded });
+        }}
+        className={`${RADIUS.chip} px-2.5 py-1 text-[11px] font-medium ${MOTION.fast} ${
+          isPill
+            ? 'bg-primary/15 text-primary shadow-xs'
+            : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
+        }`}
+      >
+        Pill
+      </button>
+
+      {/* Retro toggle ΓÇö only enabled when Lift is on */}
+      <button
+        disabled={!is3d}
+        onClick={() => {
+          setIsRetro(!isRetro);
+          persist({ isRetro: !isRetro });
+        }}
+        className={`${RADIUS.chip} px-2.5 py-1 text-[11px] font-medium ${MOTION.fast} ${
+          !is3d
+            ? 'opacity-40 cursor-not-allowed text-muted-foreground'
+            : isRetro
+              ? 'bg-primary/15 text-primary shadow-xs'
+              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
+        }`}
+      >
+        Retro
       </button>
     </div>
   );
@@ -279,7 +325,7 @@ function Section({
   );
 }
 
-/** Subgroup header chia section thành nhóm nhỏ hơn. */
+/** Subgroup header chia section th├ánh nh├│m nhß╗Å h╞ín. */
 function SubgroupHeader({ children }: { children: ReactNode }) {
   return (
     <h3 className="pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -290,7 +336,7 @@ function SubgroupHeader({ children }: { children: ReactNode }) {
 
 /**
  * Soft surface preview container.
- * NOT interactive — không có hover effect để tránh visual noise.
+ * NOT interactive ΓÇö kh├┤ng c├│ hover effect ─æß╗â tr├ính visual noise.
  * shimmer prop: adds animated shimmer beam for skeleton previews.
  */
 function PreviewCard({
@@ -316,8 +362,8 @@ function PreviewCard({
 }
 
 /**
- * Circular icon container dùng cho empty state, error state.
- * Bg-muted/60 để nổi rõ trên PreviewCard bg-muted/40.
+ * Circular icon container d├╣ng cho empty state, error state.
+ * Bg-muted/60 ─æß╗â nß╗òi r├╡ tr├¬n PreviewCard bg-muted/40.
  */
 function IconBadge({
   icon: Icon,
@@ -389,7 +435,7 @@ function PulseDot({
   return <div className={`h-2 w-2 ${RADIUS.chip} ${colorClass} ${animated ? MOTION.pulse : ''}`} />;
 }
 
-/** Single alpha swatch dùng cho scale demo. */
+/** Single alpha swatch d├╣ng cho scale demo. */
 function AlphaSwatch({ value }: { value: 5 | 10 | 15 | 20 | 30 | 50 | 80 | 100 }) {
   // Static classes for Tailwind JIT (no dynamic interpolation)
   const bg: Record<number, string> = {
@@ -434,7 +480,7 @@ function LoadingSection() {
 
       <Section
         title="System Spinner"
-        description="Single spinner for all contexts: Suspense fallback, action feedback, inline loading. Scale via h/w classes. No rounded-full — minimal square aesthetic."
+        description="Single spinner for all contexts: Suspense fallback, action feedback, inline loading. Scale via h/w classes. No rounded-full ΓÇö minimal square aesthetic."
       >
         <div className="grid gap-4 sm:grid-cols-3">
           <PreviewCard className="space-y-2 text-center">
@@ -706,10 +752,10 @@ function ErrorSection() {
 // ============================================================
 //
 // Skeleton radius convention:
-//   - Text/lines           â†’ RADIUS.skel (default rounded)
-//   - Inputs/buttons/covers â†’ RADIUS.input (lg)
-//   - Chips/pills/avatars  â†’ RADIUS.chip (full)
-//   - Cards/blocks         â†’ RADIUS.card (xl)
+//   - Text/lines           ├óΓÇáΓÇÖ RADIUS.skel (default rounded)
+//   - Inputs/buttons/covers ├óΓÇáΓÇÖ RADIUS.input (lg)
+//   - Chips/pills/avatars  ├óΓÇáΓÇÖ RADIUS.chip (full)
+//   - Cards/blocks         ├óΓÇáΓÇÖ RADIUS.card (xl)
 // ============================================================
 
 function SkeletonSection() {
@@ -925,6 +971,358 @@ function SkeletonSection() {
             <div className="flex justify-end gap-2 border-t border-border/50 pt-4">
               <Skeleton className={`h-9 w-20 ${RADIUS.input}`} />
               <Skeleton className={`h-9 w-24 ${RADIUS.input}`} />
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+    </>
+  );
+}
+
+// ============================================================
+// Tab: Inputs & Form Controls
+// ============================================================
+
+function InputsSection() {
+  const [showPassword, setShowPassword] = useState(false);
+  const [checked, setChecked] = useState(true);
+  const [toggleValue, setToggleValue] = useState<'on' | 'off'>('on');
+
+  return (
+    <>
+      <SubgroupHeader>Text inputs</SubgroupHeader>
+
+      <Section
+        title="Default states"
+        description="Standard input in all interactive states. Uses border-input, focus ring-ring + border-primary."
+      >
+        <PreviewCard className="max-w-md">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Default</label>
+              <Input placeholder="Enter your name..." />
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>With value</label>
+              <Input defaultValue="Bao Nguyen" />
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Disabled</label>
+              <Input disabled defaultValue="Cannot edit" />
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Read-only</label>
+              <Input readOnly defaultValue="Read only content" className="bg-muted/50" />
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <Section
+        title="With icons"
+        description="Icon prefix/suffix pattern. Wrap in relative container, position icon absolute."
+      >
+        <PreviewCard className="max-w-md">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Search (icon left)</label>
+              <div className="relative">
+                <Search className={`absolute left-3 top-1/2 -translate-y-1/2 ${ICON.sm} text-muted-foreground`} />
+                <Input placeholder="Search..." className="pl-9" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Email (icon left)</label>
+              <div className="relative">
+                <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 ${ICON.sm} text-muted-foreground`} />
+                <Input type="email" placeholder="email@example.com" className="pl-9" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Password (icon both sides)</label>
+              <div className="relative">
+                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 ${ICON.sm} text-muted-foreground`} />
+                <Input
+                  type={showPassword ? 'text' : 'password'}
+                  defaultValue="secret123"
+                  className="pl-9 pr-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword
+                    ? <EyeOff className={ICON.sm} />
+                    : <Eye className={ICON.sm} />
+                  }
+                </button>
+              </div>
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <Section
+        title="Error state"
+        description="Border turns destructive, helper text below in destructive color."
+      >
+        <PreviewCard className="max-w-md">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Invalid email</label>
+              <Input
+                type="email"
+                defaultValue="not-an-email"
+                className="border-destructive focus-visible:ring-destructive/30 focus-visible:border-destructive"
+              />
+              <p className="text-[11px] text-destructive">Please enter a valid email address.</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Required field</label>
+              <Input
+                placeholder="This field is required"
+                className="border-destructive focus-visible:ring-destructive/30 focus-visible:border-destructive"
+              />
+              <p className="text-[11px] text-destructive">This field cannot be empty.</p>
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <Section
+        title="Sizes"
+        description="Standard h-9. Compact h-8 for dense UI (tables, toolbars). Large h-10 for hero forms."
+      >
+        <PreviewCard className="max-w-md">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Compact (h-8)</label>
+              <Input placeholder="Compact input" className="h-8 text-xs" />
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Default (h-9)</label>
+              <Input placeholder="Default input" />
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Large (h-10)</label>
+              <Input placeholder="Large input" className="h-10" />
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <SubgroupHeader>Textarea</SubgroupHeader>
+
+      <Section
+        title="Native textarea"
+        description="Styled to match Input tokens. Same border, focus ring, placeholder style."
+      >
+        <PreviewCard className="max-w-md">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Default</label>
+              <textarea
+                placeholder="Write something..."
+                rows={3}
+                className="flex w-full border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>With content</label>
+              <textarea
+                defaultValue="This is a multi-line text area with some content that demonstrates how it looks when filled."
+                rows={3}
+                className="flex w-full border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Disabled</label>
+              <textarea
+                disabled
+                defaultValue="Cannot edit this."
+                rows={2}
+                className="flex w-full border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 resize-none"
+              />
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <SubgroupHeader>Checkbox</SubgroupHeader>
+
+      <Section
+        title="Checkbox states"
+        description="Radix checkbox. Square shape (no rounding), primary fill when checked."
+      >
+        <PreviewCard className="max-w-sm">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <Checkbox id="check-1" checked={checked} onCheckedChange={(v) => setChecked(v === true)} />
+              <label htmlFor="check-1" className="text-sm text-foreground cursor-pointer">
+                Checked (click to toggle)
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox id="check-2" />
+              <label htmlFor="check-2" className="text-sm text-foreground cursor-pointer">
+                Unchecked
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox id="check-3" disabled checked />
+              <label htmlFor="check-3" className="text-sm text-muted-foreground cursor-not-allowed">
+                Disabled checked
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox id="check-4" disabled />
+              <label htmlFor="check-4" className="text-sm text-muted-foreground cursor-not-allowed">
+                Disabled unchecked
+              </label>
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <SubgroupHeader>Select</SubgroupHeader>
+
+      <Section
+        title="Native select"
+        description="Styled native select. Same height/border as Input. Chevron icon right."
+      >
+        <PreviewCard className="max-w-md">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Default</label>
+              <div className="relative">
+                <select
+                  className="flex h-9 w-full appearance-none border border-input bg-background px-3 py-1 pr-8 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-primary disabled:cursor-not-allowed disabled:opacity-50"
+                  defaultValue=""
+                >
+                  <option value="" disabled>Select an option...</option>
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                  <option value="cute">Cute</option>
+                </select>
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 ${ICON.sm} text-muted-foreground pointer-events-none`} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>With value</label>
+              <div className="relative">
+                <select
+                  className="flex h-9 w-full appearance-none border border-input bg-background px-3 py-1 pr-8 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-primary"
+                  defaultValue="dark"
+                >
+                  <option value="dark">Dark</option>
+                  <option value="light">Light</option>
+                  <option value="cute">Cute</option>
+                </select>
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 ${ICON.sm} text-muted-foreground pointer-events-none`} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Disabled</label>
+              <div className="relative">
+                <select
+                  disabled
+                  className="flex h-9 w-full appearance-none border border-input bg-background px-3 py-1 pr-8 text-sm shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
+                  defaultValue="dark"
+                >
+                  <option value="dark">Dark</option>
+                </select>
+                <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 ${ICON.sm} text-muted-foreground pointer-events-none`} />
+              </div>
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <SubgroupHeader>Toggle patterns</SubgroupHeader>
+
+      <Section
+        title="Pill toggle group"
+        description="Segmented control pattern used across the hub (theme selector, view switcher). Same pattern as ThemeControls."
+      >
+        <PreviewCard className="max-w-sm">
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Binary toggle</label>
+              <div className="flex gap-1">
+                {(['on', 'off'] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setToggleValue(v)}
+                    className={`${RADIUS.chip} px-3.5 py-1.5 text-xs font-medium capitalize ${MOTION.fast} ${
+                      toggleValue === v
+                        ? 'bg-primary/15 text-primary shadow-xs'
+                        : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Multi-option (view mode)</label>
+              <div className="flex gap-1">
+                {['Grid', 'List', 'Table'].map((v) => (
+                  <button
+                    key={v}
+                    className={`${RADIUS.chip} px-3.5 py-1.5 text-xs font-medium ${MOTION.fast} ${
+                      v === 'Grid'
+                        ? 'bg-foreground/10 text-foreground shadow-xs'
+                        : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground'
+                    }`}
+                  >
+                    {v}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </PreviewCard>
+      </Section>
+
+      <SubgroupHeader>Composite form</SubgroupHeader>
+
+      <Section
+        title="Complete form example"
+        description="Typical tool form layout. Label + input + helper text. Consistent spacing."
+      >
+        <PreviewCard className="max-w-md">
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Title *</label>
+              <Input placeholder="Enter title" />
+              <p className={TEXT.caption}>Required. Max 100 characters.</p>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Email</label>
+              <div className="relative">
+                <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 ${ICON.sm} text-muted-foreground`} />
+                <Input type="email" placeholder="you@example.com" className="pl-9" />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <label className={TEXT.label}>Description</label>
+              <textarea
+                placeholder="Optional description..."
+                rows={3}
+                className="flex w-full border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:border-primary resize-none"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox id="form-agree" />
+              <label htmlFor="form-agree" className="text-xs text-muted-foreground cursor-pointer">
+                I agree to the terms and conditions
+              </label>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button size="sm">Submit</Button>
+              <Button size="sm" variant="outline">Cancel</Button>
             </div>
           </div>
         </PreviewCard>
@@ -1304,4 +1702,4 @@ function DemoDataGrid() {
       ))}
     </div>
   );
-}
+}

@@ -1,12 +1,12 @@
 // ============================================================
-// Sources Panel — embedded as tab in Project Packer
+// Sources Panel ΓÇö embedded as tab in Project Packer
 // ============================================================
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 
-import { useNotes, useCreateNote } from '@/api/notes';
+import { useSources, useCreateSource } from '@/tools/project-packer/api';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { cn } from '@/lib/cn';
 import { Button } from '@/components/ui/button';
@@ -16,13 +16,10 @@ import SourceList from './SourceList';
 import SourceEditor from './SourceEditor';
 
 export default function SourcesPanel() {
-  const notesQuery = useNotes();
-  const createNote = useCreateNote();
+  const sourcesQuery = useSources();
+  const createSource = useCreateSource();
 
-  const sources = useMemo(
-    () => (notesQuery.data ?? []).filter((n) => n.type === 'source'),
-    [notesQuery.data],
-  );
+  const sources = sourcesQuery.data ?? [];
 
   const [selectedId, setSelectedId] = useLocalStorage<string | null>(
     'sources_selectedId',
@@ -35,18 +32,18 @@ export default function SourcesPanel() {
   const noteIdParam = searchParams.get('noteId');
   useEffect(() => {
     if (!noteIdParam) return;
-    if (!notesQuery.data) return;
+    if (!sourcesQuery.data) return;
     const exists = sources.some((s) => s.id === noteIdParam);
     if (exists) setSelectedId(noteIdParam);
     const next = new URLSearchParams(searchParams);
     next.delete('noteId');
     setSearchParams(next, { replace: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [noteIdParam, notesQuery.data]);
+  }, [noteIdParam, sourcesQuery.data]);
 
-  // Auto-select source mới nhất
+  // Auto-select source mß╗¢i nhß║Ñt
   useEffect(() => {
-    if (!notesQuery.data) return;
+    if (!sourcesQuery.data) return;
     if (selectedId) {
       const exists = sources.some((s) => s.id === selectedId);
       if (!exists) setSelectedId(null);
@@ -60,19 +57,19 @@ export default function SourcesPanel() {
       });
       setSelectedId(sorted[0].id);
     }
-  }, [notesQuery.data, sources, selectedId, setSelectedId]);
+  }, [sourcesQuery.data, sources, selectedId, setSelectedId]);
 
   const selectedNote = sources.find((s) => s.id === selectedId) ?? null;
 
   function handleNew() {
-    createNote.mutate(
-      { title: 'Source mới', type: 'source', content: '', source: '' },
+    createSource.mutate(
+      { title: 'Source mß╗¢i', content: '', source: '' },
       {
         onSuccess: (newNote) => {
           setSelectedId(newNote.id);
-          toast.success('Đã tạo source mới');
+          toast.success('─É├ú tß║ío source mß╗¢i');
         },
-        onError: () => toast.error('Không tạo được source'),
+        onError: () => toast.error('Kh├┤ng tß║ío ─æ╞░ß╗úc source'),
       },
     );
   }
@@ -84,25 +81,26 @@ export default function SourcesPanel() {
 
   async function handleDeleteAll() {
     if (sources.length === 0) return;
-    const confirmMsg = `XÓA HẾT ${sources.length} SOURCE?\n\nKhông thể hoàn tác!\n\nOK để xác nhận.`;
+    const confirmMsg = `X├ôA Hß║╛T ${sources.length} SOURCE?\n\nKh├┤ng thß╗â ho├án t├íc!\n\nOK ─æß╗â x├íc nhß║¡n.`;
     if (!window.confirm(confirmMsg)) return;
 
     try {
-      const { workspaceDelete } = await import('@/lib/workspace/client');
+      const { fetchJson } = await import('@/api/client');
+      const { API } = await import('@/lib/config');
 
       let deleted = 0;
       for (const source of sources) {
         try {
-          await workspaceDelete('notes', source.id);
+          await fetchJson(`${API.NOTES}/${source.id}`, { method: 'DELETE' });
           deleted++;
         } catch { /* continue */ }
       }
 
-      toast.success(`Đã xóa ${deleted}/${sources.length} sources`);
+      toast.success(`─É├ú x├│a ${deleted}/${sources.length} sources`);
       setSelectedId(null);
-      notesQuery.refetch();
+      sourcesQuery.refetch();
     } catch {
-      toast.error('Không xóa được');
+      toast.error('Kh├┤ng x├│a ─æ╞░ß╗úc');
     }
   }
 
@@ -118,7 +116,7 @@ export default function SourcesPanel() {
       >
         <SourceList
           sources={sources}
-          isLoading={notesQuery.isLoading}
+          isLoading={sourcesQuery.isLoading}
           selectedId={selectedId}
           onSelect={handleSelect}
           onNew={handleNew}
@@ -160,13 +158,13 @@ export default function SourcesPanel() {
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
               <p className="mb-4 text-sm text-muted-foreground">
-                Chọn source hoặc tạo mới
+                Chß╗ìn source hoß║╖c tß║ío mß╗¢i
               </p>
-              <Button onClick={handleNew} size="sm">+ Tạo source</Button>
+              <Button onClick={handleNew} size="sm">+ Tß║ío source</Button>
             </div>
           </div>
         )}
       </main>
     </div>
   );
-}
+}
