@@ -6,7 +6,9 @@ export type ProviderCategory = 'ai' | 'pdf' | 'conversion' | 'storage' | 'realti
 
 export type ProviderStatus = 'active' | 'disabled';
 
-export type CredentialStatus = 'active' | 'disabled' | 'exhausted' | 'cooldown' | 'invalid' | 'error';
+export type CredentialStatus = 'active' | 'disabled' | 'exhausted' | 'cooldown' | 'invalid' | 'error' | 'full';
+
+export type CredentialKind = 'api_key' | 'oauth' | 'storage' | 'smtp';
 
 export type SelectionStrategy = 'round_robin' | 'least_used' | 'priority' | 'available_first';
 
@@ -43,6 +45,7 @@ export interface ServiceProfile {
 export interface ServiceCredential {
   id: string;
   profile_id: string;
+  credential_kind: CredentialKind;
   name: string | null;
   identifier: string;
   secret_data_json: Record<string, unknown> | null;
@@ -58,6 +61,10 @@ export interface ServiceCredential {
   last_error_code: string | null;
   last_error_message: string | null;
   cooldown_until: string | null;
+  storage_capacity_bytes: number | null;
+  storage_used_bytes: number | null;
+  storage_root_folder_id: string | null;
+  storage_synced_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -189,4 +196,4 @@ export interface CredentialWithSecret {
   secret_data_json: Record<string, unknown>;
   priority: number;
   weight: number;
-}
+}

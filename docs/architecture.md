@@ -37,7 +37,7 @@ src/
 │   ├── Notes.tsx         # /notes
 │   ├── Tasks.tsx         # /tasks
 │   ├── Sources.tsx       # /sources
-│   ├── Movies.tsx        # /movies
+│   ├── Bookmarks.tsx     # /bookmarks (formerly Movies)
 │   ├── Expense.tsx       # /expense
 │   ├── Keycap.tsx        # /keycap
 │   └── ProjectPacker.tsx # /project-packer
@@ -55,7 +55,7 @@ src/
 │   ├── MobileHeader.tsx
 │   ├── Modal.tsx         # Deprecated (tự build, giữ cho reference)
 │   ├── keycap/           # Keycap-specific components
-│   ├── movies/
+│   ├── bookmarks/        # Bookmark card + dialog
 │   ├── expense/
 │   ├── sources/
 │   ├── packer/
@@ -86,10 +86,10 @@ src/
 │   └── shortcutStore.ts  # Registry phím tắt
 │
 ├── api/                  # TanStack Query hooks (fetch + cache)
-│   ├── client.ts         # fetchJson wrapper
-│   ├── notes.ts
-│   ├── tasks.ts
-│   ├── movies.ts
+│   ├── client.ts         # fetchJson wrapper (legacy MockAPI tools)
+│   ├── notes.ts          # Workspace proxy
+│   ├── tasks.ts          # Workspace proxy
+│   ├── bookmarks.ts      # Workspace proxy
 │   ├── expense.ts
 │   ├── keycap.ts
 │   └── savings.ts
@@ -112,8 +112,8 @@ src/
 │   ├── config.ts         # API URL decode
 │   ├── cn.ts             # Tailwind class merge
 │   ├── tools.ts          # Tool registry cho Hub
+│   ├── queryClient.ts    # Singleton TanStack Query client
 │   ├── focus.ts          # Focus algorithm
-│   ├── movies.ts         # Movie types + helpers
 │   ├── savings.ts        # Savings types + helpers
 │   ├── expense.ts        # Expense types + date helpers
 │   ├── expenseParser.ts  # Chat input → expense item
@@ -160,8 +160,20 @@ src/
 │   │   ├── legacy-fallback.ts  # Read app_settings as fallback during transition
 │   │   ├── test-connection.ts  # Provider-specific connectivity tests
 │   │   └── index.ts       # Public exports
+│   ├── workspace/         # Workspace Supabase proxy client
+│   │   ├── supabase.ts    # Auth-aware client factory (token subscribe)
+│   │   ├── client.ts      # Edge Function proxy (workspaceSelect/Insert/Update/Delete)
+│   │   └── mappers.ts     # Row ↔ domain type mappers (snake_case ↔ camelCase)
 │   └── editor/
 │       └── VocabBlock.tsx # Tiptap custom node
+│
+├── tools/                # [NEW] Co-located tool plugins (từ giờ tool mới đặt ở đây)
+│   └── {tool-name}/     # Mỗi tool 1 folder chứa route + api + components + lib
+│       ├── route.tsx     # Page chính (lazy import từ App.tsx)
+│       ├── api.ts        # TanStack Query hooks
+│       ├── types.ts      # Zod schema + TS types
+│       ├── lib/          # Pure business logic (optional)
+│       └── components/   # UI riêng tool (optional)
 │
 └── styles/
     ├── index.css          # Tailwind + CSS vars (theme tokens)

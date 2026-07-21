@@ -1,5 +1,5 @@
 // ============================================================
-// CredentialCards — Card-based credential list + dynamic add form
+// CredentialCards — Grid 2-col compact cards + expand detail
 // ============================================================
 
 import { useState } from 'react';
@@ -30,7 +30,7 @@ export default function CredentialCards({ profileId, providerCode }: Props) {
   const [showAdd, setShowAdd] = useState(false);
 
   if (query.isLoading) {
-    return <LoadingState variant="skeleton" count={2} layout="list" itemClassName="h-24 w-full" />;
+    return <LoadingState variant="skeleton" count={4} layout="grid" itemClassName="h-20 w-full" />;
   }
   if (query.isError) {
     return <ErrorState compact message="Load credentials fail" onRetry={() => query.refetch()} />;
@@ -55,15 +55,20 @@ export default function CredentialCards({ profileId, providerCode }: Props) {
         />
       )}
 
-      {credentials.map((cred) => (
-        <CredentialCard
-          key={cred.id}
-          credential={cred}
-          providerCode={providerCode}
-          profileId={profileId}
-          onDelete={() => deleteMut.mutateAsync({ id: cred.id, profileId })}
-        />
-      ))}
+      {/* Grid 2 cột — luôn hiện full detail */}
+      {credentials.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {credentials.map((cred) => (
+            <CredentialCard
+              key={cred.id}
+              credential={cred}
+              providerCode={providerCode}
+              profileId={profileId}
+              onDelete={() => deleteMut.mutateAsync({ id: cred.id, profileId })}
+            />
+          ))}
+        </div>
+      )}
 
       {credentials.length > 0 && !showAdd && (
         <Button variant="outline" size="sm" onClick={() => setShowAdd(true)} className="gap-1">
@@ -87,7 +92,7 @@ export default function CredentialCards({ profileId, providerCode }: Props) {
   );
 }
 
-// ─── Card ───────────────────────────────────────────────────
+// ─── Compact Card ───────────────────────────────────────────
 
 function CredentialCard({
   credential,
@@ -100,9 +105,9 @@ function CredentialCard({
   onDelete: () => Promise<unknown>;
 }) {
   const updateMut = useUpdateCredential();
-  const [showSecret, setShowSecret] = useState(false);
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<'pass' | 'fail' | null>(null);
+  const [showSecret, setShowSecret] = useState(false);
 
   async function handleTest() {
     setTesting(true);
@@ -110,16 +115,14 @@ function CredentialCard({
     try {
       const ok = await testCredentialConnection(providerCode, credential);
       setTestResult(ok ? 'pass' : 'fail');
-      // Persist result to DB
       if (ok) {
         await updateMut.mutateAsync({ id: credential.id, last_success_at: new Date().toISOString() });
       } else {
         await updateMut.mutateAsync({ id: credential.id, last_error_at: new Date().toISOString(), last_error_message: 'Connection test failed' });
       }
-      toast[ok ? 'success' : 'error'](ok ? 'Connection OK' : 'Connection failed');
+      toast[ok ? 'success' : 'error'](ok ? 'OK' : 'Failed');
     } catch {
       setTestResult('fail');
-      await updateMut.mutateAsync({ id: credential.id, last_error_at: new Date().toISOString(), last_error_message: 'Test error' }).catch(() => {});
       toast.error('Test error');
     } finally {
       setTesting(false);
@@ -130,9 +133,9 @@ function CredentialCard({
     const newStatus: CredentialStatus = credential.status === 'active' ? 'disabled' : 'active';
     try {
       await updateMut.mutateAsync({ id: credential.id, status: newStatus });
-      toast.success(`Credential ${newStatus}`);
+      toast.success(`${newStatus}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Update fail');
+      toast.error(err instanceof Error ? err.message : 'Fail');
     }
   }
 
@@ -140,13 +143,25 @@ function CredentialCard({
     if (!confirm(`Xoá "${credential.name || credential.identifier}"?`)) return;
     try {
       await onDelete();
-      toast.success('Đã xoá credential');
+      toast.success('Đã xoá');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Xoá fail');
+      toast.error(err instanceof Error ? err.message : 'Fail');
     }
   }
 
-  // Format secret display
+  // Signal color
+  function getSignalColor(): string {
+    if (credential.status === 'disabled') return 'bg-muted-foreground/40';
+    if (credential.status === 'invalid' || credential.status === 'error' || credential.status === 'exhausted' || credential.status === 'cooldown') return 'bg-destructive';
+    if (testResult === 'pass') return 'bg-success';
+    if (testResult === 'fail') return 'bg-destructive';
+    const lastSuccess = credential.last_success_at ? new Date(credential.last_success_at).getTime() : 0;
+    const lastError = credential.last_error_at ? new Date(credential.last_error_at).getTime() : 0;
+    if (lastSuccess > 0 && lastSuccess > lastError) return 'bg-success';
+    if (lastError > 0 && lastError > lastSuccess) return 'bg-destructive';
+    return 'bg-warning';
+  }
+
   const secret = credential.secret_data_json;
   const secretDisplay = secret
     ? Object.entries(secret)
@@ -154,101 +169,59 @@ function CredentialCard({
         .join('\n')
     : null;
 
-  // Signal light: yellow=chưa test, green=test pass, red=test fail, gray=disabled
-  function getSignalColor(): string {
-    if (credential.status === 'disabled') return 'bg-muted-foreground/40';
-    if (credential.status === 'invalid' || credential.status === 'error') return 'bg-destructive';
-    if (credential.status === 'exhausted' || credential.status === 'cooldown') return 'bg-destructive';
-
-    // Local test result (current session)
-    if (testResult === 'pass') return 'bg-success';
-    if (testResult === 'fail') return 'bg-destructive';
-
-    // DB persisted: compare timestamps
-    const lastSuccess = credential.last_success_at ? new Date(credential.last_success_at).getTime() : 0;
-    const lastError = credential.last_error_at ? new Date(credential.last_error_at).getTime() : 0;
-    if (lastSuccess > 0 && lastSuccess > lastError) return 'bg-success';
-    if (lastError > 0 && lastError > lastSuccess) return 'bg-destructive';
-
-    // Never tested → yellow (needs attention)
-    return 'bg-warning';
-  }
-
   return (
-    <div className="relative rounded border border-border p-3 space-y-2">
-      {/* Signal dot — top left */}
-      <span className={`absolute top-2.5 left-2.5 h-2 w-2 rounded-full ${getSignalColor()}`} />
-      {/* Row 1: name + status */}
-      <div className="flex items-center justify-between pl-4">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-foreground">
-            {credential.name || credential.identifier}
-          </span>
-          <span className="rounded px-1.5 py-0.5 text-[11px] font-medium">
-            {credential.status}
-          </span>
-          <span className="text-[11px] text-muted-foreground">priority: {credential.priority}</span>
-        </div>
+    <div className="border border-border p-3 space-y-2">
+      {/* Header: signal + name + status */}
+      <div className="flex items-center gap-2">
+        <span className={`h-2 w-2 rounded-full shrink-0 ${getSignalColor()}`} />
+        <span className="text-xs font-medium text-foreground truncate flex-1">
+          {credential.name || credential.identifier}
+        </span>
+        <span className="text-[10px] text-muted-foreground">p:{credential.priority}</span>
+        <span className={`text-[10px] px-1 py-0.5 ${
+          credential.status === 'active' ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'
+        }`}>
+          {credential.status}
+        </span>
       </div>
 
-      {/* Row 2: identifier */}
-      <p className="font-mono text-xs text-muted-foreground">{credential.identifier}</p>
+      {/* Identifier */}
+      <p className="font-mono text-[11px] text-muted-foreground truncate">{credential.identifier}</p>
 
-      {/* Row 3: secret (toggle) */}
+      {/* Secret */}
       {secret && (
         <div className="flex items-start gap-2">
-          <pre className="flex-1 whitespace-pre-wrap font-mono text-xs text-muted-foreground bg-background/50 rounded p-2">
+          <pre className="flex-1 whitespace-pre-wrap font-mono text-[11px] text-muted-foreground bg-background/50 p-1.5 overflow-hidden">
             {showSecret ? secretDisplay : '••••••••'}
           </pre>
           <button
             type="button"
             onClick={() => setShowSecret(!showSecret)}
-            className="mt-1 text-muted-foreground hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
-            {showSecret ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            {showSecret ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
           </button>
         </div>
       )}
 
-      {/* Row 4: meta */}
-      {credential.last_used_at && (
-        <p className="text-[11px] text-muted-foreground">
-          Last used: {new Date(credential.last_used_at).toLocaleString()}
-          {credential.last_error_message && (
-            <span className="ml-2 text-destructive">Error: {credential.last_error_message}</span>
-          )}
+      {/* Error */}
+      {credential.last_error_message && (
+        <p className="text-[10px] text-destructive truncate">
+          {credential.last_error_message}
         </p>
       )}
 
-      {/* Row 5: actions */}
-      <div className="flex items-center gap-2 pt-1">
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1 text-xs"
-          onClick={handleTest}
-          disabled={testing}
-        >
-          <Wifi className={`h-3 w-3 ${testResult === 'pass' ? 'text-success' : testResult === 'fail' ? 'text-destructive' : ''}`} />
-          {testing ? 'Testing...' : 'Test'}
+      {/* Actions */}
+      <div className="flex items-center gap-1.5 pt-1">
+        <Button variant="outline" size="sm" className="gap-1 text-xs h-6 px-2" onClick={handleTest} disabled={testing}>
+          <Wifi className={`h-2.5 w-2.5 ${testResult === 'pass' ? 'text-success' : testResult === 'fail' ? 'text-destructive' : ''}`} />
+          {testing ? '...' : 'Test'}
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs"
-          onClick={handleToggle}
-          disabled={updateMut.isPending}
-        >
+        <Button variant="outline" size="sm" className="text-xs h-6 px-2" onClick={handleToggle} disabled={updateMut.isPending}>
           {credential.status === 'active' ? 'Disable' : 'Enable'}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="ml-auto text-xs text-destructive"
-          onClick={handleDelete}
-        >
-          <Trash2 className="h-3 w-3 mr-1" />
-          Xoá
+        <Button variant="ghost" size="sm" className="ml-auto text-xs h-6 px-1.5 text-destructive" onClick={handleDelete}>
+          <Trash2 className="h-2.5 w-2.5" />
         </Button>
       </div>
     </div>
@@ -275,8 +248,6 @@ interface AddFormProps {
 
 function AddCredentialForm({ profileId, providerCode, priority, onCreated, onCancel, isPending, onCreate }: AddFormProps) {
   const [name, setName] = useState('');
-
-  // Dynamic fields per provider
   const [fields, setFields] = useState<Record<string, string>>({});
 
   const schema = getProviderSchema(providerCode);
@@ -315,7 +286,7 @@ function AddCredentialForm({ profileId, providerCode, priority, onCreated, onCan
   }
 
   return (
-    <div className="rounded border border-border bg-muted/10 p-4 space-y-3">
+    <div className="border border-border bg-muted/10 p-4 space-y-3">
       <p className="text-sm font-medium text-foreground">Thêm credential</p>
 
       <div className="space-y-2">
@@ -430,4 +401,4 @@ function getProviderSchema(providerCode: string): ProviderSchema {
         ],
       };
   }
-}
+}

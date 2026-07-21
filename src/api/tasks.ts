@@ -1,17 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { fetchJson } from './client';
-import { API } from '@/lib/config';
-import { parseTaskRecords, type Task, type List } from '@/schemas/task';
+import { workspaceSelect, workspaceInsert, workspaceUpdate, workspaceDelete } from '@/lib/workspace/client';
+import { taskRowToDomain, taskInputToRow, taskToUpdateRow, listRowToDomain, listInputToRow, type TaskRow, type TaskListRow } from '@/lib/workspace/mappers';
+import type { Task, List } from '@/schemas/task';
 import { optimisticList } from '@/lib/optimistic';
 import { dualWriteTask, dualDeleteTask } from '@/lib/rag/dual-write';
 
 // ============================================================
-// Tasks API hooks — Optimistic UI
-// ============================================================
-//
-// Pattern: UI update ngay khi user action, API save background.
-// Nếu API fail → rollback cache, toast error.
-// Nếu user đóng tab khi pending → browser warning.
+// Tasks API hooks — Workspace Proxy + Optimistic UI
 // ============================================================
 
 interface TaskApiResponse {
@@ -20,19 +15,23 @@ interface TaskApiResponse {
 }
 
 async function fetchTasks(): Promise<TaskApiResponse> {
-  const records = await fetchJson<unknown[]>(API.TASKS);
-  return parseTaskRecords(records);
+  const [taskRows, listRows] = await Promise.all([
+    workspaceSelect<TaskRow>('tasks', { order: { column: 'created_at', ascending: false } }),
+    workspaceSelect<TaskListRow>('task_lists', { order: { column: 'created_at', ascending: true } }),
+  ]);
+
+  return {
+    tasks: taskRows.map(taskRowToDomain),
+    lists: listRows.map(listRowToDomain),
+  };
 }
 
 export function useTasks() {
-  return useQuery({
-    queryKey: ['tasks'],
-    queryFn: fetchTasks,
-  });
+  return useQuery({ queryKey: ['tasks'], queryFn: fetchTasks });
 }
 
 // ============================================================
-// Mutations — tất cả dùng optimistic update
+// Mutations
 // ============================================================
 
 export interface TaskInput {
@@ -51,18 +50,10 @@ export function useCreateTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: TaskInput) => {
-      const now = new Date().toISOString();
-      return fetchJson<Task>(API.TASKS, {
-        method: 'POST',
-        body: JSON.stringify({
-          type: 'task',
-          status: 'pending',
-          priority: 'normal',
-          createdAt: now,
-          updatedAt: now,
-          ...input,
-        }),
-      });
+      const row = taskInputToRow(input, '');
+      const { user_id: _, ...rowWithoutUserId } = row;
+      const created = await workspaceInsert<TaskRow>('tasks', rowWithoutUserId);
+      return taskRowToDomain(created);
     },
     onSuccess: (task) => {
       if (task?.id) dualWriteTask(task);
@@ -78,9 +69,9 @@ export function useCreateTask() {
         priority: input.priority ?? 'normal',
         dueDate: input.dueDate ?? null,
         recurring: input.recurring ?? false,
-        url1: null,
-        url2: null,
-        url3: null,
+        url1: input.url1 ?? null,
+        url2: input.url2 ?? null,
+        url3: input.url3 ?? null,
         completedDate: null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -94,10 +85,10 @@ export function useUpdateTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (task: Task) => {
-      return fetchJson<Task>(`${API.TASKS}/${task.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ ...task, updatedAt: new Date().toISOString() }),
-      });
+      const updateRow = taskToUpdateRow(task);
+      const { id, ...fields } = updateRow;
+      const updated = await workspaceUpdate<TaskRow>('tasks', id, fields);
+      return taskRowToDomain(updated);
     },
     onSuccess: (updated) => {
       if (updated?.id) dualWriteTask(updated);
@@ -115,15 +106,11 @@ export function useToggleTask() {
     mutationFn: async (task: Task) => {
       const newStatus = task.status === 'completed' ? 'pending' : 'completed';
       const now = new Date().toISOString();
-      return fetchJson<Task>(`${API.TASKS}/${task.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({
-          ...task,
-          status: newStatus,
-          completedDate: newStatus === 'completed' ? now : null,
-          updatedAt: now,
-        }),
+      const updated = await workspaceUpdate<TaskRow>('tasks', task.id, {
+        status: newStatus,
+        completed_date: newStatus === 'completed' ? now : null,
       });
+      return taskRowToDomain(updated);
     },
     onSuccess: (updated) => {
       if (updated?.id) dualWriteTask(updated);
@@ -148,10 +135,8 @@ export function useToggleImportant() {
   return useMutation({
     mutationFn: async (task: Task) => {
       const newPriority = task.priority === 'high' ? 'normal' : 'high';
-      return fetchJson<Task>(`${API.TASKS}/${task.id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ ...task, priority: newPriority, updatedAt: new Date().toISOString() }),
-      });
+      const updated = await workspaceUpdate<TaskRow>('tasks', task.id, { priority: newPriority });
+      return taskRowToDomain(updated);
     },
     onSuccess: (updated) => {
       if (updated?.id) dualWriteTask(updated);
@@ -171,7 +156,7 @@ export function useDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      await fetchJson(`${API.TASKS}/${id}`, { method: 'DELETE' });
+      await workspaceDelete('tasks', id);
       dualDeleteTask(id);
     },
     ...optimisticList<TaskApiResponse, string>(qc, ['tasks'], (old, id) => ({
@@ -189,11 +174,10 @@ export function useCreateList() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (title: string) => {
-      const now = new Date().toISOString();
-      return fetchJson<List>(API.TASKS, {
-        method: 'POST',
-        body: JSON.stringify({ type: 'list', title, createdAt: now, updatedAt: now }),
-      });
+      const row = listInputToRow(title, '');
+      const { user_id: _, ...rowWithoutUserId } = row;
+      const created = await workspaceInsert<TaskListRow>('task_lists', rowWithoutUserId);
+      return listRowToDomain(created);
     },
     ...optimisticList<TaskApiResponse, string>(qc, ['tasks'], (old, title) => ({
       ...old,
@@ -206,7 +190,7 @@ export function useDeleteList() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (listId: string) => {
-      return fetchJson(`${API.TASKS}/${listId}`, { method: 'DELETE' });
+      await workspaceDelete('task_lists', listId);
     },
     ...optimisticList<TaskApiResponse, string>(qc, ['tasks'], (old, listId) => ({
       ...old,

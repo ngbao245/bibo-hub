@@ -82,18 +82,11 @@ export const TOOLS: Tool[] = [
     description: 'Task management theo style Microsoft To Do',
   },
   {
-    id: 'sources',
-    label: 'Sources',
-    group: 'Productivity',
-    action: { kind: 'route', path: '/sources' },
-    description: 'Quản lý nguồn tài liệu và link',
-  },
-  {
-    id: 'secret',
-    label: 'Secret',
-    group: 'Productivity',
-    action: { kind: 'modal', modalId: 'secret' },
-    description: 'Notes mã hóa bằng password',
+    id: 'vault',
+    label: 'Vault',
+    group: 'Utilities',
+    action: { kind: 'route', path: '/vault' },
+    description: 'Zero-knowledge encrypted secrets — notes, accounts, cards',
   },
   {
     id: 'library',
@@ -126,13 +119,6 @@ export const TOOLS: Tool[] = [
 
   // Finance
   {
-    id: 'savings',
-    label: 'Saving',
-    group: 'Finance',
-    action: { kind: 'modal', modalId: 'savings' },
-    description: 'Theo dõi tiết kiệm hàng tháng',
-  },
-  {
     id: 'expense',
     label: 'Chi tiêu',
     group: 'Finance',
@@ -149,11 +135,11 @@ export const TOOLS: Tool[] = [
     description: 'Theo dõi đơn hàng SPX',
   },
   {
-    id: 'movies',
-    label: 'Movies',
+    id: 'bookmarks',
+    label: 'Bookmarks',
     group: 'Tracking',
-    action: { kind: 'route', path: '/movies' },
-    description: 'Danh sách phim đã xem và muốn xem',
+    action: { kind: 'route', path: '/bookmarks' },
+    description: 'Theo dõi phim, series, manga, anime',
   },
   {
     id: 'agency-studio',
@@ -209,13 +195,6 @@ export const TOOLS: Tool[] = [
     description: 'Truyền file ngang hàng qua WebRTC',
   },
   {
-    id: 'keycap',
-    label: 'Retailing',
-    group: 'Developer',
-    action: { kind: 'route', path: '/keycap' },
-    description: 'Quản lý sản phẩm bán lẻ',
-  },
-  {
     id: 'code-compare',
     label: 'Compare',
     group: 'Developer',
@@ -232,13 +211,6 @@ export const TOOLS: Tool[] = [
     description: 'Public landing page bán dịch vụ — polygon 3D hero',
   },
   {
-    id: 'backup',
-    label: 'Backup',
-    group: 'Admin',
-    action: { kind: 'modal', modalId: 'backup' },
-    description: 'Export/import data',
-  },
-  {
     id: 'project-packer',
     label: 'Project Packer',
     group: 'Admin',
@@ -253,11 +225,11 @@ export const TOOLS: Tool[] = [
     description: 'Quản lý setting dự án (CRUD qua mockapi)',
   },
   {
-    id: 'cache-inspector',
-    label: 'Cache',
-    group: 'Admin',
-    action: { kind: 'modal', modalId: 'cacheInspector' },
-    description: 'Xem & quản lý cache',
+    id: 'home-widgets',
+    label: 'Home Widgets',
+    group: 'Productivity',
+    action: { kind: 'route', path: '/' },
+    description: 'Widget system trên HubPro homepage — daily reminder, quick actions',
   },
 ];
 

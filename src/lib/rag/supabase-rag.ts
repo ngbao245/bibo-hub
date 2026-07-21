@@ -9,7 +9,7 @@
 // hiện tại. user_id phải lấy từ session khi upsert.
 // ============================================================
 
-import { supabase } from '@/lib/library/supabase';
+import { supabase } from '@/tools/library/lib/supabase';
 import type { EntityType, RagMatchRow } from './types';
 
 // ------------------------------------------------------------

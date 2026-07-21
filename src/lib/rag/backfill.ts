@@ -18,8 +18,8 @@ import { fetchJson } from '@/api/client';
 import { API } from '@/lib/config';
 import { parseNotes, type Note } from '@/schemas/note';
 import { parseTaskRecords, type Task } from '@/schemas/task';
-import { supabase } from '@/lib/library/supabase';
-import type { Highlight } from '@/lib/library/types';
+import { supabase } from '@/tools/library/lib/supabase';
+import type { Highlight } from '@/tools/library/lib/types';
 
 import { useRagStore } from '@/stores/ragStore';
 import {

@@ -40,8 +40,6 @@ const VALID_NOTE_TYPES: NoteType[] = [
   'code',
   'source',
   'savings',
-  'movie',
-  'series',
   'order',
 ];
 

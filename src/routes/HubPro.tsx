@@ -1,17 +1,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Keyboard, ChevronDown, Pin, PinOff, User, LogOut } from 'lucide-react';
+import { Keyboard, Pin, PinOff, User, LogOut, Sun, Moon, Sparkles, Box, Circle } from 'lucide-react';
 import { PencilSparkles } from '@/components/icons/PencilSparkles';
 import { useNavigate } from 'react-router-dom';
 
 import { TOOLS, TOOL_GROUPS, type Tool, type ToolGroup } from '@/lib/tools';
 import { useToolAction } from '@/hooks/useToolAction';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useHubFavorites, useSaveHubFavorites } from '@/api/hubFavorites';
 import { useToolCategories } from '@/api/toolCategories';
+import { useSaveTheme } from '@/api/themeApi';
 import { cn } from '@/lib/cn';
-import FocusLayer from '@/components/FocusLayer';
+import WidgetArea from '@/tools/home-widgets/components/WidgetArea';
 import { useAuthStore } from '@/stores/authStore';
+import { useThemeStore, type ThemeId } from '@/stores/themeStore';
 import { authClient } from '@/lib/authClient';
 import { getAvatarUrl } from '@/api/avatars';
 
@@ -52,7 +53,6 @@ const MAX_FAVORITES = 24;
 
 export default function HubPro() {
   const handleClick = useToolAction();
-  const [focusVisible, setFocusVisible] = useLocalStorage('hubpro_focusVisible', true);
 
   // Filter tools theo profile.allowed_tools. Admin → all tools.
   const profile = useAuthStore((s) => s.profile);
@@ -63,64 +63,75 @@ export default function HubPro() {
     return TOOLS.filter((t) => profile.allowed_tools.includes(t.id));
   }, [profile]);
 
-  // Favorites — lưu /Config (group __system), trống nếu chưa có record
+  // Favorites — localStorage instant + Supabase sync
   const favQuery = useHubFavorites();
   const saveMut = useSaveHubFavorites();
-  const [favoriteIds, setFavoriteIdsLocal] = useState<string[]>([]);
-  const dirtyRef = useRef(false);
+
+  const LS_KEY = 'hub_favorites_local';
+
+  // Read initial from localStorage (instant), then override from Supabase when ready
+  const [favoriteIds, setFavoriteIdsLocal] = useState<string[]>(() => {
+    try {
+      const cached = localStorage.getItem(LS_KEY);
+      return cached ? JSON.parse(cached) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Sync từ API → state local khi query load xong
+  // Sync logic: localStorage is source of truth (always freshest).
+  // Only pull from Supabase when localStorage is empty (first-time user / new device).
   useEffect(() => {
-    if (favQuery.data) {
-      setFavoriteIdsLocal(favQuery.data.ids);
+    if (!favQuery.data) return;
+
+    const localRaw = localStorage.getItem(LS_KEY);
+    const localIds: string[] = localRaw ? JSON.parse(localRaw) : [];
+    const supabaseIds = favQuery.data.ids;
+
+    if (localIds.length === 0 && supabaseIds.length > 0) {
+      // New device / cleared cache → pull from Supabase
+      setFavoriteIdsLocal(supabaseIds);
+      try { localStorage.setItem(LS_KEY, JSON.stringify(supabaseIds)); } catch {}
+    } else if (localIds.length > 0 && supabaseIds.length === 0) {
+      // localStorage has data, Supabase empty → push up (retry sync)
+      saveMut.mutate({ ids: localIds, recordId: null });
     }
+    // Both have data → localStorage wins (it's always updated on pin action)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favQuery.data]);
 
-  // Flush dirty state lên API
-  const flushSave = useCallback(() => {
-    if (!dirtyRef.current) return;
-    dirtyRef.current = false;
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-      debounceRef.current = null;
-    }
-    saveMut.mutate({
-      ids: favoriteIds,
-      recordId: favQuery.data?.recordId ?? null,
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [favoriteIds, favQuery.data?.recordId]);
-
-  // Save trước khi rời trang hoặc tab blur
-  useEffect(() => {
-    const handleBeforeUnload = () => flushSave();
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') flushSave();
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, [flushSave]);
-
+  // Save: localStorage instant + debounce Supabase sync
   const setFavoriteIds = useCallback(
     (ids: string[]) => {
       setFavoriteIdsLocal(ids);
-      dirtyRef.current = true;
-      // Debounce 2s — gom nhiều thao tác thành 1 request
+      // Instant localStorage backup
+      try { localStorage.setItem(LS_KEY, JSON.stringify(ids)); } catch {}
+      // Debounce Supabase sync (500ms)
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
-        dirtyRef.current = false;
         debounceRef.current = null;
         saveMut.mutate({ ids, recordId: favQuery.data?.recordId ?? null });
-      }, 2000);
+      }, 500);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [favQuery.data?.recordId],
   );
+
+  // Flush on tab hidden (visibility change)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden' && debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+        saveMut.mutate({ ids: favoriteIds, recordId: favQuery.data?.recordId ?? null });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [favoriteIds, favQuery.data?.recordId]);
 
   const visibleToolIds = useMemo(() => new Set(visibleTools.map((t) => t.id)), [visibleTools]);
   const favoriteSet = new Set(favoriteIds);
@@ -316,7 +327,7 @@ export default function HubPro() {
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
-      <Header focusVisible={focusVisible} onShowFocus={() => setFocusVisible(true)} />
+      <Header />
 
       <div
         ref={scrollRef}
@@ -325,7 +336,7 @@ export default function HubPro() {
         <div className="flex h-full flex-col px-[clamp(12px,4vw,8rem)]">
           {/* Section 1: chiếm trọn container */}
           <div className="flex h-full shrink-0 flex-col gap-3 py-4 max-md:py-2">
-            {focusVisible && <FocusLayer onHide={() => setFocusVisible(false)} />}
+            <WidgetArea />
 
             <section className="min-h-0 flex-1 overflow-y-auto">
               {favQuery.isLoading ? (
@@ -461,13 +472,7 @@ export default function HubPro() {
 // ============================================================
 // Header
 // ============================================================
-function Header({
-  focusVisible,
-  onShowFocus,
-}: {
-  focusVisible: boolean;
-  onShowFocus: () => void;
-}) {
+function Header() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const profile = useAuthStore((s) => s.profile);
@@ -492,13 +497,6 @@ function Header({
       </div>
 
       <div className="flex items-center gap-2">
-        {!focusVisible && (
-          <Button variant="outline" size="sm" onClick={onShowFocus} className="gap-1.5">
-            <ChevronDown className="h-3.5 w-3.5" />
-            Hiện Focus
-          </Button>
-        )}
-
         <Tooltip>
           <TooltipTrigger asChild>
             <button
@@ -553,12 +551,17 @@ function Header({
             )}
           </Button>
           {userMenuOpen && (
-            <div className="absolute right-0 top-full z-50 mt-1 min-w-[160px] border border-border bg-popover py-1 shadow-md">
+            <div className="absolute right-0 top-full z-50 mt-1 min-w-[200px] border border-border bg-popover py-1 shadow-md">
               {profile?.username && (
                 <div className="border-b border-border px-3 py-2 text-xs text-muted-foreground">
                   {profile.username}
                 </div>
               )}
+
+              {/* Theme section */}
+              <ThemeMenuSection />
+
+              <div className="border-t border-border" />
               <button
                 className="flex w-full items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-muted"
                 onClick={() => {
@@ -584,6 +587,97 @@ function Header({
         </div>
       </div>
     </header>
+  );
+}
+
+// ============================================================
+// Theme menu section (inside user dropdown)
+// ============================================================
+
+const THEME_OPTIONS: { id: ThemeId; label: string; icon: typeof Sun }[] = [
+  { id: 'dark', label: 'Dark', icon: Moon },
+  { id: 'light', label: 'Light', icon: Sun },
+  { id: 'cute', label: 'Cute', icon: Sparkles },
+];
+
+function ThemeMenuSection() {
+  const theme = useThemeStore((s) => s.theme);
+  const is3d = useThemeStore((s) => s.is3d);
+  const isRounded = useThemeStore((s) => s.isRounded);
+  const setTheme = useThemeStore((s) => s.setTheme);
+  const setIs3d = useThemeStore((s) => s.setIs3d);
+  const setIsRounded = useThemeStore((s) => s.setIsRounded);
+  const saveTheme = useSaveTheme();
+
+  const persist = (patch: Partial<{ theme: ThemeId; is3d: boolean; isRounded: boolean }>) => {
+    const next = {
+      theme: patch.theme ?? theme,
+      is3d: patch.is3d ?? is3d,
+      isRounded: patch.isRounded ?? isRounded,
+    };
+    saveTheme.save(next);
+  };
+
+  return (
+    <div className="border-b border-border px-3 py-2 space-y-2">
+      <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Theme</p>
+
+      {/* Theme selector */}
+      <div className="flex gap-1">
+        {THEME_OPTIONS.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => {
+              setTheme(t.id);
+              persist({ theme: t.id });
+            }}
+            className={cn(
+              'flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-all duration-150',
+              theme === t.id
+                ? 'bg-primary/15 text-primary'
+                : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+            )}
+          >
+            <t.icon className="h-3 w-3" />
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Toggles */}
+      <div className="flex gap-2">
+        <button
+          onClick={() => {
+            setIs3d(!is3d);
+            persist({ is3d: !is3d });
+          }}
+          className={cn(
+            'flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-all duration-150',
+            is3d
+              ? 'bg-primary/15 text-primary'
+              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+          )}
+        >
+          <Box className="h-3 w-3" />
+          3D
+        </button>
+        <button
+          onClick={() => {
+            setIsRounded(!isRounded);
+            persist({ isRounded: !isRounded });
+          }}
+          className={cn(
+            'flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium transition-all duration-150',
+            isRounded
+              ? 'bg-primary/15 text-primary'
+              : 'text-muted-foreground hover:bg-foreground/5 hover:text-foreground',
+          )}
+        >
+          <Circle className="h-3 w-3" />
+          Rounded
+        </button>
+      </div>
+    </div>
   );
 }
 

@@ -49,7 +49,7 @@ async function testIlovepdf(secret: Record<string, unknown>): Promise<boolean> {
   if (!publicKey) return false;
   try {
     // Use the existing testKey from library
-    const { testKey } = await import('@/lib/library/pdf-compress');
+    const { testKey } = await import('@/tools/library/lib/pdf-compress');
     return testKey(publicKey);
   } catch {
     return false;
@@ -63,7 +63,7 @@ async function testDrive(secret: Record<string, unknown>): Promise<boolean> {
   const folderId = secret.folder_id as string | undefined;
   if (!clientId || !clientSecret || !refreshToken || !folderId) return false;
   try {
-    const { testDriveConnection } = await import('@/lib/library/drive-backup');
+    const { testDriveConnection } = await import('@/tools/library/lib/drive-backup');
     return testDriveConnection({ client_id: clientId, client_secret: clientSecret, refresh_token: refreshToken, folder_id: folderId });
   } catch {
     return false;
@@ -90,4 +90,4 @@ async function testTurn(secret: Record<string, unknown>): Promise<boolean> {
   if (!username || !credential) return false;
   // TURN servers can't be easily tested via HTTP — validate credentials exist
   return true;
-}
+}

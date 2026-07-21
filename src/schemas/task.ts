@@ -72,3 +72,36 @@ export function parseTaskRecords(records: unknown[]): { tasks: Task[]; lists: Li
 
   return { tasks, lists };
 }
+
+// ============================================================
+// DB Row Schemas (snake_case) — for workspace Supabase response
+// ============================================================
+
+export const TaskRowSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  list_id: z.string().nullish(),
+  title: z.string().default(''),
+  description: z.string().nullish(),
+  status: z.enum(['pending', 'completed']).default('pending'),
+  priority: z.enum(['normal', 'high']).default('normal'),
+  due_date: z.string().nullish(),
+  recurring: z.boolean().default(false),
+  url1: z.string().nullish(),
+  url2: z.string().nullish(),
+  url3: z.string().nullish(),
+  completed_date: z.string().nullish(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const TaskListRowSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  name: z.string().default(''),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type TaskRowZ = z.infer<typeof TaskRowSchema>;
+export type TaskListRowZ = z.infer<typeof TaskListRowSchema>;

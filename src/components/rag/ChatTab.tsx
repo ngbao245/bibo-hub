@@ -41,7 +41,7 @@ import {
   promptInternal,
   PROMPT_AUTO_NO_CONTEXT,
 } from '@/lib/rag/prompts';
-import { renderMarkdown } from '@/lib/markdown-preview/render';
+import { renderMarkdown } from '@/tools/markdown-preview/lib/render';
 import type { EntityType, RagMatchRow } from '@/lib/rag/types';
 import {
   useCreateRagSession,

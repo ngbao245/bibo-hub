@@ -73,15 +73,27 @@ async function loadCredentialsFromRegistry(): Promise<CredentialWithSecret[]> {
 
   if (!bindings?.length || !bindings[0].profile_id) return [];
 
-  // Load active credentials from the profile
+  // Load active credentials from the profile.
+  // Only include credentials that passed connection test (last_success_at not null).
   const { data: credentials } = await authClient
     .from('service_credentials')
-    .select('id, identifier, secret_data_json, priority, weight')
+    .select('id, identifier, secret_data_json, priority, weight, last_success_at, last_error_at')
     .eq('profile_id', bindings[0].profile_id)
     .eq('status', 'active')
+    .not('last_success_at', 'is', null)
     .order('priority');
 
-  return (credentials ?? []) as CredentialWithSecret[];
+  // Further filter: only keep credentials whose last test was successful
+  // (last_success_at >= last_error_at, or no error at all)
+  const verified = (credentials ?? []).filter((c) => {
+    const success = c.last_success_at as string | null;
+    const error = c.last_error_at as string | null;
+    if (!success) return false;
+    if (!error) return true; // never failed → OK
+    return success >= error; // last success is more recent than last error
+  });
+
+  return verified as CredentialWithSecret[];
 }
 
 /**
@@ -133,4 +145,4 @@ async function loadFromAppSettings(): Promise<RagTokens> {
     .filter((v) => v.length > 0);
 
   return { geminiApiKeys };
-}
+}

@@ -104,6 +104,13 @@ async function callGeminiWithRetry<T>(
         else pool.markRateLimited(state.key, retryAfter);
         continue;
       }
+      if (status === 400) {
+        // 400 Bad Request — thường là key invalid hoặc format sai.
+        // Mark invalid để pool không pick lại key này.
+        const bodyMsg = extractErrorMessage((err as GeminiError).body);
+        pool.markInvalid(state.key, `HTTP 400: ${bodyMsg || 'Bad Request'}`);
+        continue;
+      }
       if (status === 401 || status === 403) {
         pool.markInvalid(state.key, `HTTP ${status}`);
         continue;
@@ -125,6 +132,13 @@ async function callGeminiWithRetry<T>(
 
 function sleep(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
+}
+
+/** Extract human-readable error message from Gemini error response body. */
+function extractErrorMessage(body: unknown): string {
+  if (!body || typeof body !== 'object') return '';
+  const err = (body as { error?: { message?: string } }).error;
+  return err?.message ?? '';
 }
 
 // ------------------------------------------------------------

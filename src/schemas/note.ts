@@ -18,8 +18,6 @@ export const NoteTypeSchema = z.enum([
   'secret',
   'source',
   'savings',
-  'movie',
-  'series',
   'order',
 ]);
 export type NoteType = z.infer<typeof NoteTypeSchema>;
@@ -60,3 +58,32 @@ export function parseNotes(records: unknown[]): Note[] {
   }
   return result;
 }
+
+// ============================================================
+// DB Row Schema (snake_case) — for workspace Supabase response
+// ============================================================
+
+export const NoteRowSchema = z.object({
+  id: z.string(),
+  user_id: z.string(),
+  title: z.string().default(''),
+  content: z.string().default(''),
+  type: NoteTypeSchema.default('note'),
+  source: z.string().nullish(),
+  tags: z.string().nullish(),
+  example: z.string().nullish(),
+  url1: z.string().nullish(),
+  url2: z.string().nullish(),
+  url3: z.string().nullish(),
+  url4: z.string().nullish(),
+  url5: z.string().nullish(),
+  word_count_enabled: z.boolean().default(false),
+  timer_duration: z.string().nullish(),
+  linked_notes: z.array(z.string()).default([]),
+  is_child_note: z.boolean().default(false),
+  parent_note_id: z.string().nullish(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export type NoteRowZ = z.infer<typeof NoteRowSchema>;

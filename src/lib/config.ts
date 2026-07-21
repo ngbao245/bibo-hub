@@ -30,6 +30,7 @@ const CONFIG_BASE = decode(ENCODED_CONFIG_BASE);
 export const API = {
   BASE,
   NOTES: `${BASE}/notes`,
+  /** @deprecated backup.ts + backfill.ts còn dùng — sẽ xoá khi cleanup Phase 5. */
   TASKS: `${BASE}/tasks`,
   TAGS: `${BASE}/tags`,
   CONFIGS: `${CONFIG_BASE}/Config`,

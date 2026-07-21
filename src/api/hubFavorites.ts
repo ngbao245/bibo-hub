@@ -1,98 +1,85 @@
-
 // ============================================================
-// Hub Favorites — sync pinned tools lên /Config
+// Hub Favorites — per-user pinned tools via Supabase user_tool_settings
 // ============================================================
 //
-// Lưu 1 record duy nhất: group="__system", type="hub_favorites".
-// config1 chứa JSON array tool IDs (plain, không encrypt).
+// Lưu trong user_tool_settings WHERE tool_code = '__hub'
+// → settings_json.favorites = string[] (tool IDs)
 //
-// Logic:
-//   - Load: tìm record __system/hub_favorites → parse config1.
-//   - Save: PUT record (tạo nếu chưa có).
+// User chưa có record → favorites trống (tự pin).
 // ============================================================
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fetchJson } from './client';
-import { API } from '@/lib/config';
-import { parseSettingList, type Setting } from '@/lib/setting';
+import { authClient } from '@/lib/authClient';
+import { useAuthStore } from '@/stores/authStore';
 
 const QUERY_KEY = ['hub_favorites'] as const;
-const SYSTEM_GROUP = '__system';
-const SYSTEM_TYPE = 'hub_favorites';
-
-function findRecord(list: Setting[]): Setting | null {
-  return (
-    list.find(
-      (s) => s.group.trim() === SYSTEM_GROUP && s.type.trim() === SYSTEM_TYPE,
-    ) ?? null
-  );
-}
-
-function parseIds(record: Setting | null): string[] {
-  if (!record?.config1) return [];
-  try {
-    const arr = JSON.parse(record.config1);
-    if (Array.isArray(arr)) return arr.filter((x) => typeof x === 'string');
-  } catch {
-    /* ignore */
-  }
-  return [];
-}
-
-async function fetchFavorites(): Promise<{ ids: string[]; recordId: string | null }> {
-  const raw = await fetchJson<unknown>(API.CONFIGS);
-  const list = parseSettingList(raw);
-  const record = findRecord(list);
-  const ids = parseIds(record);
-  return { ids, recordId: record?.id ?? null };
-}
+const TOOL_CODE = '__hub';
 
 export function useHubFavorites() {
+  const userId = useAuthStore((s) => s.session?.user.id);
+
   return useQuery({
-    queryKey: QUERY_KEY,
-    queryFn: fetchFavorites,
+    queryKey: [...QUERY_KEY, userId],
+    queryFn: async (): Promise<{ ids: string[]; recordId: string | null }> => {
+      if (!userId) return { ids: [], recordId: null };
+
+      const { data, error } = await authClient
+        .from('user_tool_settings')
+        .select('id, settings_json')
+        .eq('user_id', userId)
+        .eq('tool_code', TOOL_CODE)
+        .maybeSingle();
+
+      if (error || !data) return { ids: [], recordId: null };
+
+      const settings = data.settings_json as Record<string, unknown> | null;
+      const favorites = Array.isArray(settings?.favorites) ? settings.favorites as string[] : [];
+
+      return { ids: favorites, recordId: data.id };
+    },
+    enabled: !!userId,
     staleTime: 60_000,
   });
 }
 
 export function useSaveHubFavorites() {
   const qc = useQueryClient();
+  const userId = useAuthStore((s) => s.session?.user.id);
+
   return useMutation({
-    mutationFn: async ({
-      ids,
-      recordId,
-    }: {
-      ids: string[];
-      recordId: string | null;
-    }) => {
-      const body = {
-        name: '',
-        description: '',
-        group: SYSTEM_GROUP,
-        type: SYSTEM_TYPE,
-        config1: JSON.stringify(ids),
-        config2: '',
-        config3: '',
-        config4: '',
-        config5: '',
-        config6: '',
-        config7: '',
-        config8: '',
-        config9: '',
-        config10: '',
-      };
+    mutationFn: async ({ ids, recordId }: { ids: string[]; recordId: string | null }) => {
+      if (!userId) throw new Error('Not authenticated');
 
       if (recordId) {
-        await fetchJson(`${API.CONFIGS}/${recordId}`, {
-          method: 'PUT',
-          body: JSON.stringify(body),
-        });
+        // Update existing record — merge favorites into settings_json
+        const { data: existing } = await authClient
+          .from('user_tool_settings')
+          .select('settings_json')
+          .eq('id', recordId)
+          .single();
+
+        const current = (existing?.settings_json as Record<string, unknown>) ?? {};
+        const merged = { ...current, favorites: ids };
+
+        const { error } = await authClient
+          .from('user_tool_settings')
+          .update({ settings_json: merged, updated_at: new Date().toISOString() })
+          .eq('id', recordId);
+
+        if (error) throw new Error(error.message);
       } else {
-        await fetchJson(API.CONFIGS, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        });
+        // Create new record
+        const { error } = await authClient
+          .from('user_tool_settings')
+          .insert({
+            user_id: userId,
+            tool_code: TOOL_CODE,
+            settings_json: { favorites: ids },
+            is_enabled: true,
+          });
+
+        if (error) throw new Error(error.message);
       }
     },
     onSuccess: () => {
@@ -100,6 +87,3 @@ export function useSaveHubFavorites() {
     },
   });
 }
-
-/** Group ẩn — Setting UI sẽ filter nhóm này ra khỏi list. */
-export const SYSTEM_GROUP_NAME = SYSTEM_GROUP;

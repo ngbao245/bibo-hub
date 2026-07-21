@@ -1,25 +1,24 @@
-
 // ============================================================
-// Tool Categories — sync category assignment lên /Config
+// Tool Categories — read/write from Supabase app_settings
 // ============================================================
 //
-// 1 record: group="Setting", type="Category" (record id=4 đã tạo sẵn).
-// config1 = JSON { categories: string[], mapping: Record<toolId, category> }
+// Key: 'tool_categories_default'
+// Value: { categories: string[], mapping: Record<toolId, category> }
 //
 // - categories: thứ tự hiển thị category trên Hub.
 // - mapping: tool ID → category name.
-// - Tool không có trong mapping → ẩn khỏi section (vẫn hiện ở favorites nếu pin).
+// - Tool không có trong mapping → "Unassigned".
+//
+// Admin set default qua /config. User mới thấy default.
+// Per-user override sẽ dùng user_tool_settings (tương lai).
 // ============================================================
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { fetchJson } from './client';
-import { API } from '@/lib/config';
-import { parseSettingList, type Setting } from '@/lib/setting';
+import { authClient } from '@/lib/authClient';
 
 const QUERY_KEY = ['tool_categories'] as const;
-const CAT_GROUP = 'Setting';
-const CAT_TYPE = 'Category';
+const SETTINGS_KEY = 'tool_categories_default';
 
 export interface ToolCategoriesData {
   categories: string[];
@@ -28,43 +27,37 @@ export interface ToolCategoriesData {
 
 const EMPTY_DATA: ToolCategoriesData = { categories: [], mapping: {} };
 
-function findRecord(list: Setting[]): Setting | null {
-  return (
-    list.find(
-      (s) => s.group.trim() === CAT_GROUP && s.type.trim() === CAT_TYPE,
-    ) ?? null
-  );
-}
-
-function parseData(record: Setting | null): ToolCategoriesData {
-  if (!record?.config1) return EMPTY_DATA;
-  try {
-    const obj = JSON.parse(record.config1);
-    if (
-      obj &&
-      Array.isArray(obj.categories) &&
-      obj.mapping &&
-      typeof obj.mapping === 'object'
-    ) {
-      return {
-        categories: obj.categories.filter((x: unknown) => typeof x === 'string'),
-        mapping: obj.mapping as Record<string, string>,
-      };
-    }
-  } catch {
-    /* ignore */
-  }
-  return EMPTY_DATA;
-}
-
 async function fetchToolCategories(): Promise<{
   data: ToolCategoriesData;
   recordId: string | null;
 }> {
-  const raw = await fetchJson<unknown>(API.CONFIGS);
-  const list = parseSettingList(raw);
-  const record = findRecord(list);
-  return { data: parseData(record), recordId: record?.id ?? null };
+  const { data, error } = await authClient
+    .from('app_settings')
+    .select('key, value')
+    .eq('key', SETTINGS_KEY)
+    .maybeSingle();
+
+  if (error || !data) {
+    return { data: EMPTY_DATA, recordId: null };
+  }
+
+  const value = data.value as ToolCategoriesData | null;
+  if (
+    value &&
+    Array.isArray(value.categories) &&
+    value.mapping &&
+    typeof value.mapping === 'object'
+  ) {
+    return {
+      data: {
+        categories: value.categories.filter((x: unknown) => typeof x === 'string'),
+        mapping: value.mapping,
+      },
+      recordId: SETTINGS_KEY,
+    };
+  }
+
+  return { data: EMPTY_DATA, recordId: SETTINGS_KEY };
 }
 
 export function useToolCategories() {
@@ -80,42 +73,22 @@ export function useSaveToolCategories() {
   return useMutation({
     mutationFn: async ({
       data,
-      recordId,
     }: {
       data: ToolCategoriesData;
       recordId: string | null;
     }) => {
-      const body = {
-        name: '',
-        description: '',
-        group: CAT_GROUP,
-        type: CAT_TYPE,
-        config1: JSON.stringify(data),
-        config2: '',
-        config3: '',
-        config4: '',
-        config5: '',
-        config6: '',
-        config7: '',
-        config8: '',
-        config9: '',
-        config10: '',
-      };
+      const { error } = await authClient
+        .from('app_settings')
+        .upsert({
+          key: SETTINGS_KEY,
+          value: data,
+          updated_at: new Date().toISOString(),
+        });
 
-      if (recordId) {
-        await fetchJson(`${API.CONFIGS}/${recordId}`, {
-          method: 'PUT',
-          body: JSON.stringify(body),
-        });
-      } else {
-        await fetchJson(API.CONFIGS, {
-          method: 'POST',
-          body: JSON.stringify(body),
-        });
-      }
+      if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: QUERY_KEY });
     },
   });
-}
+}

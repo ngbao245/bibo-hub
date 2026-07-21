@@ -113,6 +113,8 @@ Group `"RAG"` trong table `/Config`, có 2 records:
 
 Fields encrypted bằng `APP_SECRET`:
 
+**Loading rule**: chỉ credential có `status='active'` VÀ `last_success_at IS NOT NULL` VÀ lần test gần nhất là success (`last_success_at >= last_error_at`, hoặc chưa từng error) mới được load vào key pool. Credential chưa pass connection test lần nào, hoặc lần test gần nhất là fail, sẽ bị skip.
+
 | Field | Required | Mô tả |
 |---|---|---|
 | `geminiApiKey1` | Bắt buộc ≥ 1 trong 3 | Gemini key #1 |

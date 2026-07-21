@@ -290,6 +290,24 @@ Data source: sau spec `library-migrate-to-project-a`, mọi bảng (`books`, `hi
 }
 ```
 
+### Book Deletion & Multi-Storage
+
+Khi delete book, logic phan nhanh theo `storage_node_id`:
+
+- **Book co `storage_node_id`** (uploaded len federated storage node):
+  1. Load storage nodes config, tim node matching ID.
+  2. Tao Supabase client rieng cho node do (`getUploadClient(node)`).
+  3. Xoa file (+ cover neu co) tu bucket cua node.
+  4. Tru usage (`updateUsage(nodeId, -file_size_bytes)`) — fire-and-forget (catch ignore).
+  5. Delete record tu `books` table (Core project).
+  6. Invalidate queries: `['reader', 'books']`, `['reader', 'storage-usage']`, `['library', 'storage-nodes']`.
+
+- **Book KHONG co `storage_node_id`** (legacy, uploaded truoc multi-storage):
+  1. Xoa file tu bucket `BUCKET` (Core project storage — Project A).
+  2. Delete record + invalidate queries nhu tren (tru `storage-nodes`).
+
+Edge case: neu node config khong tim thay (node bi xoa/disable) → file storage khong xoa duoc, nhung DB record van delete. Hien chua co fallback/retry.
+
 ### Progress Type (stored in DB)
 ```ts
 {
@@ -420,6 +438,12 @@ const captureSnapshot = () => {
 - `GET /books/{id}`: Fetch book info (title, cover, etc.)
 - `GET /books/{bookId}/toc`: Fetch outline (if available)
 
+**File Access (Signed URL):**
+- `getBookFileUrl(filePath, storageNodeId?)` — tạo signed URL (valid 1h) để download PDF blob.
+  - Nếu `storageNodeId` cung cap + node ton tai trong `loadStorageNodes()` → route sang bucket cua storage pool node do (qua `getReadClient` tu `library-storage-pool/lib/pool`).
+  - Nếu `storageNodeId` null/undefined hoac node khong tim thay → fallback Core project bucket (`books` bucket, legacy path).
+  - Ca 2 path deu tra ve signed URL valid 1 gio.
+
 ---
 
 ## 14. Book Management (spec `library-book-management`)
@@ -499,3 +523,24 @@ The BiBo Library is a full-featured shared PDF library with:
 - **Performance**: Snapshots, prefetch, lazy indexing, debounce saves
 
 Core complexity: managing DOM Selection state + native browser behaviors on iOS + async text extraction. Codebase follows React hooks patterns, TanStack Query for server state, localStorage for client preferences.
+
+---
+
+## 15. Storage Pool Routing (Upload)
+
+Upload book (và replace file) hỗ trợ **multi-node storage pool**:
+
+1. Load danh sách `StorageNode` (từ config/DB).
+2. `pickNodeOrThrow(nodes, fileSize)` — chọn node best-fit theo dung lượng file.
+3. Nếu nodes rỗng (chưa config) → fallback upload vào Supabase Core bucket (legacy).
+4. Nếu pool full (tất cả node hết dung lượng) → throw `StoragePoolFullError`, upload abort.
+
+Upload opts khi có node:
+- `supabaseUrl`: endpoint node
+- `authKey`: service role key node
+- `bucket`: bucket name node
+- `useServiceRole: true`
+
+Cả PDF file upload (Stage 2) và cover upload (Stage 3) đều dùng cùng `poolUploadOpts`.
+
+Return value của `processAndUploadFile` giờ bao gồm `storageNode: StorageNode | null` — caller biết file đã lưu ở node nào (null = Core legacy).

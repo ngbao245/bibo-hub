@@ -32,7 +32,7 @@
     --accent: 204 100% 40%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 358 64% 51%;      /* #d13438 */
+    --destructive: 0 84% 60%;         /* #ef4444 - Tailwind red-500 */
     --destructive-foreground: 0 0% 100%;
 
     --success: 142 71% 45%;          /* ~ green-500 */
@@ -46,6 +46,137 @@
     --ring: 204 100% 40%;
 
     --radius: 0;                      /* vuông vức */
+  }
+
+  /* ============================================================
+     Light theme — clean white/gray, scoped via data-theme
+     ============================================================ */
+  [data-theme='light'] {
+    --background: 0 0% 98%;            /* #fafafa */
+    --foreground: 240 10% 10%;         /* #1a1a1e */
+
+    --card: 0 0% 100%;                 /* white */
+    --card-foreground: 240 10% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 10%;
+
+    --primary: 204 100% 40%;           /* keep blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 5% 93%;           /* #ededf0 */
+    --secondary-foreground: 240 10% 20%;
+
+    --muted: 240 5% 93%;
+    --muted-foreground: 240 4% 46%;    /* #6e6e7a */
+
+    --accent: 204 100% 40%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 10%;
+
+    --border: 240 6% 88%;             /* #e0e0e4 */
+    --input: 240 6% 88%;
+    --ring: 204 100% 40%;
+
+    --radius: 0;
+  }
+
+  /* ============================================================
+     Cute theme — bright, bubbly, thick buttons, playful colors
+     Light base + vivid pastels + rounded-er feel
+     ============================================================ */
+  [data-theme='cute'] {
+    --background: 330 30% 97%;         /* warm pink-white #faf6f8 */
+    --foreground: 280 30% 15%;         /* deep purple-black */
+
+    --card: 0 0% 100%;
+    --card-foreground: 280 30% 15%;
+
+    --popover: 330 20% 98%;
+    --popover-foreground: 280 30% 15%;
+
+    --primary: 280 70% 55%;            /* vivid purple #9333ea */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 330 40% 93%;          /* soft pink #f5e6ee */
+    --secondary-foreground: 280 30% 25%;
+
+    --muted: 330 25% 93%;              /* muted pink */
+    --muted-foreground: 280 10% 45%;
+
+    --accent: 180 60% 45%;             /* teal accent */
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 350 80% 58%;        /* hot pink-red */
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 155 70% 45%;            /* mint green */
+    --success-foreground: 0 0% 100%;
+
+    --warning: 45 95% 55%;             /* bright yellow */
+    --warning-foreground: 0 0% 10%;
+
+    --border: 330 20% 85%;             /* pink border */
+    --input: 330 20% 85%;
+    --ring: 280 70% 55%;
+
+    --radius: 0.75rem;                 /* rounder for cute feel */
+  }
+
+  /* ============================================================
+     Theme switch — instant snap, no transition.
+     ============================================================ */
+
+  /* ============================================================
+     Toggle: Rounded corners — applied via [data-rounded]
+     Override Tailwind's hard-coded 0 radius within scope
+     ============================================================ */
+  [data-rounded] {
+    --radius: 0.75rem;
+  }
+  [data-rounded] .rounded-lg {
+    border-radius: 0.5rem;
+  }
+  [data-rounded] .rounded-xl {
+    border-radius: 0.75rem;
+  }
+  [data-rounded] .rounded-2xl {
+    border-radius: 1rem;
+  }
+  [data-rounded] .rounded {
+    border-radius: 0.375rem;
+  }
+  [data-rounded] .rounded-sm {
+    border-radius: 0.25rem;
+  }
+  [data-rounded] .rounded-md {
+    border-radius: 0.375rem;
+  }
+
+  /* ============================================================
+     Toggle: 3D raised buttons — applied via [data-3d]
+     Works on any theme (dark, light, cute)
+     ============================================================ */
+  [data-3d] button:not(:disabled),
+  [data-3d] [role='button']:not(:disabled) {
+    border-bottom: 3px solid hsl(0 0% 0% / 0.25);
+    transition: transform 100ms, border-bottom-width 100ms, box-shadow 100ms;
+    box-shadow: 0 2px 4px hsl(0 0% 0% / 0.15);
+  }
+
+  [data-3d] button:not(:disabled):active,
+  [data-3d] [role='button']:not(:disabled):active {
+    transform: translateY(2px);
+    border-bottom-width: 1px;
+    box-shadow: 0 0 2px hsl(0 0% 0% / 0.08);
   }
 
   * {

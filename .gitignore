@@ -85,3 +85,6 @@ coverage
 
 # Backup folder
 backup/
+
+# packed folder
+files-changed/
