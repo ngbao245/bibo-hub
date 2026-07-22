@@ -5,12 +5,12 @@
 
 /* ============================================================
    Theme tokens (HSL) - shadcn/ui style
-   Dark mode bß║¡t mß║╖c ─æß╗ïnh cho cß║ú app.
-   Color giß╗» tinh thß║ºn VSCode dark hiß╗çn tß║íi.
+   Dark mode bß║¡t mß║╖c định cho cả app.
+   Color giữ tinh thß║ºn VSCode dark hiß╗çn tại.
    ============================================================ */
 @layer base {
   :root {
-    /* Default = dark theme (project lu├┤n d├╣ng dark) */
+    /* Default = dark theme (project luổn dùng dark) */
     --background: 0 0% 12%;          /* #1e1e1e */
     --foreground: 0 0% 83%;          /* #d4d4d4 */
 
@@ -45,11 +45,11 @@
     --input: 240 4% 25%;
     --ring: 204 100% 40%;
 
-    --radius: 0;                      /* vu├┤ng vß╗⌐c */
+    --radius: 0;                      /* vuông vức */
   }
 
   /* ============================================================
-     Light theme ΓÇö clean white/gray, scoped via data-theme
+     Light theme — clean white/gray, scoped via data-theme
      ============================================================ */
   [data-theme='light'] {
     --background: 0 0% 98%;            /* #fafafa */
@@ -90,7 +90,7 @@
   }
 
   /* ============================================================
-     Cute theme ΓÇö bright, bubbly, thick buttons, playful colors
+     Cute theme — bright, bubbly, thick buttons, playful colors
      Light base + vivid pastels + rounded-er feel
      ============================================================ */
   [data-theme='cute'] {
@@ -132,11 +132,11 @@
   }
 
   /* ============================================================
-     Theme switch ΓÇö instant snap, no transition.
+     Theme switch — instant snap, no transition.
      ============================================================ */
 
   /* ============================================================
-     Toggle: Rounded corners ΓÇö applied via [data-rounded]
+     Toggle: Rounded corners — applied via [data-rounded]
      Override Tailwind's hard-coded 0 radius within scope
      ============================================================ */
   [data-rounded] {
@@ -158,7 +158,7 @@
     border-radius: 0.25rem;
   }
 
-  /* Checkbox/switch KH├öNG bo tr├▓n ΓÇö lu├┤n vu├┤ng bß║Ñt kß╗â rounded mode */
+  /* Checkbox/switch KH├öNG bo tròn — luổn vuông bß║Ñt kß╗â rounded mode */
   [data-rounded] button[role='checkbox'],
   [data-rounded] button[role='switch'] {
     border-radius: 0 !important;
@@ -168,7 +168,7 @@
   }
 
   /* ============================================================
-     Toggle: Pill corners ΓÇö applied via [data-pill]
+     Toggle: Pill corners — applied via [data-pill]
      Stronger rounding than [data-rounded]. Mutually exclusive.
      ============================================================ */
   [data-pill] {
@@ -193,14 +193,14 @@
     border-radius: 0.75rem;
   }
 
-  /* Checkbox/switch KH├öNG bo tr├▓n ΓÇö lu├┤n vu├┤ng bß║Ñt kß╗â pill mode */
+  /* Checkbox/switch KH├öNG bo tròn — luổn vuông bß║Ñt kß╗â pill mode */
   [data-pill] button[role='checkbox'],
   [data-pill] button[role='switch'] {
     border-radius: 0 !important;
   }
 
   /* ============================================================
-     Toggle: Lift (elevation) ΓÇö applied via [data-3d]
+     Toggle: Lift (elevation) — applied via [data-3d]
      Works on any theme (dark, light, cute)
      
      Only surfaces get lift: Button, Card, Dialog, Dropdown, Popover.
@@ -230,7 +230,7 @@
     transform: translateY(2px);
   }
 
-  /* Outline/secondary buttons: lift shadow c├╣ng tone border gß╗æc */
+  /* Outline/secondary buttons: lift shadow cùng tone border gß╗æc */
   [data-3d] button.border-border:not(:disabled):not([data-flat]):not([data-flat] *) {
     box-shadow: 0 3px 0 0 hsl(var(--border)), 0 2px 4px hsl(0 0% 0% / 0.15);
   }
@@ -254,7 +254,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  /* Disable text selection tr├¬n UI elements */
+  /* Disable text selection trênn UI elements */
   button,
   .no-select {
     user-select: none;
@@ -268,7 +268,7 @@
     -webkit-user-select: text;
   }
 
-  /* ß║¿n scrollbar nh╞░ng vß║½n cuß╗Ön ─æ╞░ß╗úc */
+  /* ß║¿n scrollbar nh╞░ng vẫn cuß╗Ön được */
   ::-webkit-scrollbar {
     display: none;
   }
@@ -288,8 +288,8 @@
 }
 
 /* ============================================================
-   ß║¿n n├║t reveal password mß║╖c ─æß╗ïnh cß╗ºa Edge / IE / Chromium.
-   App tß╗▒ render toggle eye ΓåÆ tr├ính hiß╗ân thß╗ï 2 n├║t tr├╣ng.
+   ß║¿n nút reveal password mß║╖c định của Edge / IE / Chromium.
+   App tự render toggle eye → tránh hiển thị 2 nút trũng.
    ============================================================ */
 input[type='password']::-ms-reveal,
 input[type='password']::-ms-clear,
@@ -300,7 +300,7 @@ input[type='password']::-webkit-strong-password-auto-fill-button {
   pointer-events: none;
 }
 
-/* ß║¿n spinner mß║╖c ─æß╗ïnh cß╗ºa input[type=number] (Chrome, Safari, Firefox) */
+/* ß║¿n spinner mß║╖c định của input[type=number] (Chrome, Safari, Firefox) */
 input[type='number']::-webkit-outer-spin-button,
 input[type='number']::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -312,8 +312,8 @@ input[type='number'] {
 }
 
 /* ============================================================
-   PDF Reader theme ΓÇö Apply filter l├¬n to├án bß╗Ö page container
-   ─æß╗â canvas v├á text layer c├╣ng bß╗ï transform, tr├ính misalignment.
+   PDF Reader theme — Apply filter l├¬n toàn bộ page container
+   để canvas vă text layer cùng bß╗ï transform, tránh misalignment.
    ============================================================ */
 [data-pdf-theme='dark'] .react-pdf__Page {
   filter: invert(1) hue-rotate(180deg);
@@ -322,7 +322,7 @@ input[type='number'] {
   filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
 }
 
-/* Snapshot canvas c┼⌐ng cß║ºn filter ri├¬ng v├¼ nß║▒m ngo├ái .react-pdf__Page */
+/* Snapshot canvas cũng cần filter ri├¬ng v├¼ nằm ngoăi .react-pdf__Page */
 [data-pdf-theme='dark'] [data-pdf-snapshot] {
   filter: invert(1) hue-rotate(180deg);
 }
@@ -330,7 +330,7 @@ input[type='number'] {
   filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
 }
 
-/* Text layer giß╗» nguy├¬n transparent, selection highlight tß╗▒ nhi├¬n */
+/* Text layer giữ nguy├¬n transparent, selection highlight tự nhi├¬n */
 .react-pdf__Page__textContent span {
   color: transparent !important;
 }
@@ -426,7 +426,7 @@ input[type='number'] {
   font-weight: 600;
 }
 
-/* Citation [n] button ΓÇö inline nhß╗Å, theo primary */
+/* Citation [n] button — inline nhỏ, theo primary */
 .rag-cite {
   display: inline;
   background: transparent;
@@ -443,4 +443,4 @@ input[type='number'] {
 }
 .rag-cite:focus-visible {
   outline: 1px solid hsl(var(--ring));
-}
+}

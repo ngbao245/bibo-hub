@@ -45,10 +45,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { LoadingState, EmptyState, ErrorState } from '@/components/shared';
 
 // ============================================================
-// Design tokens ΓÇö cß╗⌐ng, kh├┤ng hard-code Tailwind classes rß╗¥i rß║íc
+// Design tokens — cß╗⌐ng, không hard-code Tailwind classes rß╗¥i rß║íc
 // ============================================================
 
-/** Border radius scale. Map cß╗⌐ng theo role ΓÇö kh├┤ng t├╣y tiß╗çn. */
+/** Border radius scale. Map cß╗⌐ng theo role — không tũy tiß╗çn. */
 const RADIUS = {
   chip: 'rounded-full', // badges, pills, avatars
   input: 'rounded-lg',  // buttons, inputs, small blocks
@@ -57,14 +57,14 @@ const RADIUS = {
   skel: 'rounded',      // default text/line skeletons
 } as const;
 
-/** Motion presets. Tß║Ñt cß║ú transitions ß╗ƒ 150ms ─æß╗â ─æß╗ông bß╗Ö nhß╗ïp. */
+/** Motion presets. Tất cả transitions ở 150ms để đß╗ông bộ nhß╗ïp. */
 const MOTION = {
   fast: 'transition-all duration-150',
   fade: 'animate-in fade-in duration-150',
   pulse: 'animate-pulse [animation-duration:2s]',
 } as const;
 
-/** Icon size scale ΓÇö chß╗ë 3 gi├í trß╗ï. */
+/** Icon size scale — chỉ 3 giá trß╗ï. */
 const ICON = {
   sm: 'h-4 w-4',   // 16px inline, button icon
   md: 'h-5 w-5',   // 20px empty state, section header
@@ -81,7 +81,7 @@ const TEXT = {
   code: 'rounded bg-muted px-1.5 py-0.5 text-[11px] font-mono',
 } as const;
 
-/** Section gap nhß║Ñt qu├ín giß╗»a tß║Ñt cß║ú tab. */
+/** Section gap nhất quán giữa tất cả tab. */
 const SECTION_GAP = 'space-y-12';
 
 // ============================================================
@@ -245,7 +245,7 @@ function ThemeControls() {
         Lift
       </button>
 
-      {/* Subtle toggle (was Rounded) ΓÇö radio with Pill */}
+      {/* Subtle toggle (was Rounded) — radio with Pill */}
       <button
         onClick={() => {
           const next = !isRounded;
@@ -262,7 +262,7 @@ function ThemeControls() {
         Subtle
       </button>
 
-      {/* Pill toggle ΓÇö radio with Subtle */}
+      {/* Pill toggle — radio with Subtle */}
       <button
         onClick={() => {
           const next = !isPill;
@@ -279,7 +279,7 @@ function ThemeControls() {
         Pill
       </button>
 
-      {/* Retro toggle ΓÇö only enabled when Lift is on */}
+      {/* Retro toggle — only enabled when Lift is on */}
       <button
         disabled={!is3d}
         onClick={() => {
@@ -325,7 +325,7 @@ function Section({
   );
 }
 
-/** Subgroup header chia section th├ánh nh├│m nhß╗Å h╞ín. */
+/** Subgroup header chia section thănh nhốm nhỏ h╞ín. */
 function SubgroupHeader({ children }: { children: ReactNode }) {
   return (
     <h3 className="pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
@@ -336,7 +336,7 @@ function SubgroupHeader({ children }: { children: ReactNode }) {
 
 /**
  * Soft surface preview container.
- * NOT interactive ΓÇö kh├┤ng c├│ hover effect ─æß╗â tr├ính visual noise.
+ * NOT interactive — không có hover effect để tránh visual noise.
  * shimmer prop: adds animated shimmer beam for skeleton previews.
  */
 function PreviewCard({
@@ -362,8 +362,8 @@ function PreviewCard({
 }
 
 /**
- * Circular icon container d├╣ng cho empty state, error state.
- * Bg-muted/60 ─æß╗â nß╗òi r├╡ tr├¬n PreviewCard bg-muted/40.
+ * Circular icon container dùng cho empty state, error state.
+ * Bg-muted/60 để nội r├╡ trênn PreviewCard bg-muted/40.
  */
 function IconBadge({
   icon: Icon,
@@ -435,7 +435,7 @@ function PulseDot({
   return <div className={`h-2 w-2 ${RADIUS.chip} ${colorClass} ${animated ? MOTION.pulse : ''}`} />;
 }
 
-/** Single alpha swatch d├╣ng cho scale demo. */
+/** Single alpha swatch dùng cho scale demo. */
 function AlphaSwatch({ value }: { value: 5 | 10 | 15 | 20 | 30 | 50 | 80 | 100 }) {
   // Static classes for Tailwind JIT (no dynamic interpolation)
   const bg: Record<number, string> = {
@@ -480,7 +480,7 @@ function LoadingSection() {
 
       <Section
         title="System Spinner"
-        description="Single spinner for all contexts: Suspense fallback, action feedback, inline loading. Scale via h/w classes. No rounded-full ΓÇö minimal square aesthetic."
+        description="Single spinner for all contexts: Suspense fallback, action feedback, inline loading. Scale via h/w classes. No rounded-full — minimal square aesthetic."
       >
         <div className="grid gap-4 sm:grid-cols-3">
           <PreviewCard className="space-y-2 text-center">
@@ -1702,4 +1702,4 @@ function DemoDataGrid() {
       ))}
     </div>
   );
-}
+}

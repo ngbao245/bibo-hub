@@ -77,7 +77,7 @@ coverage
 # ============================================================
 # Tooling-specific
 # ============================================================
-# CodeGraph index ΓÇö rebuild bß║▒ng `codegraph init`
+# CodeGraph index — rebuild bằng `codegraph init`
 .codegraph/
 
 # Kiro IDE settings (per-dev)
@@ -88,4 +88,4 @@ backup/
 
 # packed folder
 files-changed/
-changed-files/
+changed-files/

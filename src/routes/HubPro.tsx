@@ -24,20 +24,20 @@ import { LoadingState, EmptyState } from '@/components/shared';
 import { useModalStore } from '@/stores/modalStore';
 
 // ============================================================
-// HubPro - bß║ún REDESIGNED d├╣ng shadcn/ui
+// HubPro - bß║ún REDESIGNED dùng shadcn/ui
 // ============================================================
 //
 // Layout:
-//   Header ΓåÆ Focus Layer ΓåÆ Favorites (full viewport ─æß║ºu) ΓåÆ Categories ΓåÆ Footer
+//   Header → Focus Layer → Favorites (full viewport đầu) → Categories → Footer
 //
-// Favorites: shortcut nhanh, chiß║┐m trß╗ìn 100vh ─æß║ºu ti├¬n (trß╗½ header/focus).
-// Categories: hiß╗ân thß╗ï Tß║ñT Cß║ó tools sß║»p theo group, scroll xuß╗æng sß║╜ thß║Ñy.
-// 1 tool c├│ thß╗â xuß║Ñt hiß╗çn ß╗ƒ cß║ú 2 chß╗ù ΓÇö favorite chß╗ë l├á shortcut.
-// Tß╗æi ─æa 24 favorite slots.
+// Favorites: shortcut nhanh, chiß║┐m trß╗ìn 100vh đầu ti├¬n (trß╗½ header/focus).
+// Categories: hiển thị Tß║ñT Cß║ó tools sß║»p theo group, scroll xuổng sß║╜ thß║Ñy.
+// 1 tool có thể xuß║Ñt hiß╗çn ở cả 2 chß╗ù — favorite chỉ là shortcut.
+// Tß╗æi đa 24 favorite slots.
 // ============================================================
 
-// 6 category fix cß╗⌐ng ΓÇö user kh├┤ng th├¬m/xo├í ─æ╞░ß╗úc.
-// Thß╗⌐ tß╗▒ n├áy l├á default order lß║ºn ─æß║ºu v├áo app; user c├│ thß╗â reorder qua Setting.
+// 6 category fix cß╗⌐ng — user không thêm/xoá được.
+// Thß╗⌐ tự này là default order lần đầu vào app; user có thể reorder qua Setting.
 const DEFAULT_GROUP_ORDER: ToolGroup[] = [
   'Productivity',
   'Finance',
@@ -54,7 +54,7 @@ const MAX_FAVORITES = 24;
 export default function HubPro() {
   const handleClick = useToolAction();
 
-  // Filter tools theo profile.allowed_tools. Admin ΓåÆ all tools.
+  // Filter tools theo profile.allowed_tools. Admin → all tools.
   const profile = useAuthStore((s) => s.profile);
   const visibleTools = useMemo(() => {
     if (!profile) return [] as Tool[];
@@ -63,7 +63,7 @@ export default function HubPro() {
     return TOOLS.filter((t) => profile.allowed_tools.includes(t.id));
   }, [profile]);
 
-  // Favorites ΓÇö localStorage instant + Supabase sync
+  // Favorites — localStorage instant + Supabase sync
   const favQuery = useHubFavorites();
   const saveMut = useSaveHubFavorites();
 
@@ -91,14 +91,14 @@ export default function HubPro() {
     const supabaseIds = favQuery.data.ids;
 
     if (localIds.length === 0 && supabaseIds.length > 0) {
-      // New device / cleared cache ΓåÆ pull from Supabase
+      // New device / cleared cache → pull from Supabase
       setFavoriteIdsLocal(supabaseIds);
       try { localStorage.setItem(LS_KEY, JSON.stringify(supabaseIds)); } catch {}
     } else if (localIds.length > 0 && supabaseIds.length === 0) {
-      // localStorage has data, Supabase empty ΓåÆ push up (retry sync)
+      // localStorage has data, Supabase empty → push up (retry sync)
       saveMut.mutate({ ids: localIds, recordId: null });
     }
-    // Both have data ΓåÆ localStorage wins (it's always updated on pin action)
+    // Both have data → localStorage wins (it's always updated on pin action)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [favQuery.data]);
 
@@ -140,14 +140,14 @@ export default function HubPro() {
     .filter((t): t is Tool => !!t && visibleToolIds.has(t.id))
     .slice(0, MAX_FAVORITES); // hard limit khi render
 
-  // Categories ΓÇö l╞░u /Config. Mapping tool ΓåÆ category ho├án to├án dynamic.
-  // Ch╞░a config ΓåÆ d├╣ng DEFAULT_GROUP_ORDER, mß╗ìi tool r╞íi v├áo Unassigned.
+  // Categories — lưu /Config. Mapping tool → category hoàn toàn dynamic.
+  // Ch╞░a config → dùng DEFAULT_GROUP_ORDER, mọi tool r╞íi vào Unassigned.
   const catQuery = useToolCategories();
   const { categoryOrder, toolsByCategory, unassignedTools } = useMemo(() => {
     const catData = catQuery.data?.data;
     const hasCustom = catData && catData.categories.length > 0;
 
-    // Thß╗⌐ tß╗▒ category
+    // Thß╗⌐ tự category
     const order: string[] = hasCustom
       ? catData.categories
       : DEFAULT_GROUP_ORDER;
@@ -178,7 +178,7 @@ export default function HubPro() {
       setFavoriteIds(favoriteIds.filter((x) => x !== id));
     } else {
       if (favoriteIds.length >= MAX_FAVORITES) {
-        toast.error(`Tß╗æi ─æa ${MAX_FAVORITES} pin. Bß╗Å bß╗¢t rß╗ôi th├¬m lß║íi.`);
+        toast.error(`Tß╗æi đa ${MAX_FAVORITES} pin. Bß╗Å bß╗¢t rß╗ôi thêm lß║íi.`);
         return;
       }
       setFavoriteIds([...favoriteIds, id]);
@@ -186,11 +186,11 @@ export default function HubPro() {
   }
 
   // ============================================================
-  // Drag-to-reorder favorites ΓÇö LIVE reorder.
-  // Trong l├║c ─æang k├⌐o, mß╗ùi lß║ºn dragOver cell mß╗¢i sß║╜ ngay lß║¡p tß╗⌐c
-  // cß║¡p nhß║¡t `favoriteIds` ΓåÆ React re-render ΓåÆ FLIP animation chß║íy ΓåÆ c├íc cell
-  // kh├íc slide nh╞░ß╗¥ng chß╗ù ngay. Cell ─æang k├⌐o (draggedId) bß╗ï mß╗¥ tß║íi slot mß╗¢i
-  // cß╗ºa n├│. Khi dragEnd chß╗ë cß║ºn clear state.
+  // Drag-to-reorder favorites — LIVE reorder.
+  // Trong lúc đang k├⌐o, mß╗ùi lần dragOver cell mới sß║╜ ngay lß║¡p tß╗⌐c
+  // cß║¡p nhß║¡t `favoriteIds` → React re-render → FLIP animation chạy → các cell
+  // khác slide nh╞░ß╗¥ng chß╗ù ngay. Cell đang k├⌐o (draggedId) bß╗ï mß╗¥ tại slot mới
+  // của nố. Khi dragEnd chỉ cần clear state.
   // ============================================================
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [insertIndex, setInsertIndex] = useState<number | null>(null);
@@ -230,14 +230,14 @@ export default function HubPro() {
     setInsertIndex(null);
   }
 
-  // FLIP animation cho favorites khi reorder ΓÇö ─æ├ú bß╗Å, d├╣ng insert indicator thay thß║┐
+  // FLIP animation cho favorites khi reorder — đã bß╗Å, dùng insert indicator thay thß║┐
 
   // ============================================================
   // Smooth section transition (JS-driven, easeOutCubic ~450ms).
   // Logic:
-  //   - ß╗₧ section 1 (top<10% viewport) + scroll DOWN ΓåÆ animate xuß╗æng section 2
-  //   - ß╗₧ section 2 ─æß║ºu (top trong [0.9h, 1.1h]) + scroll UP ΓåÆ animate l├¬n section 1
-  //   - C├íc tr╞░ß╗¥ng hß╗úp kh├íc (scroll trong section 2) ΓåÆ browser native
+  //   - ß╗₧ section 1 (top<10% viewport) + scroll DOWN → animate xuổng section 2
+  //   - ß╗₧ section 2 đầu (top trong [0.9h, 1.1h]) + scroll UP → animate l├¬n section 1
+  //   - Các tr╞░ß╗¥ng hß╗úp khác (scroll trong section 2) → browser native
   // ============================================================
   const scrollRef = useRef<HTMLDivElement>(null);
   const animatingRef = useRef(false);
@@ -254,7 +254,7 @@ export default function HubPro() {
     function step(now: number) {
       if (!el) return;
       const t = Math.min((now - t0) / duration, 1);
-      // easeOutCubic ΓÇö fast start, mß╗üm vß╗ü cuß╗æi
+      // easeOutCubic — fast start, mß╗üm về cuß╗æi
       const eased = 1 - Math.pow(1 - t, 3);
       el.scrollTop = start + dist * eased;
       if (t < 1) {
@@ -279,10 +279,10 @@ export default function HubPro() {
       const h = el.clientHeight;
       const top = el.scrollTop;
 
-      // Trong v├╣ng "bi├¬n giß╗¢i" cß╗ºa 2 section ─æß║ºu (top < 1.1h):
-      //  - scroll DOWN ΓåÆ snap vß╗ü h (─æß║ºu section 2)
-      //  - scroll UP ΓåÆ snap vß╗ü 0 (─æß║ºu section 1)
-      // Ngo├ái v├╣ng ─æ├│ (─æ├ú cuß╗Ön s├óu trong section 2) ΓåÆ browser native.
+      // Trong vũng "bi├¬n giß╗¢i" của 2 section đầu (top < 1.1h):
+      //  - scroll DOWN → snap về h (đầu section 2)
+      //  - scroll UP → snap về 0 (đầu section 1)
+      // Ngoăi vũng đó (đã cuß╗Ön s├óu trong section 2) → browser native.
       if (top < h * 1.1) {
         if (e.deltaY > 0 && top < h * 0.9) {
           e.preventDefault();
@@ -349,7 +349,7 @@ export default function HubPro() {
                       'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))',
                   }}
                   onDragOver={(e) => {
-                    // Chß╗ë fire khi k├⌐o v├áo v├╣ng trß╗æng cß╗ºa grid (kh├┤ng phß║úi child cell)
+                    // Chß╗ë fire khi k├⌐o vào vũng trổng của grid (không phải child cell)
                     if (!draggedId) return;
                     if (e.target !== e.currentTarget) return;
                     e.preventDefault();
@@ -383,16 +383,16 @@ export default function HubPro() {
                 <EmptyState
                   compact
                   icon={Pin}
-                  title="Ch╞░a c├│ pin n├áo"
-                  description="Cuß╗Ön xuß╗æng v├á bß║Ñm biß╗âu t╞░ß╗úng pin ß╗ƒ tool bß║Ñt kß╗│ ─æß╗â pin l├¬n ─æ├óy."
+                  title="Ch╞░a có pin năo"
+                  description="Cuß╗Ön xuổng vă bß║Ñm biß╗âu t╞░ß╗úng pin ở tool bß║Ñt kß╗│ để pin l├¬n đ├óy."
                 />
               )}
             </section>
           </div>
 
-          {/* Section 2: content height tß╗▒ nhi├¬n.
-              Khi catQuery c├▓n loading ΓåÆ skeleton grid, tr├ính flash mß╗ìi tool
-              v├áo Unassigned rß╗ôi ngay lß║¡p tß╗⌐c nhß║úy vß╗ü category thß║¡t. */}
+          {/* Section 2: content height tự nhi├¬n.
+              Khi catQuery c├▓n loading → skeleton grid, tránh flash mọi tool
+              vào Unassigned rß╗ôi ngay lß║¡p tß╗⌐c nhß║úy về category thß║¡t. */}
           <div className="shrink-0 space-y-6 border-t border-border py-6">
             {catQuery.isLoading ? (
               <CategoriesSkeleton />
@@ -427,7 +427,7 @@ export default function HubPro() {
                   );
                 })}
 
-                {/* Unassigned ΓÇö tool ch╞░a ─æ╞░ß╗úc g├ín v├áo category n├áo */}
+                {/* Unassigned — tool ch╞░a được gán vào category năo */}
                 {unassignedTools.length > 0 && (
                   <section>
                     <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-warning">
@@ -437,7 +437,7 @@ export default function HubPro() {
                       </span>
                     </h2>
                     <p className="mb-2 text-[11px] text-muted-foreground">
-                      V├áo Config ΓåÆ Tool Categories ─æß╗â k├⌐o c├íc tool n├áy v├áo category.
+                      Văo Config → Tool Categories để k├⌐o các tool này vào category.
                     </p>
                     <div
                       className="grid gap-px bg-border"
@@ -500,7 +500,7 @@ function Header() {
         <Tooltip>
           <TooltipTrigger asChild>
             <button
-              onClick={() => toast.info('T├¡nh n─âng g├│p ├╜ ─æang ph├ít triß╗ân')}
+              onClick={() => toast.info('Tảnh n─âng gốp ừ đang phát triß╗ân')}
               data-flat
               className="relative inline-flex h-9 w-9 items-center justify-center text-foreground transition-colors hover:text-primary"
             >
@@ -521,7 +521,7 @@ function Header() {
               <PencilSparkles className="relative h-3.5 w-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent>G├│p ├╜</TooltipContent>
+          <TooltipContent>Gốp ừ</TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -530,7 +530,7 @@ function Header() {
               <Keyboard className="h-4 w-4" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Ph├¡m tß║»t (Alt+K)</TooltipContent>
+          <TooltipContent>Phảm tß║»t (Alt+K)</TooltipContent>
         </Tooltip>
 
         {/* User menu */}
@@ -670,7 +670,7 @@ function ThemeMenuSection() {
         ))}
       </div>
 
-      {/* Effect toggles ΓÇö bordered cards with themed preview */}
+      {/* Effect toggles — bordered cards with themed preview */}
       <div className="grid grid-cols-2 gap-2">
         {/* Lift */}
         <button
@@ -699,7 +699,7 @@ function ThemeMenuSection() {
           </span>
         </button>
 
-        {/* Subtle (was Rounded) ΓÇö radio with Pill */}
+        {/* Subtle (was Rounded) — radio with Pill */}
         <button
           data-flat
           onClick={() => {
@@ -760,7 +760,7 @@ function ThemeMenuSection() {
           </span>
         </button>
 
-        {/* Pill ΓÇö radio with Subtle */}
+        {/* Pill — radio with Subtle */}
         <button
           data-flat
           onClick={() => {
@@ -794,15 +794,15 @@ function ThemeMenuSection() {
 }
 
 // ============================================================
-// Skeletons ΓÇö beam sweep N h├áng, mß╗ùi h├áng tß╗æc ─æß╗Ö kh├íc nhau
+// Skeletons — beam sweep N hăng, mß╗ùi hăng tß╗æc độ khác nhau
 // ============================================================
-// Mß╗ùi row = 1 grid clip 1 h├áng, c├│ beam ri├¬ng. Stack nhiß╗üu row vß╗¢i duration
-// kh├íc nhau ΓåÆ cß║úm gi├íc "living", kh├┤ng ─æ╞ín ─æiß╗çu.
+// Mỗi row = 1 grid clip 1 hăng, có beam ri├¬ng. Stack nhiều row với duration
+// khác nhau → cảm giác "living", không đ╞ín điß╗çu.
 
 const GRID_TEMPLATE_COLUMNS =
   'repeat(auto-fill, minmax(clamp(110px, 8vw, 180px), 1fr))';
 
-// Duration cho tß╗½ng row theo index. Beyond 4 rows d├╣ng modulo (hiß║┐m khi cß║ºn).
+// Duration cho từng row theo index. Beyond 4 rows dùng modulo (hiß║┐m khi cần).
 const ROW_DURATIONS = ['1.4s', '2.4s', '1.8s', '2s'];
 
 function SkeletonRows({ rows }: { rows: number }) {
@@ -829,8 +829,8 @@ function FavoritesSkeleton() {
 }
 
 function CategoriesSkeleton() {
-  // Sß╗æ section = sß╗æ category fix cß╗⌐ng (`TOOL_GROUPS`). Nß║┐u t╞░╞íng lai th├¬m
-  // category ΓåÆ tß╗▒ sync, kh├┤ng phß║úi nhß╗¢ update chß╗ù n├áy.
+  // Sß╗æ section = số category fix cß╗⌐ng (`TOOL_GROUPS`). Nß║┐u tương lai thêm
+  // category → tự sync, không phải nhß╗¢ update chß╗ù này.
   return (
     <>
       {TOOL_GROUPS.map((g) => (
@@ -850,7 +850,7 @@ function Footer({ total, favorites }: { total: number; favorites: number }) {
   return (
     <footer className="flex items-center justify-between border-t border-border bg-card px-[clamp(1rem,4vw,4rem)] py-2 text-xs text-muted-foreground">
       <span>
-        {favorites}/{total} ─æ├ú pin
+        {favorites}/{total} đã pin
       </span>
       <span className="font-mono max-md:hidden">v2.0.0</span>
     </footer>
@@ -858,8 +858,8 @@ function Footer({ total, favorites }: { total: number; favorites: number }) {
 }
 
 // ============================================================
-// ToolCell - card tß╗½ng tool, hover hiß╗çn n├║t pin/unpin.
-// Khi `draggable=true` (favorites) hß╗ù trß╗ú drag ─æß╗â reorder.
+// ToolCell - card từng tool, hover hiß╗çn nút pin/unpin.
+// Khi `draggable=true` (favorites) hß╗ù trß╗ú drag để reorder.
 // ============================================================
 function ToolCell({
   tool,
@@ -934,7 +934,7 @@ function ToolCell({
                 ? 'text-primary opacity-70 hover:opacity-100'
                 : 'text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-foreground',
             )}
-            title={isFavorite ? 'Bß╗Å pin' : 'Pin l├¬n ─æß║ºu'}
+            title={isFavorite ? 'Bß╗Å pin' : 'Pin l├¬n đầu'}
             aria-label={isFavorite ? 'Bß╗Å pin' : 'Pin'}
           >
             {isFavorite ? <PinOff className="h-3 w-3" /> : <Pin className="h-3 w-3" />}
@@ -954,4 +954,4 @@ function ToolCell({
       </TooltipContent>
     </Tooltip>
   );
-}
+}

@@ -1,4 +1,4 @@
-# Theme Toggles ΓÇö Lift & Rounded
+# Theme Toggles — Lift & Rounded
 
 User toggle trong Setting / Design System / HubPro avatar menu. Apply qua `data-*` attributes tren `<html>`.
 
@@ -11,7 +11,7 @@ User toggle trong Setting / Design System / HubPro avatar menu. Apply qua `data-
 
 ## Lift Eligibility
 
-Lift chi ap dung cho **surfaces** ΓÇö xem `docs/lift-design-guidelines.md`.
+Lift chi ap dung cho **surfaces** — xem `docs/lift-design-guidelines.md`.
 
 ### Always (nhan lift tu dong)
 
@@ -45,7 +45,7 @@ Gan `data-flat` len button hoac **parent container** de exclude:
 </div>
 ```
 
-CSS selector: `:not([data-flat]):not([data-flat] *)` ΓÇö element co `data-flat` hoac nam trong parent co `data-flat` deu bi exclude.
+CSS selector: `:not([data-flat]):not([data-flat] *)` — element co `data-flat` hoac nam trong parent co `data-flat` deu bi exclude.
 
 ## Opt-out Rounded
 
@@ -59,8 +59,8 @@ Checkbox/switch: luon vuong bat ke rounded mode (CSS force `border-radius: 0 !im
 
 ## Lift mechanics (box-shadow approach)
 
-- `box-shadow: 0 3px 0 0 color, 0 2px 4px shadow` ΓÇö tao raised visual.
-- **Khong dung border-bottom** ΓÇö khong anh huong layout.
+- `box-shadow: 0 3px 0 0 color, 0 2px 4px shadow` — tao raised visual.
+- **Khong dung border-bottom** — khong anh huong layout.
 - Active: `box-shadow: none` = pressed flat.
 - Outline/secondary buttons: shadow dung `hsl(var(--border))` thay vi den.
 - Toggle on/off: khong shift layout.
@@ -70,4 +70,4 @@ Checkbox/switch: luon vuong bat ke rounded mode (CSS force `border-radius: 0 !im
 - CSS rules: `src/styles/index.css` (section "Toggle: Lift")
 - Guidelines: `docs/lift-design-guidelines.md`
 - Store: `src/tools/theme/store.ts`
-- Apply attributes: `src/App.tsx` (`useApplyThemeAttributes`)
+- Apply attributes: `src/App.tsx` (`useApplyThemeAttributes`)

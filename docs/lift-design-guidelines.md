@@ -39,7 +39,7 @@ Khong ap dung:
 
 ### 2. Khong phai moi component deu can shadow
 
-SAI ΓÇö tat ca deu co shadow:
+SAI — tat ca deu co shadow:
 - Sidebar
 - Table
 - Tabs
@@ -47,7 +47,7 @@ SAI ΓÇö tat ca deu co shadow:
 - Input
 - Checkbox
 
-DUNG ΓÇö chi surface noi bat:
+DUNG — chi surface noi bat:
 - Card
 - Button
 - Dialog
@@ -199,4 +199,4 @@ Ma hieu la:
 
 Lift la mot **semantic elevation system**, khong phai hieu ung thi giac ap dung dong loat.
 
-Chi nhung component dai dien cho mot **surface** moi nen tham gia vao he thong Lift. Dieu nay giup giao dien giu duoc cam giac premium, ro thu bac va tranh roi mat.
+Chi nhung component dai dien cho mot **surface** moi nen tham gia vao he thong Lift. Dieu nay giup giao dien giu duoc cam giac premium, ro thu bac va tranh roi mat.

@@ -12,7 +12,7 @@ import ToolGuard from './components/auth/ToolGuard';
 
 // ============================================================
 // Lazy routes - mß╗ùi page load chunk ri├¬ng khi navigate tß╗¢i.
-// Giß║úm initial bundle tß╗½ ~300KB xuß╗æng ~100KB.
+// Giß║úm initial bundle từ ~300KB xuổng ~100KB.
 // ============================================================
 const Landing = lazy(() => import('./tools/portfolio/route'));
 const Hub = lazy(() => import('./routes/HubPro'));
@@ -33,7 +33,7 @@ const AgencyStudio = lazy(() => import('./routes/AgencyStudio'));
 const AgencyUnsubscribe = lazy(() => import('./routes/AgencyStudio/Unsubscribe'));
 const Vault = lazy(() => import('./tools/vault/route'));
 const DesignSystem = lazy(() => import('./routes/DesignSystem'));
-// Modals - vß║½n eager load v├¼ ch├║ng mount ß╗ƒ App level + cß║ºn shortcut l├║c n├áo c┼⌐ng sß║╡n.
+// Modals - vẫn eager load v├¼ chúng mount ở App level + cần shortcut lúc năo cũng sß║╡n.
 import Calculator from './tools/calculator/modal';
 import Translate from './tools/translate/modal';
 import Encoder from './tools/encoder/modal';
@@ -43,7 +43,7 @@ import Crypto from './tools/crypto/modal';
 import Audio from './tools/audio/modal';
 import RagAssistantModal from './components/rag/RagAssistantModal';
 
-// Audio player to├án cß╗Ñc (provider + floating window mount 1 lß║ºn)
+// Audio player toàn cß╗Ñc (provider + floating window mount 1 lần)
 import { AudioProvider } from './tools/audio/lib/audio-context';
 import AudioFloatingHost from './tools/audio/components/AudioFloatingHost';
 
@@ -56,7 +56,7 @@ function PageLoader() {
   );
 }
 
-/** Legacy /json-viewer ΓåÆ /json-studio redirect, giß╗» query string cho bookmark c┼⌐. */
+/** Legacy /json-viewer → /json-studio redirect, giữ query string cho bookmark cũ. */
 function LegacyJsonViewerRedirect() {
   const { search, hash } = useLocation();
   return <Navigate to={`/json-studio${search}${hash}`} replace />;
@@ -109,7 +109,7 @@ export default function App() {
   useGlobalShortcuts();
   useBootstrapShortcutOverrides();
   useBootstrapRag();
-  useLandingShortcut(); // Alt+H ΓåÆ /portfolio (mß╗ƒ landing tß╗½ hub cho owner)
+  useLandingShortcut(); // Alt+H → /portfolio (mở landing từ hub cho owner)
   useThemeHydration();
   useApplyThemeAttributes();
 
@@ -117,12 +117,12 @@ export default function App() {
     <AudioProvider>
       <Suspense fallback={<PageLoader />}>
         <Routes>
-          {/* Public routes ΓÇö kh├┤ng cß║ºn auth */}
+          {/* Public routes — không cần auth */}
           <Route path="/login" element={<Login />} />
           <Route path="/portfolio" element={<Landing />} />
           <Route path="/agency-studio/unsubscribe" element={<AgencyUnsubscribe />} />
 
-          {/* Protected routes ΓÇö wrap AuthGuard */}
+          {/* Protected routes — wrap AuthGuard */}
           <Route
             path="*"
             element={
@@ -153,7 +153,7 @@ export default function App() {
                   <Route path="/agency-studio/*" element={<AgencyStudio />} />
                   <Route path="/vault" element={<Vault />} />
                   <Route path="/design-system" element={<DesignSystem />} />
-                  {/* Legacy redirect: /setting ΓåÆ /config */}
+                  {/* Legacy redirect: /setting → /config */}
                   <Route path="/setting" element={<Navigate to="/config" replace />} />
                   <Route
                     path="/library/*"
@@ -171,7 +171,7 @@ export default function App() {
         </Routes>
       </Suspense>
 
-      {/* Modal to├án cß╗Ñc */}
+      {/* Modal toàn cß╗Ñc */}
       <Calculator />
       <Translate />
       <Encoder />
@@ -181,8 +181,8 @@ export default function App() {
       <Audio />
       <RagAssistantModal />
 
-      {/* Player host (YT iframe ß║⌐n) + floating UI ΓÇö mount global, kh├┤ng unmount khi ─æ├│ng modal */}
+      {/* Player host (YT iframe ß║⌐n) + floating UI — mount global, không unmount khi đóng modal */}
       <AudioFloatingHost />
     </AudioProvider>
   );
-}
+}

@@ -5,11 +5,11 @@ import { parseNotes, type Note } from '@/schemas/note';
 import { optimisticList } from '@/lib/optimistic';
 
 // ============================================================
-// Sources API ΓÇö MockAPI (ch╞░a migrate)
+// Sources API — MockAPI (ch╞░a migrate)
 // ============================================================
 //
-// Sources l╞░u trong MockAPI endpoint API.NOTES vß╗¢i type='source'.
-// T├ích ri├¬ng khß╗Åi useNotes (─æ├ú migrate sang workspace) ─æß╗â tr├ính
+// Sources lưu trong MockAPI endpoint API.NOTES với type='source'.
+// Tách ri├¬ng khß╗Åi useNotes (đã migrate sang workspace) để tránh
 // mismatch read/write.
 // ============================================================
 
@@ -131,4 +131,4 @@ export function useDeleteSource() {
       old.filter((n) => n.id !== id),
     ),
   });
-}
+}

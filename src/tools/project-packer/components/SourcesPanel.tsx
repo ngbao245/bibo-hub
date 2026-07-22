@@ -1,5 +1,5 @@
 // ============================================================
-// Sources Panel ΓÇö embedded as tab in Project Packer
+// Sources Panel — embedded as tab in Project Packer
 // ============================================================
 
 import { useEffect, useState } from 'react';
@@ -41,7 +41,7 @@ export default function SourcesPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [noteIdParam, sourcesQuery.data]);
 
-  // Auto-select source mß╗¢i nhß║Ñt
+  // Auto-select source mới nhất
   useEffect(() => {
     if (!sourcesQuery.data) return;
     if (selectedId) {
@@ -63,13 +63,13 @@ export default function SourcesPanel() {
 
   function handleNew() {
     createSource.mutate(
-      { title: 'Source mß╗¢i', content: '', source: '' },
+      { title: 'Source mới', content: '', source: '' },
       {
         onSuccess: (newNote) => {
           setSelectedId(newNote.id);
-          toast.success('─É├ú tß║ío source mß╗¢i');
+          toast.success('Đã tạo source mới');
         },
-        onError: () => toast.error('Kh├┤ng tß║ío ─æ╞░ß╗úc source'),
+        onError: () => toast.error('Không tạo được source'),
       },
     );
   }
@@ -81,7 +81,7 @@ export default function SourcesPanel() {
 
   async function handleDeleteAll() {
     if (sources.length === 0) return;
-    const confirmMsg = `X├ôA Hß║╛T ${sources.length} SOURCE?\n\nKh├┤ng thß╗â ho├án t├íc!\n\nOK ─æß╗â x├íc nhß║¡n.`;
+    const confirmMsg = `XÓA HẾT ${sources.length} SOURCE?\n\nKhông thể hoàn tác!\n\nOK để xác nhận.`;
     if (!window.confirm(confirmMsg)) return;
 
     try {
@@ -96,11 +96,11 @@ export default function SourcesPanel() {
         } catch { /* continue */ }
       }
 
-      toast.success(`─É├ú x├│a ${deleted}/${sources.length} sources`);
+      toast.success(`Đã xóa ${deleted}/${sources.length} sources`);
       setSelectedId(null);
       sourcesQuery.refetch();
     } catch {
-      toast.error('Kh├┤ng x├│a ─æ╞░ß╗úc');
+      toast.error('Không xóa được');
     }
   }
 
@@ -158,13 +158,13 @@ export default function SourcesPanel() {
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
               <p className="mb-4 text-sm text-muted-foreground">
-                Chß╗ìn source hoß║╖c tß║ío mß╗¢i
+                Chọn source hoặc tạo mới
               </p>
-              <Button onClick={handleNew} size="sm">+ Tß║ío source</Button>
+              <Button onClick={handleNew} size="sm">+ Tạo source</Button>
             </div>
           </div>
         )}
       </main>
     </div>
   );
-}
+}

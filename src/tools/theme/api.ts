@@ -1,13 +1,13 @@
 // ============================================================
-// themeApi ΓÇö Read/write user theme preferences from Supabase
+// themeApi — Read/write user theme preferences from Supabase
 // ============================================================
 //
 // Pattern: Optimistic Update + Debounced Background Sync
 //
 // 1. UI updates INSTANTLY via Zustand store (optimistic)
-// 2. Save to Supabase is DEBOUNCED ΓÇö user can spam clicks,
+// 2. Save to Supabase is DEBOUNCED — user can spam clicks,
 //    only 1 request fires after 800ms idle.
-// 3. On mount: fetch from DB ΓåÆ hydrate store.
+// 3. On mount: fetch from DB → hydrate store.
 // 4. On error: rollback store to last known DB state.
 // ============================================================
 
@@ -55,7 +55,7 @@ async function saveThemeSettings(settings: ThemeSettings): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-/** Fetch theme on mount ΓåÆ hydrate store. Use in App root. */
+/** Fetch theme on mount → hydrate store. Use in App root. */
 export function useThemeHydration() {
   const { data, isSuccess } = useQuery({
     queryKey: QUERY_KEY,
@@ -120,4 +120,4 @@ export function useSaveTheme() {
   }, []);
 
   return { save };
-}
+}
