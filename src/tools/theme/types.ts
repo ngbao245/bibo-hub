@@ -6,4 +6,4 @@ export interface ThemeSettings {
   isRounded: boolean;
   isRetro: boolean;
   isPill: boolean;
-}
+}

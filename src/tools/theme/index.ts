@@ -2,4 +2,4 @@
 export { useThemeStore } from './store';
 export { useThemeHydration, useSaveTheme } from './api';
 export { DEFAULT_THEME_SETTINGS, THEMES } from './constants';
-export type { ThemeId, ThemeSettings } from './types';
+export type { ThemeId, ThemeSettings } from './types';

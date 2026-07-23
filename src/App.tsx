@@ -11,8 +11,8 @@ import AuthGuard from './components/auth/AuthGuard';
 import ToolGuard from './components/auth/ToolGuard';
 
 // ============================================================
-// Lazy routes - mß╗ùi page load chunk ri├¬ng khi navigate tß╗¢i.
-// Giß║úm initial bundle từ ~300KB xuổng ~100KB.
+// Lazy routes - mỗi page load chunk riêng khi navigate tới.
+// Giảm initial bundle từ ~300KB xuống ~100KB.
 // ============================================================
 const Landing = lazy(() => import('./tools/portfolio/route'));
 const Hub = lazy(() => import('./routes/HubPro'));
@@ -33,7 +33,7 @@ const AgencyStudio = lazy(() => import('./routes/AgencyStudio'));
 const AgencyUnsubscribe = lazy(() => import('./routes/AgencyStudio/Unsubscribe'));
 const Vault = lazy(() => import('./tools/vault/route'));
 const DesignSystem = lazy(() => import('./routes/DesignSystem'));
-// Modals - vẫn eager load v├¼ chúng mount ở App level + cần shortcut lúc năo cũng sß║╡n.
+// Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
 import Calculator from './tools/calculator/modal';
 import Translate from './tools/translate/modal';
 import Encoder from './tools/encoder/modal';
@@ -43,7 +43,7 @@ import Crypto from './tools/crypto/modal';
 import Audio from './tools/audio/modal';
 import RagAssistantModal from './components/rag/RagAssistantModal';
 
-// Audio player toàn cß╗Ñc (provider + floating window mount 1 lần)
+// Audio player toàn cục (provider + floating window mount 1 lần)
 import { AudioProvider } from './tools/audio/lib/audio-context';
 import AudioFloatingHost from './tools/audio/components/AudioFloatingHost';
 
@@ -171,7 +171,7 @@ export default function App() {
         </Routes>
       </Suspense>
 
-      {/* Modal toàn cß╗Ñc */}
+      {/* Modal toàn cục */}
       <Calculator />
       <Translate />
       <Encoder />
@@ -181,7 +181,7 @@ export default function App() {
       <Audio />
       <RagAssistantModal />
 
-      {/* Player host (YT iframe ß║⌐n) + floating UI — mount global, không unmount khi đóng modal */}
+      {/* Player host (YT iframe ẩn) + floating UI — mount global, không unmount khi đóng modal */}
       <AudioFloatingHost />
     </AudioProvider>
   );

@@ -5,11 +5,11 @@ import { parseNotes, type Note } from '@/schemas/note';
 import { optimisticList } from '@/lib/optimistic';
 
 // ============================================================
-// Sources API — MockAPI (ch╞░a migrate)
+// Sources API — MockAPI (chưa migrate)
 // ============================================================
 //
 // Sources lưu trong MockAPI endpoint API.NOTES với type='source'.
-// Tách ri├¬ng khß╗Åi useNotes (đã migrate sang workspace) để tránh
+// Tách riêng khỏi useNotes (đã migrate sang workspace) để tránh
 // mismatch read/write.
 // ============================================================
 

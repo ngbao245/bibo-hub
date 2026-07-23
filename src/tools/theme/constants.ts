@@ -12,4 +12,4 @@ export const THEMES: { id: ThemeId; label: string }[] = [
   { id: 'dark', label: 'Dark' },
   { id: 'light', label: 'Light' },
   { id: 'cute', label: 'Cute' },
-];
+];
