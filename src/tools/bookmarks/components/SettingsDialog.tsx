@@ -38,6 +38,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/cn';
+import { getBasename, getPublicUrl, getOriginWithBasename } from '@/lib/basename';
 
 import { SlugSchema, SpaceNameSchema } from '../schemas';
 import type {
@@ -85,12 +86,12 @@ const SECTIONS: {
   label: string;
   icon: typeof User;
 }[] = [
-  { id: 'profile', label: 'Profile', icon: User },
-  { id: 'sharing', label: 'Sharing', icon: Share2 },
-  { id: 'appearance', label: 'Appearance', icon: Palette },
-  { id: 'data', label: 'Import / Export', icon: Upload },
-  { id: 'advanced', label: 'Advanced', icon: Code2 },
-];
+    { id: 'profile', label: 'Profile', icon: User },
+    { id: 'sharing', label: 'Sharing', icon: Share2 },
+    { id: 'appearance', label: 'Appearance', icon: Palette },
+    { id: 'data', label: 'Import / Export', icon: Upload },
+    { id: 'advanced', label: 'Advanced', icon: Code2 },
+  ];
 
 const GRADIENT_PRESETS: {
   name: string;
@@ -98,34 +99,34 @@ const GRADIENT_PRESETS: {
   labelColor: string | null;
   titleColor: string | null;
 }[] = [
-  // Twilight (replaces old Default reset slot)
-  { name: 'Twilight', value: 'linear-gradient(135deg, #4c669f 0%, #3b5998 50%, #192f6a 100%)', labelColor: '#ffffff', titleColor: '#cbd5e1' },
-  // Warm
-  { name: 'Sunset', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
-  { name: 'Peach', value: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
-  { name: 'Coral', value: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
-  { name: 'Golden', value: 'linear-gradient(135deg, #fddb92 0%, #d1fdff 100%)', labelColor: '#1f2937', titleColor: '#0f172a' },
-  // Cool
-  { name: 'Ocean', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
-  { name: 'Mint', value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', labelColor: '#134e4a', titleColor: '#0f766e' },
-  { name: 'Sky', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
-  { name: 'Forest', value: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)', labelColor: '#ffffff', titleColor: '#d1fae5' },
-  // Purple / Pink
-  { name: 'Purple', value: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
-  { name: 'Berry', value: 'linear-gradient(135deg, #cc2b5e 0%, #753a88 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
-  { name: 'Candy', value: 'linear-gradient(135deg, #d365ff 0%, #ff8fbc 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
-  // Dark / Moody
-  { name: 'Night', value: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)', labelColor: '#e5e7eb', titleColor: '#f9fafb' },
-  { name: 'Cyber', value: 'linear-gradient(135deg, #000428 0%, #004e92 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
-  { name: 'Nordic', value: 'linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
-  // Solid subtle
-  { name: 'Paper', value: 'linear-gradient(180deg, #fafafa 0%, #f1f1f1 100%)', labelColor: '#1f2937', titleColor: '#0f172a' },
-  { name: 'Slate', value: 'linear-gradient(180deg, #1e1e2e 0%, #181825 100%)', labelColor: '#e5e7eb', titleColor: '#f9fafb' },
-  // Extras
-  { name: 'Aurora', value: 'linear-gradient(135deg, #00c9a7 0%, #92fe9d 50%, #c471ed 100%)', labelColor: '#ffffff', titleColor: '#fef3c7' },
-  { name: 'Rose', value: 'linear-gradient(135deg, #ffdde1 0%, #ee9ca7 100%)', labelColor: '#7f1d1d', titleColor: '#9f1239' },
-  { name: 'Midnight', value: 'linear-gradient(135deg, #232526 0%, #414345 100%)', labelColor: '#f9fafb', titleColor: '#e5e7eb' },
-];
+    // Twilight (replaces old Default reset slot)
+    { name: 'Twilight', value: 'linear-gradient(135deg, #4c669f 0%, #3b5998 50%, #192f6a 100%)', labelColor: '#ffffff', titleColor: '#cbd5e1' },
+    // Warm
+    { name: 'Sunset', value: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
+    { name: 'Peach', value: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
+    { name: 'Coral', value: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
+    { name: 'Golden', value: 'linear-gradient(135deg, #fddb92 0%, #d1fdff 100%)', labelColor: '#1f2937', titleColor: '#0f172a' },
+    // Cool
+    { name: 'Ocean', value: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
+    { name: 'Mint', value: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', labelColor: '#134e4a', titleColor: '#0f766e' },
+    { name: 'Sky', value: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
+    { name: 'Forest', value: 'linear-gradient(135deg, #134e5e 0%, #71b280 100%)', labelColor: '#ffffff', titleColor: '#d1fae5' },
+    // Purple / Pink
+    { name: 'Purple', value: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
+    { name: 'Berry', value: 'linear-gradient(135deg, #cc2b5e 0%, #753a88 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
+    { name: 'Candy', value: 'linear-gradient(135deg, #d365ff 0%, #ff8fbc 100%)', labelColor: '#ffffff', titleColor: '#fde68a' },
+    // Dark / Moody
+    { name: 'Night', value: 'linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%)', labelColor: '#e5e7eb', titleColor: '#f9fafb' },
+    { name: 'Cyber', value: 'linear-gradient(135deg, #000428 0%, #004e92 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
+    { name: 'Nordic', value: 'linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%)', labelColor: '#ffffff', titleColor: '#bae6fd' },
+    // Solid subtle
+    { name: 'Paper', value: 'linear-gradient(180deg, #fafafa 0%, #f1f1f1 100%)', labelColor: '#1f2937', titleColor: '#0f172a' },
+    { name: 'Slate', value: 'linear-gradient(180deg, #1e1e2e 0%, #181825 100%)', labelColor: '#e5e7eb', titleColor: '#f9fafb' },
+    // Extras
+    { name: 'Aurora', value: 'linear-gradient(135deg, #00c9a7 0%, #92fe9d 50%, #c471ed 100%)', labelColor: '#ffffff', titleColor: '#fef3c7' },
+    { name: 'Rose', value: 'linear-gradient(135deg, #ffdde1 0%, #ee9ca7 100%)', labelColor: '#7f1d1d', titleColor: '#9f1239' },
+    { name: 'Midnight', value: 'linear-gradient(135deg, #232526 0%, #414345 100%)', labelColor: '#f9fafb', titleColor: '#e5e7eb' },
+  ];
 
 const SOLID_PRESETS: {
   name: string;
@@ -133,25 +134,25 @@ const SOLID_PRESETS: {
   labelColor: string;
   titleColor: string;
 }[] = [
-  { name: 'White', value: '#ffffff', labelColor: '#1f2937', titleColor: '#0f172a' },
-  { name: 'Cream', value: '#fef3c7', labelColor: '#78350f', titleColor: '#92400e' },
-  { name: 'Peach', value: '#fed7aa', labelColor: '#7c2d12', titleColor: '#9a3412' },
-  { name: 'Rose', value: '#fbcfe8', labelColor: '#831843', titleColor: '#9f1239' },
-  { name: 'Lavender', value: '#ddd6fe', labelColor: '#4c1d95', titleColor: '#5b21b6' },
-  { name: 'Sky', value: '#bae6fd', labelColor: '#0c4a6e', titleColor: '#075985' },
-  { name: 'Mint', value: '#bbf7d0', labelColor: '#14532d', titleColor: '#166534' },
-  { name: 'Neutral', value: '#e5e7eb', labelColor: '#1f2937', titleColor: '#374151' },
-  { name: 'Slate', value: '#334155', labelColor: '#f1f5f9', titleColor: '#e2e8f0' },
-  { name: 'Navy', value: '#1e3a8a', labelColor: '#f9fafb', titleColor: '#dbeafe' },
-  { name: 'Emerald', value: '#065f46', labelColor: '#f9fafb', titleColor: '#d1fae5' },
-  { name: 'Charcoal', value: '#0f172a', labelColor: '#f9fafb', titleColor: '#cbd5e1' },
-  // Extras
-  { name: 'Coral', value: '#fecaca', labelColor: '#7f1d1d', titleColor: '#991b1b' },
-  { name: 'Amber', value: '#fde68a', labelColor: '#78350f', titleColor: '#92400e' },
-  { name: 'Teal', value: '#99f6e4', labelColor: '#134e4a', titleColor: '#115e59' },
-  { name: 'Indigo', value: '#c7d2fe', labelColor: '#3730a3', titleColor: '#4338ca' },
-  { name: 'Forest', value: '#14532d', labelColor: '#f9fafb', titleColor: '#d1fae5' },
-];
+    { name: 'White', value: '#ffffff', labelColor: '#1f2937', titleColor: '#0f172a' },
+    { name: 'Cream', value: '#fef3c7', labelColor: '#78350f', titleColor: '#92400e' },
+    { name: 'Peach', value: '#fed7aa', labelColor: '#7c2d12', titleColor: '#9a3412' },
+    { name: 'Rose', value: '#fbcfe8', labelColor: '#831843', titleColor: '#9f1239' },
+    { name: 'Lavender', value: '#ddd6fe', labelColor: '#4c1d95', titleColor: '#5b21b6' },
+    { name: 'Sky', value: '#bae6fd', labelColor: '#0c4a6e', titleColor: '#075985' },
+    { name: 'Mint', value: '#bbf7d0', labelColor: '#14532d', titleColor: '#166534' },
+    { name: 'Neutral', value: '#e5e7eb', labelColor: '#1f2937', titleColor: '#374151' },
+    { name: 'Slate', value: '#334155', labelColor: '#f1f5f9', titleColor: '#e2e8f0' },
+    { name: 'Navy', value: '#1e3a8a', labelColor: '#f9fafb', titleColor: '#dbeafe' },
+    { name: 'Emerald', value: '#065f46', labelColor: '#f9fafb', titleColor: '#d1fae5' },
+    { name: 'Charcoal', value: '#0f172a', labelColor: '#f9fafb', titleColor: '#cbd5e1' },
+    // Extras
+    { name: 'Coral', value: '#fecaca', labelColor: '#7f1d1d', titleColor: '#991b1b' },
+    { name: 'Amber', value: '#fde68a', labelColor: '#78350f', titleColor: '#92400e' },
+    { name: 'Teal', value: '#99f6e4', labelColor: '#134e4a', titleColor: '#115e59' },
+    { name: 'Indigo', value: '#c7d2fe', labelColor: '#3730a3', titleColor: '#4338ca' },
+    { name: 'Forest', value: '#14532d', labelColor: '#f9fafb', titleColor: '#d1fae5' },
+  ];
 
 
 
@@ -522,44 +523,44 @@ function ProfileSection({
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(220px,300px)]">
       <div className="min-w-0">
-      <SectionHeader
-        title="Profile"
-        hint="Tên và mô tả hiển thị trên public page. Preview bên phải cập nhật real-time."
-      />
+        <SectionHeader
+          title="Profile"
+          hint="Tên và mô tả hiển thị trên public page. Preview bên phải cập nhật real-time."
+        />
 
-      <SubGroup title="Identity">
-        <Field label="Display name" hint="Tên hiển thị thay username.">
-          <Input
-            value={current.displayName}
-            onChange={(e) => setField('displayName', e.target.value)}
-            maxLength={60}
-            placeholder="Bao Nguyen"
-            className="h-9"
-          />
-        </Field>
+        <SubGroup title="Identity">
+          <Field label="Display name" hint="Tên hiển thị thay username.">
+            <Input
+              value={current.displayName}
+              onChange={(e) => setField('displayName', e.target.value)}
+              maxLength={60}
+              placeholder="Bao Nguyen"
+              className="h-9"
+            />
+          </Field>
 
-        <Field label="Space name" hint="Label bên phải tên. VD: Home, Work, Dev.">
-          <Input
-            value={current.spaceName}
-            onChange={(e) => setField('spaceName', e.target.value)}
-            maxLength={40}
-            placeholder="Home"
-            className="h-9"
-          />
-        </Field>
-      </SubGroup>
+          <Field label="Space name" hint="Label bên phải tên. VD: Home, Work, Dev.">
+            <Input
+              value={current.spaceName}
+              onChange={(e) => setField('spaceName', e.target.value)}
+              maxLength={40}
+              placeholder="Home"
+              className="h-9"
+            />
+          </Field>
+        </SubGroup>
 
-      <SubGroup title="Links">
-        <Field label="Webpage" hint="URL cá nhân, hiện dưới tên trong Hero header.">
-          <Input
-            value={current.webpage}
-            onChange={(e) => setField('webpage', e.target.value)}
-            placeholder="https://baonguyen.dev"
-            type="url"
-            className="h-9"
-          />
-        </Field>
-      </SubGroup>
+        <SubGroup title="Links">
+          <Field label="Webpage" hint="URL cá nhân, hiện dưới tên trong Hero header.">
+            <Input
+              value={current.webpage}
+              onChange={(e) => setField('webpage', e.target.value)}
+              placeholder="https://baonguyen.dev"
+              type="url"
+              className="h-9"
+            />
+          </Field>
+        </SubGroup>
       </div>
       <aside className="sticky top-0 h-fit self-start">
         <LivePreview current={current} />
@@ -583,7 +584,9 @@ function SharingSection({
   slugError: string | null;
   validateSlug: (v: string) => void;
 }) {
-  const publicUrl = `${window.location.origin}/bookmarks/${current.slug}`;
+  const publicUrl = getPublicUrl(`/bookmarks/${current.slug}`);
+  const originWithBasename = getOriginWithBasename();
+  const basename = getBasename();
 
   function copyUrl() {
     navigator.clipboard.writeText(publicUrl);
@@ -630,7 +633,7 @@ function SharingSection({
         <Field label="Slug" hint={`3-30 ký tự [a-z0-9-]. Không dùng "admin", "api"…`}>
           <div className="flex items-center gap-1 text-xs">
             <span className="whitespace-nowrap font-mono text-muted-foreground">
-              {window.location.origin}/bookmarks/
+              {originWithBasename}/bookmarks/
             </span>
             <Input
               value={current.slug}
@@ -660,7 +663,7 @@ function SharingSection({
               <Copy className="h-3 w-3" />
             </Button>
             <Button size="icon" variant="ghost" className="h-6 w-6" asChild title="Preview">
-              <a href={`/bookmarks/${current.slug}`} target="_blank" rel="noopener noreferrer">
+              <a href={`${basename}/bookmarks/${current.slug}`} target="_blank" rel="noopener noreferrer">
                 <ExternalLink className="h-3 w-3" />
               </a>
             </Button>
@@ -705,409 +708,409 @@ function AppearanceSection({
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(220px,300px)]">
       <div className="min-w-0">
-      <SectionHeader
-        title="Appearance"
-        hint="Diện mạo bookmark page. Preview bên phải cập nhật real-time."
-      />
+        <SectionHeader
+          title="Appearance"
+          hint="Diện mạo bookmark page. Preview bên phải cập nhật real-time."
+        />
 
-      <SubGroup title="Header">
-        <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 bg-background p-3">
-          <div className="space-y-0.5">
-            <p className="text-xs font-semibold text-foreground">Hero header</p>
-            <p className="text-[11px] leading-tight text-muted-foreground">
-              Superdense-style h1 title + space name + URL trên đầu bookmark grid.
-              Tắt để chỉ hiện grid.
-            </p>
-          </div>
-          <Switch
-            checked={current.showHero}
-            onCheckedChange={(v) => setField('showHero', v)}
-            aria-label="Hero header"
-          />
-        </div>
-
-        {current.showHero && (
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            <ColorPicker
-              label="Title color"
-              value={current.heroTitleColor}
-              onChange={(v) => setField('heroTitleColor', v)}
-            />
-            <ColorPicker
-              label="Space color"
-              value={current.heroSpaceColor}
-              onChange={(v) => setField('heroSpaceColor', v)}
-            />
-            <ColorPicker
-              label="URL color"
-              value={current.heroUrlColor}
-              onChange={(v) => setField('heroUrlColor', v)}
+        <SubGroup title="Header">
+          <div className="flex items-start justify-between gap-4 rounded-lg border border-border/60 bg-background p-3">
+            <div className="space-y-0.5">
+              <p className="text-xs font-semibold text-foreground">Hero header</p>
+              <p className="text-[11px] leading-tight text-muted-foreground">
+                Superdense-style h1 title + space name + URL trên đầu bookmark grid.
+                Tắt để chỉ hiện grid.
+              </p>
+            </div>
+            <Switch
+              checked={current.showHero}
+              onCheckedChange={(v) => setField('showHero', v)}
+              aria-label="Hero header"
             />
           </div>
-        )}
-        <p className="mt-2 text-[11px] text-muted-foreground/70">
-          Muốn đổi size, font-family, weight? Dùng Custom CSS editor trong Advanced
-          (target <code>.bibo-hero-title</code>, <code>.spaces-link</code>,
-          <code>.user-static-link</code>).
-        </p>
 
-        <div className="mt-4 space-y-2 border-t border-border/40 pt-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
-            Text colors
+          {current.showHero && (
+            <div className="mt-3 grid grid-cols-3 gap-3">
+              <ColorPicker
+                label="Title color"
+                value={current.heroTitleColor}
+                onChange={(v) => setField('heroTitleColor', v)}
+              />
+              <ColorPicker
+                label="Space color"
+                value={current.heroSpaceColor}
+                onChange={(v) => setField('heroSpaceColor', v)}
+              />
+              <ColorPicker
+                label="URL color"
+                value={current.heroUrlColor}
+                onChange={(v) => setField('heroUrlColor', v)}
+              />
+            </div>
+          )}
+          <p className="mt-2 text-[11px] text-muted-foreground/70">
+            Muốn đổi size, font-family, weight? Dùng Custom CSS editor trong Advanced
+            (target <code>.bibo-hero-title</code>, <code>.spaces-link</code>,
+            <code>.user-static-link</code>).
           </p>
-          <div className="grid grid-cols-3 gap-3">
-            <ColorPicker
-              label="Category label"
-              value={current.categoryLabelColor}
-              onChange={(v) => setField('categoryLabelColor', v)}
-            />
-            <ColorPicker
-              label="Category background"
-              value={current.categoryBgColor}
-              onChange={(v) => setField('categoryBgColor', v)}
-            />
-            <ColorPicker
-              label="Bookmark title (hover)"
-              value={current.bookmarkTitleColor}
-              onChange={(v) => setField('bookmarkTitleColor', v)}
-            />
-          </div>
-        </div>
-      </SubGroup>
 
-      <SubGroup title="Theme">
-        <div className="grid grid-cols-3 gap-2">
-          {(
-            [
-              { id: 'light', label: 'Light', Icon: Sun },
-              { id: 'dark', label: 'Dark', Icon: Moon },
-              { id: 'system', label: 'System', Icon: Monitor },
-            ] as const
-          ).map(({ id, label, Icon }) => {
-            const active = current.theme === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => setField('theme', id as BookmarkTheme)}
-                className={cn(
-                  'flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors duration-150',
-                  active
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:text-foreground',
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                <span className="text-xs font-medium">{label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </SubGroup>
-
-      <SubGroup title="Layout">
-        <Field label="Columns" hint="Số cột hiển thị category (1-4).">
-          <div className="flex gap-1.5">
-            {[1, 2, 3, 4].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setField('columnCount', n)}
-                className={cn(
-                  'flex h-10 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border text-xs transition-colors duration-150',
-                  current.columnCount === n
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:text-foreground',
-                )}
-              >
-                <ColumnGlyph n={n} active={current.columnCount === n} />
-                <span className="font-medium">{n}</span>
-              </button>
-            ))}
-          </div>
-        </Field>
-
-        <Field label={`Icon size — ${current.iconSize}px`}>
-          <input
-            type="range"
-            min={20}
-            max={60}
-            step={2}
-            value={current.iconSize}
-            onChange={(e) => setField('iconSize', parseInt(e.target.value, 10))}
-            className="w-full"
-          />
-        </Field>
-      </SubGroup>
-
-      <SubGroup title="Background">
-        <div className="grid grid-cols-4 gap-2">
-          {(
-            [
-              {
-                id: 'default' as const,
-                label: 'Default',
-                swatch: 'bg-muted border border-border/60',
-                style: undefined as React.CSSProperties | undefined,
-              },
-              {
-                id: 'solid' as const,
-                label: 'Solid',
-                swatch: '',
-                style: { background: '#4facfe' } as React.CSSProperties,
-              },
-              {
-                id: 'gradient' as const,
-                label: 'Gradient',
-                swatch: '',
-                style: {
-                  background:
-                    'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                } as React.CSSProperties,
-              },
-              {
-                id: 'image' as const,
-                label: 'Image',
-                swatch: '',
-                style: {
-                  background:
-                    'linear-gradient(45deg, #94a3b8 25%, transparent 25%, transparent 75%, #94a3b8 75%), linear-gradient(45deg, #94a3b8 25%, #cbd5e1 25%, #cbd5e1 75%, #94a3b8 75%)',
-                  backgroundSize: '8px 8px',
-                  backgroundPosition: '0 0, 4px 4px',
-                } as React.CSSProperties,
-              },
-            ]
-          ).map(({ id, label, swatch, style }) => {
-            const active = current.backgroundType === id;
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => {
-                  if (current.backgroundType !== id) {
-                    setField('backgroundType', id as BackgroundType);
-                    setField('backgroundValue', '');
-                  }
-                }}
-                className={cn(
-                  'flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs font-medium transition-colors duration-150',
-                  active
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:text-foreground',
-                )}
-              >
-                <span
-                  className={cn('h-6 w-full rounded', swatch)}
-                  style={style}
-                />
-                {label}
-              </button>
-            );
-          })}
-        </div>
-
-        {current.backgroundType === 'solid' && (
-          <div className="space-y-2">
-            <p className="text-[11px] text-muted-foreground">
-              Chọn màu preset hoặc paste hex tuỳ ý:
+          <div className="mt-4 space-y-2 border-t border-border/40 pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              Text colors
             </p>
-            <div className="grid grid-cols-6 gap-2">
-              {SOLID_PRESETS.map((s) => {
-                const active = current.backgroundValue === s.value;
-                return (
-                  <button
-                    key={s.name}
-                    type="button"
-                    onClick={() => {
-                      setField('backgroundValue', s.value);
-                      // Category badge: bg=labelColor, text=contrast pair từ labelColor.
-                      const { label: badgeText } = contrastPair(s.labelColor);
-                      setField('categoryBgColor', s.labelColor);
-                      setField('categoryLabelColor', badgeText);
-                      setField('bookmarkTitleColor', s.titleColor);
-                      setField('heroTitleColor', s.labelColor);
-                      setField('heroSpaceColor', s.titleColor);
-                      setField('heroUrlColor', s.titleColor);
-                    }}
-                    className={cn(
-                      'relative flex h-14 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 transition-transform duration-150 hover:scale-[1.03]',
-                      active ? 'border-primary ring-2 ring-primary/20' : 'border-border/60',
-                    )}
-                    style={{ background: s.value }}
-                    title={s.name}
-                    aria-label={s.name}
-                  >
-                    <span
-                      className="text-[9px] font-semibold uppercase tracking-wider"
-                      style={{ color: s.labelColor }}
-                    >
-                      Aa
-                    </span>
-                    <span
-                      className="text-[9px] font-medium"
-                      style={{ color: s.titleColor }}
-                    >
-                      {s.name}
-                    </span>
-                  </button>
-                );
-              })}
-              {/* Pick from palette — native color picker */}
-              <label
-                className={cn(
-                  'relative flex h-14 cursor-pointer flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 border-border/60 transition-transform duration-150 hover:scale-[1.03]',
-                )}
-                style={{
-                  background:
-                    'conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #ec4899, #ef4444)',
-                }}
-                title="Pick from palette"
-                aria-label="Pick color from palette"
-              >
-                <input
-                  type="color"
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                  onChange={(e) => pickSolidCommit(e.target.value)}
-                />
-                <span className="pointer-events-none rounded-full bg-black/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
-                  Pick
-                </span>
-              </label>
+            <div className="grid grid-cols-3 gap-3">
+              <ColorPicker
+                label="Category label"
+                value={current.categoryLabelColor}
+                onChange={(v) => setField('categoryLabelColor', v)}
+              />
+              <ColorPicker
+                label="Category background"
+                value={current.categoryBgColor}
+                onChange={(v) => setField('categoryBgColor', v)}
+              />
+              <ColorPicker
+                label="Bookmark title (hover)"
+                value={current.bookmarkTitleColor}
+                onChange={(v) => setField('bookmarkTitleColor', v)}
+              />
             </div>
-            <Input
-              value={current.backgroundValue}
-              onChange={(e) => setField('backgroundValue', e.target.value)}
-              placeholder="#hex hoặc rgb(...)"
-              className="h-8 font-mono text-xs"
-            />
           </div>
-        )}
+        </SubGroup>
 
-        {current.backgroundType === 'gradient' && (
-          <div className="space-y-2">
-            <p className="text-[11px] text-muted-foreground">
-              Chọn preset hoặc paste CSS gradient tuỳ ý:
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {GRADIENT_PRESETS.map((g) => {
-                const active = current.backgroundValue === g.value;
-                return (
-                  <button
-                    key={g.name}
-                    type="button"
-                    onClick={() => {
-                      setField('backgroundValue', g.value);
-                      // Category badge: bg=labelColor, text=contrast pair từ labelColor.
-                      // contrastPair() tự tính text đọc được trên bg hex đó.
-                      if (g.labelColor) {
-                        const { label: badgeText } = contrastPair(g.labelColor);
-                        setField('categoryBgColor', g.labelColor);
-                        setField('categoryLabelColor', badgeText);
-                      }
-                      setField('bookmarkTitleColor', g.titleColor);
-                      setField('heroTitleColor', g.labelColor);
-                      setField('heroSpaceColor', g.titleColor);
-                      setField('heroUrlColor', g.titleColor);
-                    }}
-                    className={cn(
-                      'relative flex flex-col items-start gap-1 overflow-hidden rounded-lg border-2 p-2 text-left transition-transform duration-150 hover:scale-[1.02]',
-                      active ? 'border-primary ring-2 ring-primary/20' : 'border-border/60',
-                    )}
-                    style={{ background: g.value }}
-                    title={g.name}
-                    aria-label={g.name}
-                  >
-                    <span
-                      className="inline-flex items-center rounded-full bg-white/25 px-1.5 py-0.5 text-[9px] font-medium backdrop-blur-sm"
-                      style={{ color: g.labelColor ?? undefined }}
-                    >
-                      Social
-                    </span>
-                    <div className="flex gap-1">
-                      <span className="h-4 w-4 rounded-full bg-white/70" />
-                      <span className="h-4 w-4 rounded-full bg-white/55" />
-                      <span className="h-4 w-4 rounded-full bg-white/45" />
-                    </div>
-                    <span
-                      className="mt-1 text-[10px] font-semibold drop-shadow"
-                      style={{ color: g.titleColor ?? undefined }}
-                    >
-                      {g.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <Input
-              value={current.backgroundValue}
-              onChange={(e) => setField('backgroundValue', e.target.value)}
-              placeholder="linear-gradient(...) hoặc CSS bất kỳ"
-              className="h-8 font-mono text-xs"
-            />
+        <SubGroup title="Theme">
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { id: 'light', label: 'Light', Icon: Sun },
+                { id: 'dark', label: 'Dark', Icon: Moon },
+                { id: 'system', label: 'System', Icon: Monitor },
+              ] as const
+            ).map(({ id, label, Icon }) => {
+              const active = current.theme === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setField('theme', id as BookmarkTheme)}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-lg border p-3 transition-colors duration-150',
+                    active
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:text-foreground',
+                  )}
+                >
+                  <Icon className="h-4 w-4" />
+                  <span className="text-xs font-medium">{label}</span>
+                </button>
+              );
+            })}
           </div>
-        )}
+        </SubGroup>
 
-        {current.backgroundType === 'image' && (
-          <ImageUploadField
-            value={current.backgroundValue}
-            onChange={(v) => setField('backgroundValue', v)}
-          />
-        )}
-      </SubGroup>
-
-      <SubGroup title="Overlay">
-        <p className="text-[11px] text-muted-foreground">
-          Phủ 1 lớp màu blend lên background. Opacity = 0 để tắt.
-        </p>
-        <div className="grid grid-cols-2 gap-3">
-          <ColorPicker
-            label="Overlay color"
-            value={current.backgroundOverlayColor}
-            onChange={(v) => setField('backgroundOverlayColor', v)}
-          />
-          <Field label="Blend mode">
-            <select
-              value={current.backgroundBlendMode}
-              onChange={(e) => setField('backgroundBlendMode', e.target.value as BlendMode)}
-              className="h-9 w-full rounded-md border border-border/60 bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              {BLEND_MODES.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
+        <SubGroup title="Layout">
+          <Field label="Columns" hint="Số cột hiển thị category (1-4).">
+            <div className="flex gap-1.5">
+              {[1, 2, 3, 4].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setField('columnCount', n)}
+                  className={cn(
+                    'flex h-10 flex-1 flex-col items-center justify-center gap-0.5 rounded-lg border text-xs transition-colors duration-150',
+                    current.columnCount === n
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:text-foreground',
+                  )}
+                >
+                  <ColumnGlyph n={n} active={current.columnCount === n} />
+                  <span className="font-medium">{n}</span>
+                </button>
               ))}
-            </select>
+            </div>
           </Field>
-        </div>
-        <Field label={`Overlay opacity — ${current.backgroundOverlayOpacity}%`}>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            step={1}
-            value={current.backgroundOverlayOpacity}
-            onChange={(e) =>
-              setField('backgroundOverlayOpacity', parseInt(e.target.value, 10))
-            }
-            className="w-full"
-          />
-        </Field>
-      </SubGroup>
 
-      <SubGroup title="Behavior">
-        <div className="flex items-center justify-between rounded-md border border-border/60 bg-background p-3">
-          <div>
-            <p className="text-xs font-medium text-foreground">Open in same tab</p>
-            <p className="text-[11px] text-muted-foreground">
-              Click bookmark thay trang hiện tại thay vì mở tab mới.
-            </p>
+          <Field label={`Icon size — ${current.iconSize}px`}>
+            <input
+              type="range"
+              min={20}
+              max={60}
+              step={2}
+              value={current.iconSize}
+              onChange={(e) => setField('iconSize', parseInt(e.target.value, 10))}
+              className="w-full"
+            />
+          </Field>
+        </SubGroup>
+
+        <SubGroup title="Background">
+          <div className="grid grid-cols-4 gap-2">
+            {(
+              [
+                {
+                  id: 'default' as const,
+                  label: 'Default',
+                  swatch: 'bg-muted border border-border/60',
+                  style: undefined as React.CSSProperties | undefined,
+                },
+                {
+                  id: 'solid' as const,
+                  label: 'Solid',
+                  swatch: '',
+                  style: { background: '#4facfe' } as React.CSSProperties,
+                },
+                {
+                  id: 'gradient' as const,
+                  label: 'Gradient',
+                  swatch: '',
+                  style: {
+                    background:
+                      'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  } as React.CSSProperties,
+                },
+                {
+                  id: 'image' as const,
+                  label: 'Image',
+                  swatch: '',
+                  style: {
+                    background:
+                      'linear-gradient(45deg, #94a3b8 25%, transparent 25%, transparent 75%, #94a3b8 75%), linear-gradient(45deg, #94a3b8 25%, #cbd5e1 25%, #cbd5e1 75%, #94a3b8 75%)',
+                    backgroundSize: '8px 8px',
+                    backgroundPosition: '0 0, 4px 4px',
+                  } as React.CSSProperties,
+                },
+              ]
+            ).map(({ id, label, swatch, style }) => {
+              const active = current.backgroundType === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => {
+                    if (current.backgroundType !== id) {
+                      setField('backgroundType', id as BackgroundType);
+                      setField('backgroundValue', '');
+                    }
+                  }}
+                  className={cn(
+                    'flex flex-col items-center gap-1.5 rounded-lg border p-2 text-xs font-medium transition-colors duration-150',
+                    active
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border/60 bg-background text-muted-foreground hover:border-border hover:text-foreground',
+                  )}
+                >
+                  <span
+                    className={cn('h-6 w-full rounded', swatch)}
+                    style={style}
+                  />
+                  {label}
+                </button>
+              );
+            })}
           </div>
-          <Switch
-            checked={current.openInSameTab}
-            onCheckedChange={(v) => setField('openInSameTab', v)}
-          />
-        </div>
-      </SubGroup>
+
+          {current.backgroundType === 'solid' && (
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground">
+                Chọn màu preset hoặc paste hex tuỳ ý:
+              </p>
+              <div className="grid grid-cols-6 gap-2">
+                {SOLID_PRESETS.map((s) => {
+                  const active = current.backgroundValue === s.value;
+                  return (
+                    <button
+                      key={s.name}
+                      type="button"
+                      onClick={() => {
+                        setField('backgroundValue', s.value);
+                        // Category badge: bg=labelColor, text=contrast pair từ labelColor.
+                        const { label: badgeText } = contrastPair(s.labelColor);
+                        setField('categoryBgColor', s.labelColor);
+                        setField('categoryLabelColor', badgeText);
+                        setField('bookmarkTitleColor', s.titleColor);
+                        setField('heroTitleColor', s.labelColor);
+                        setField('heroSpaceColor', s.titleColor);
+                        setField('heroUrlColor', s.titleColor);
+                      }}
+                      className={cn(
+                        'relative flex h-14 flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 transition-transform duration-150 hover:scale-[1.03]',
+                        active ? 'border-primary ring-2 ring-primary/20' : 'border-border/60',
+                      )}
+                      style={{ background: s.value }}
+                      title={s.name}
+                      aria-label={s.name}
+                    >
+                      <span
+                        className="text-[9px] font-semibold uppercase tracking-wider"
+                        style={{ color: s.labelColor }}
+                      >
+                        Aa
+                      </span>
+                      <span
+                        className="text-[9px] font-medium"
+                        style={{ color: s.titleColor }}
+                      >
+                        {s.name}
+                      </span>
+                    </button>
+                  );
+                })}
+                {/* Pick from palette — native color picker */}
+                <label
+                  className={cn(
+                    'relative flex h-14 cursor-pointer flex-col items-center justify-center gap-0.5 overflow-hidden rounded-lg border-2 border-border/60 transition-transform duration-150 hover:scale-[1.03]',
+                  )}
+                  style={{
+                    background:
+                      'conic-gradient(from 0deg, #ef4444, #f59e0b, #eab308, #22c55e, #06b6d4, #3b82f6, #a855f7, #ec4899, #ef4444)',
+                  }}
+                  title="Pick from palette"
+                  aria-label="Pick color from palette"
+                >
+                  <input
+                    type="color"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    onChange={(e) => pickSolidCommit(e.target.value)}
+                  />
+                  <span className="pointer-events-none rounded-full bg-black/40 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
+                    Pick
+                  </span>
+                </label>
+              </div>
+              <Input
+                value={current.backgroundValue}
+                onChange={(e) => setField('backgroundValue', e.target.value)}
+                placeholder="#hex hoặc rgb(...)"
+                className="h-8 font-mono text-xs"
+              />
+            </div>
+          )}
+
+          {current.backgroundType === 'gradient' && (
+            <div className="space-y-2">
+              <p className="text-[11px] text-muted-foreground">
+                Chọn preset hoặc paste CSS gradient tuỳ ý:
+              </p>
+              <div className="grid grid-cols-4 gap-2">
+                {GRADIENT_PRESETS.map((g) => {
+                  const active = current.backgroundValue === g.value;
+                  return (
+                    <button
+                      key={g.name}
+                      type="button"
+                      onClick={() => {
+                        setField('backgroundValue', g.value);
+                        // Category badge: bg=labelColor, text=contrast pair từ labelColor.
+                        // contrastPair() tự tính text đọc được trên bg hex đó.
+                        if (g.labelColor) {
+                          const { label: badgeText } = contrastPair(g.labelColor);
+                          setField('categoryBgColor', g.labelColor);
+                          setField('categoryLabelColor', badgeText);
+                        }
+                        setField('bookmarkTitleColor', g.titleColor);
+                        setField('heroTitleColor', g.labelColor);
+                        setField('heroSpaceColor', g.titleColor);
+                        setField('heroUrlColor', g.titleColor);
+                      }}
+                      className={cn(
+                        'relative flex flex-col items-start gap-1 overflow-hidden rounded-lg border-2 p-2 text-left transition-transform duration-150 hover:scale-[1.02]',
+                        active ? 'border-primary ring-2 ring-primary/20' : 'border-border/60',
+                      )}
+                      style={{ background: g.value }}
+                      title={g.name}
+                      aria-label={g.name}
+                    >
+                      <span
+                        className="inline-flex items-center rounded-full bg-white/25 px-1.5 py-0.5 text-[9px] font-medium backdrop-blur-sm"
+                        style={{ color: g.labelColor ?? undefined }}
+                      >
+                        Social
+                      </span>
+                      <div className="flex gap-1">
+                        <span className="h-4 w-4 rounded-full bg-white/70" />
+                        <span className="h-4 w-4 rounded-full bg-white/55" />
+                        <span className="h-4 w-4 rounded-full bg-white/45" />
+                      </div>
+                      <span
+                        className="mt-1 text-[10px] font-semibold drop-shadow"
+                        style={{ color: g.titleColor ?? undefined }}
+                      >
+                        {g.name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <Input
+                value={current.backgroundValue}
+                onChange={(e) => setField('backgroundValue', e.target.value)}
+                placeholder="linear-gradient(...) hoặc CSS bất kỳ"
+                className="h-8 font-mono text-xs"
+              />
+            </div>
+          )}
+
+          {current.backgroundType === 'image' && (
+            <ImageUploadField
+              value={current.backgroundValue}
+              onChange={(v) => setField('backgroundValue', v)}
+            />
+          )}
+        </SubGroup>
+
+        <SubGroup title="Overlay">
+          <p className="text-[11px] text-muted-foreground">
+            Phủ 1 lớp màu blend lên background. Opacity = 0 để tắt.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <ColorPicker
+              label="Overlay color"
+              value={current.backgroundOverlayColor}
+              onChange={(v) => setField('backgroundOverlayColor', v)}
+            />
+            <Field label="Blend mode">
+              <select
+                value={current.backgroundBlendMode}
+                onChange={(e) => setField('backgroundBlendMode', e.target.value as BlendMode)}
+                className="h-9 w-full rounded-md border border-border/60 bg-background px-2 text-xs text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+              >
+                {BLEND_MODES.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          <Field label={`Overlay opacity — ${current.backgroundOverlayOpacity}%`}>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={1}
+              value={current.backgroundOverlayOpacity}
+              onChange={(e) =>
+                setField('backgroundOverlayOpacity', parseInt(e.target.value, 10))
+              }
+              className="w-full"
+            />
+          </Field>
+        </SubGroup>
+
+        <SubGroup title="Behavior">
+          <div className="flex items-center justify-between rounded-md border border-border/60 bg-background p-3">
+            <div>
+              <p className="text-xs font-medium text-foreground">Open in same tab</p>
+              <p className="text-[11px] text-muted-foreground">
+                Click bookmark thay trang hiện tại thay vì mở tab mới.
+              </p>
+            </div>
+            <Switch
+              checked={current.openInSameTab}
+              onCheckedChange={(v) => setField('openInSameTab', v)}
+            />
+          </div>
+        </SubGroup>
       </div>
 
       {/* h-fit prevents CSS Grid from stretching aside to left column height, which would
@@ -1149,10 +1152,10 @@ const LivePreview = memo(function LivePreview({ current }: { current: BookmarkPr
     () =>
       current.backgroundOverlayColor && current.backgroundOverlayOpacity > 0
         ? {
-            backgroundColor: current.backgroundOverlayColor,
-            opacity: current.backgroundOverlayOpacity / 100,
-            mixBlendMode: current.backgroundBlendMode as CSSProperties['mixBlendMode'],
-          }
+          backgroundColor: current.backgroundOverlayColor,
+          opacity: current.backgroundOverlayOpacity / 100,
+          mixBlendMode: current.backgroundBlendMode as CSSProperties['mixBlendMode'],
+        }
         : null,
     [
       current.backgroundOverlayColor,
@@ -1170,7 +1173,7 @@ const LivePreview = memo(function LivePreview({ current }: { current: BookmarkPr
         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
           Live preview
         </p>
-          <span className="inline-flex items-center gap-1.5 rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-success">
+        <span className="inline-flex items-center gap-1.5 rounded bg-primary/10 px-1.5 py-0.5 text-[9px] font-medium text-success">
           <span className="h-2 w-2 rounded-full bg-success animate-pulse [animation-duration:2s] motion-reduce:animate-none" />
           preview
         </span>

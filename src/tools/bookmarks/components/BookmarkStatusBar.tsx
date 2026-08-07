@@ -17,6 +17,7 @@ import { Globe, Copy, ExternalLink, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/cn';
+import { getBasename } from '@/lib/basename';
 
 interface Props {
   isPublic: boolean;
@@ -34,12 +35,16 @@ export function BookmarkStatusBar({
   onEnablePublic,
   className,
 }: Props) {
+  // Detect basename để hiển thị path đúng
+  const basename = window.location.pathname.startsWith('/hubibo') ? '/hubibo' : '';
+  const displayPath = `${basename}/bookmarks/${slug}`;
+
   function copy() {
     if (!publicUrl) return;
     navigator.clipboard
       .writeText(publicUrl)
       .then(() => toast.success('Đã copy link'))
-      .catch(() => {});
+      .catch(() => { });
   }
 
   return (
@@ -56,7 +61,7 @@ export function BookmarkStatusBar({
             title="Copy public URL"
           >
             <Copy className="h-3 w-3" />
-            /bookmarks/{slug}
+            {displayPath}
           </button>
           <a
             href={publicUrl}

@@ -26,6 +26,7 @@ import {
   type PublicCategory,
 } from './lib/edge-functions';
 import { useBookmarkProfile } from './api';
+import { getPublicUrl } from '@/lib/basename';
 
 // ============================================================
 // BookmarksPublic — read-only public view (no auth)
@@ -210,7 +211,7 @@ export default function BookmarksPublic() {
               showHero={profile.showHero}
               displayName={displayLabel}
               spaceName={profile.spaceName}
-              publicUrl={`${window.location.origin}/bookmarks/${profile.slug}`}
+              publicUrl={getPublicUrl(`/bookmarks/${profile.slug}`)}
               webpage={profile.webpage}
             />
           </section>
@@ -224,111 +225,111 @@ export default function BookmarksPublic() {
             <div className="mx-auto w-[90%] max-w-[2250px]">
               <div
                 className={`grid gap-6 ${gridColsClass}`}
-              style={{
-                gridTemplateRows: `repeat(${Math.max(
-                  1,
-                  ...Array.from({ length: columnCount }, (_, i) =>
-                    categories.filter((c) => c.columnIndex === i).length,
-                  ),
-                )}, auto)`,
-              }}
-            >
-              {Array.from({ length: columnCount }, (_, colIdx) => {
-                const colCats = categories
-                  .filter((c) => c.columnIndex === colIdx)
-                  .sort((a, b) => a.orderIndex - b.orderIndex);
-                if (colCats.length === 0) return <div key={colIdx} />;
-                return (
-                  <div key={colIdx} className="grid gap-6 [grid-template-rows:subgrid] [grid-row:1/-1]">
-                    {colCats.map((cat) => {
-                      const catMatch = categoryHasMatch(cat);
-                      return (
-                      <div
-                        key={cat.id}
-                        className="transition-opacity"
-                        style={{ opacity: catMatch ? 1 : 0.15 }}
-                        aria-hidden={!catMatch || undefined}
-                      >
-                        <div className="mb-2 flex items-center gap-1.5">
-                          <span
-                            className="bookmark-category-badge inline-flex items-center rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm"
+                style={{
+                  gridTemplateRows: `repeat(${Math.max(
+                    1,
+                    ...Array.from({ length: columnCount }, (_, i) =>
+                      categories.filter((c) => c.columnIndex === i).length,
+                    ),
+                  )}, auto)`,
+                }}
+              >
+                {Array.from({ length: columnCount }, (_, colIdx) => {
+                  const colCats = categories
+                    .filter((c) => c.columnIndex === colIdx)
+                    .sort((a, b) => a.orderIndex - b.orderIndex);
+                  if (colCats.length === 0) return <div key={colIdx} />;
+                  return (
+                    <div key={colIdx} className="grid gap-6 [grid-template-rows:subgrid] [grid-row:1/-1]">
+                      {colCats.map((cat) => {
+                        const catMatch = categoryHasMatch(cat);
+                        return (
+                          <div
+                            key={cat.id}
+                            className="transition-opacity"
+                            style={{ opacity: catMatch ? 1 : 0.15 }}
+                            aria-hidden={!catMatch || undefined}
                           >
-                            {cat.name}
-                          </span>
-                          {(bookmarksByCategory.get(cat.id) ?? []).length > 0 && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="ml-auto h-6 w-6"
-                              onClick={() => openAll(cat)}
-                              title="Open all"
-                              aria-label="Open all"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-
-                        <ul
-                          className="m-0 flex flex-wrap gap-1.5 p-0"
-                          style={{ listStyle: 'none', minHeight: iconSize + 4 }}
-                        >
-                          {(bookmarksByCategory.get(cat.id) ?? []).map((b) => {
-                            const bmMatch = matchesSearch(b);
-                            const accessibleLabel =
-                              b.title || b.url.replace(/^https?:\/\//, '').replace(/\/$/, '') || b.url;
-                            return (
-                            <li
-                              key={b.id}
-                              style={{ opacity: bmMatch ? 1 : 0.15 }}
-                              onMouseEnter={() =>
-                                setHoverByCat((prev) => ({ ...prev, [cat.id]: b.title }))
-                              }
-                              onMouseLeave={() =>
-                                setHoverByCat((prev) => ({ ...prev, [cat.id]: null }))
-                              }
-                              title={b.title || b.url}
-                              className="cursor-pointer"
-                              aria-hidden={!bmMatch || undefined}
-                            >
-                              <a
-                                href={b.url}
-                                target={openInSameTab ? '_self' : '_blank'}
-                                rel={openInSameTab ? undefined : 'noopener noreferrer'}
-                                aria-label={accessibleLabel}
-                                tabIndex={bmMatch ? undefined : -1}
+                            <div className="mb-2 flex items-center gap-1.5">
+                              <span
+                                className="bookmark-category-badge inline-flex items-center rounded-full bg-primary px-3 py-1 text-[11px] font-semibold text-primary-foreground shadow-sm"
                               >
-                                <BookmarkFavicon
-                                  faviconUrl={b.faviconUrl}
-                                  title={b.title}
-                                  url={b.url}
-                                  size={iconSize}
-                                  backdrop={profile.iconBackdrop}
-                                  iconType={b.iconType}
-                                  iconText={b.iconText}
-                                  iconRounded={b.iconRounded}
-                                  iconBackground={b.iconBackground}
-                                />
-                              </a>
-                            </li>
-                            );
-                          })}
-                        </ul>
+                                {cat.name}
+                              </span>
+                              {(bookmarksByCategory.get(cat.id) ?? []).length > 0 && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="ml-auto h-6 w-6"
+                                  onClick={() => openAll(cat)}
+                                  title="Open all"
+                                  aria-label="Open all"
+                                >
+                                  <ExternalLink className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
 
-                        <p
-                          className={
-                            'bibo-bookmark-hover-title mt-1.5 min-h-[14px] text-[11px] text-muted-foreground/70 transition-opacity duration-150 ' +
-                            (hoverByCat[cat.id] ? 'opacity-100' : 'opacity-0')
-                          }
-                        >
-                          {hoverByCat[cat.id] || '\u00A0'}
-                        </p>
-                      </div>
-                      );
-                    })}
-                  </div>
-                );
-              })}
+                            <ul
+                              className="m-0 flex flex-wrap gap-1.5 p-0"
+                              style={{ listStyle: 'none', minHeight: iconSize + 4 }}
+                            >
+                              {(bookmarksByCategory.get(cat.id) ?? []).map((b) => {
+                                const bmMatch = matchesSearch(b);
+                                const accessibleLabel =
+                                  b.title || b.url.replace(/^https?:\/\//, '').replace(/\/$/, '') || b.url;
+                                return (
+                                  <li
+                                    key={b.id}
+                                    style={{ opacity: bmMatch ? 1 : 0.15 }}
+                                    onMouseEnter={() =>
+                                      setHoverByCat((prev) => ({ ...prev, [cat.id]: b.title }))
+                                    }
+                                    onMouseLeave={() =>
+                                      setHoverByCat((prev) => ({ ...prev, [cat.id]: null }))
+                                    }
+                                    title={b.title || b.url}
+                                    className="cursor-pointer"
+                                    aria-hidden={!bmMatch || undefined}
+                                  >
+                                    <a
+                                      href={b.url}
+                                      target={openInSameTab ? '_self' : '_blank'}
+                                      rel={openInSameTab ? undefined : 'noopener noreferrer'}
+                                      aria-label={accessibleLabel}
+                                      tabIndex={bmMatch ? undefined : -1}
+                                    >
+                                      <BookmarkFavicon
+                                        faviconUrl={b.faviconUrl}
+                                        title={b.title}
+                                        url={b.url}
+                                        size={iconSize}
+                                        backdrop={profile.iconBackdrop}
+                                        iconType={b.iconType}
+                                        iconText={b.iconText}
+                                        iconRounded={b.iconRounded}
+                                        iconBackground={b.iconBackground}
+                                      />
+                                    </a>
+                                  </li>
+                                );
+                              })}
+                            </ul>
+
+                            <p
+                              className={
+                                'bibo-bookmark-hover-title mt-1.5 min-h-[14px] text-[11px] text-muted-foreground/70 transition-opacity duration-150 ' +
+                                (hoverByCat[cat.id] ? 'opacity-100' : 'opacity-0')
+                              }
+                            >
+                              {hoverByCat[cat.id] || '\u00A0'}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

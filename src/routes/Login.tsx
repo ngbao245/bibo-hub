@@ -42,7 +42,7 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Đã login → về URL đích ngay
+  // Đã login từ trước → về URL đích ngay
   if (session) {
     return <Navigate to={safeNext(params.get('next'))} replace />;
   }
@@ -87,8 +87,17 @@ export default function LoginPage() {
           .eq('id', user.id);
       }
 
-      // onAuthStateChange sẽ update session → useEffect ở Navigate above redirect
-      navigate(safeNext(params.get('next')), { replace: true });
+      // Đợi session được persist vào localStorage rồi redirect ngay
+      console.log('[Login] Login API success, checking session...');
+
+      // Đợi một chút để authClient persist session
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // Redirect ngay với window.location để tránh race condition với React state
+      const target = safeNext(params.get('next'));
+      const basename = window.location.pathname.startsWith('/hubibo') ? '/hubibo' : '';
+      console.log('[Login] Redirecting to:', basename + target);
+      window.location.href = basename + target;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Đăng nhập thất bại');
       setSubmitting(false);
@@ -162,4 +171,4 @@ export default function LoginPage() {
       </div>
     </div>
   );
-}
+}

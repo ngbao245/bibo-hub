@@ -28,6 +28,7 @@ import BookmarkFavicon from './components/BookmarkFavicon';
 import BookmarksSkeleton from './components/BookmarksSkeleton';
 import { BookmarkOverlay } from './components/BookmarkBackground';
 import { BookmarkHeader } from './components/BookmarkHeader';
+import { getPublicUrl } from '@/lib/basename';
 import { BookmarkStatusBar } from './components/BookmarkStatusBar';
 
 import { Button } from '@/components/ui/button';
@@ -579,7 +580,7 @@ export default function BookmarksEdit() {
   }
 
   const profileData = profileQuery.data;
-  const publicUrl = profileData ? `${window.location.origin}/bookmarks/${profileData.slug}` : '';
+  const publicUrl = profileData ? getPublicUrl(`/bookmarks/${profileData.slug}`) : '';
 
   if (profileQuery.isLoading || categoriesQuery.isLoading || bookmarksQuery.isLoading) {
     return (
@@ -778,7 +779,7 @@ export default function BookmarksEdit() {
                 showHero
                 displayName={displayLabel}
                 spaceName={profileData.spaceName}
-                publicUrl={`${window.location.origin}/bookmarks/${profileData.slug}`}
+                publicUrl={publicUrl}
                 webpage={profileData.webpage}
               />
             </section>
