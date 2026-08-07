@@ -102,7 +102,7 @@ function AudioModalContent() {
                 if (window.confirm('Xóa tất cả bài?')) player.clearQueue();
               }}
               disabled={player.queue.length === 0}
-              className="rounded px-2 py-0.5 text-muted-foreground hover:bg-popover hover:text-destructive disabled:opacity-40"
+              className="rounded px-2 py-0.5 text-muted-foreground hover:bg-popover hover:text-destructive disabled:opacity-40 disabled:pointer-events-none"
             >
               Clear
             </button>

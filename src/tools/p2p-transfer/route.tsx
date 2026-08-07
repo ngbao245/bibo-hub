@@ -949,20 +949,16 @@ function downloadBlob(blob: Blob, name: string) {
   URL.revokeObjectURL(url);
 }
 
-// QR Display — lazy import qrcode
+// QR Display — uses shared qr helper
+
 function QrDisplay({ value }: { value: string }) {
   const [svg, setSvg] = useState<string>('');
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const qrcode = await import('qrcode');
-      const out = await qrcode.toString(value, {
-        type: 'svg',
-        margin: 1,
-        color: { dark: '#fff', light: '#0000' },
-        width: 240,
-      });
+      const { generateQrSvg } = await import('@/lib/qr');
+      const out = await generateQrSvg(value);
       if (!cancelled) setSvg(out);
     })();
     return () => { cancelled = true; };

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import './rag-markdown.css';
 import {
   BookOpen,
   Book,
@@ -19,10 +20,12 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
 import { cn } from '@/lib/cn';
+import { MaintenanceState } from '@/components/shared';
 
 import { useModalStore } from '@/stores/modalStore';
 import { useRagStore, selectIsReady, type RagPendingContext } from '@/stores/ragStore';
 import { useReaderStore } from '@/stores/readerStore';
+import { useAuthStore } from '@/stores/authStore';
 import { ragRetrieve } from '@/lib/rag/search';
 import {
   chatStream,
@@ -762,19 +765,36 @@ export default function ChatTab() {
   );
 
   // ----- Not-ready state -----
-  if (status === 'needs_setup') {
+  const isAdmin = useAuthStore((s) => s.profile?.role === 'admin');
+
+  if (status === 'needs_setup' || (status !== 'ready' && status !== 'loading')) {
+    if (isAdmin) {
+      return (
+        <NotReadyState
+          title={status === 'needs_setup' ? 'Chưa setup RAG' : 'RAG gặp lỗi'}
+          message={
+            status === 'needs_setup'
+              ? 'Cần ít nhất 1 Gemini API key để dùng chat.'
+              : 'Đang khởi động hoặc gặp lỗi. Check Setting → group RAG.'
+          }
+          showConfigLink
+        />
+      );
+    }
     return (
-      <NotReadyState
-        title="Chưa setup RAG"
-        message="Cần ít nhất 1 Gemini API key để dùng chat."
+      <MaintenanceState
+        title="Tính năng đang bảo trì..."
+        description=""
+        className="h-full"
       />
     );
   }
-  if (status !== 'ready') {
+  if (status === 'loading') {
     return (
       <NotReadyState
-        title="RAG chưa sẵn sàng"
-        message="Đang khởi động hoặc gặp lỗi. Check Setting → group RAG."
+        title="Đang khởi động"
+        message="AI Assistant đang tải..."
+        showConfigLink={false}
       />
     );
   }
@@ -1290,9 +1310,11 @@ function ExampleList({ items }: { items: string[] }) {
 function NotReadyState({
   title,
   message,
+  showConfigLink = true,
 }: {
   title: string;
   message: string;
+  showConfigLink?: boolean;
 }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 px-4 text-center">
@@ -1305,12 +1327,14 @@ function NotReadyState({
           {message}
         </p>
       </div>
-      <a
-        href="/config"
-        className="border border-primary/40 bg-primary/5 px-3 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
-      >
-        Mở Config → AI Agentic
-      </a>
+      {showConfigLink && (
+        <a
+          href="/config"
+          className="border border-primary/40 bg-primary/5 px-3 py-1 text-xs text-primary transition-colors hover:bg-primary/10"
+        >
+          Mở Config → AI Agentic
+        </a>
+      )}
     </div>
   );
 }
