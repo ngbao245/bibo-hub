@@ -65,7 +65,7 @@ const INTER_REQUEST_DELAY_MS = 4500; // 15 RPM = 1 request / 4s, dùng 4.5s an t
 
 const queue: Job[] = [];
 let running = 0;
-let listenerSet: Set<(snapshot: QueueSnapshot) => void> = new Set();
+const listenerSet: Set<(snapshot: QueueSnapshot) => void> = new Set();
 
 export interface QueueSnapshot {
   pending: number;
@@ -194,7 +194,7 @@ async function runJob(job: Job): Promise<void> {
         drain();
       }, delay);
     } else {
-      // eslint-disable-next-line no-console
+       
       console.warn(
         `[rag-queue] Job dropped after ${job.attempts} attempts:`,
         job.kind,

@@ -30,7 +30,7 @@ const MAX_RETRY = 3;
 // Pool singleton — sync với ragStore.tokens
 // ------------------------------------------------------------
 
-let pool: GeminiKeyPool = new GeminiKeyPool([]);
+const pool: GeminiKeyPool = new GeminiKeyPool([]);
 
 /** Cập nhật pool khi tokens trong store thay đổi. */
 function syncPoolWithStore(): void {
@@ -74,13 +74,7 @@ async function callGeminiWithRetry<T>(
   let lastErr: unknown = null;
 
   for (let attempt = 0; attempt < MAX_RETRY; attempt++) {
-    let state: KeyState;
-    try {
-      state = pool.pickKey();
-    } catch (err) {
-      // Hết key → throw ra, caller hiển thị friendly message
-      throw err;
-    }
+    const state: KeyState = pool.pickKey();
 
     try {
       const result = await fn(state);
@@ -166,8 +160,7 @@ async function geminiFetch(
   const path = pathWithKey(key);
   // Log endpoint (không log key) để user thấy mỗi lần tốn quota.
   const endpoint = path.split('?')[0];
-  // eslint-disable-next-line no-console
-  console.log(`[Gemini] ${endpoint}`);
+  console.warn(`[Gemini] ${endpoint}`);
   const res = await fetch(`${API_BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -299,8 +292,7 @@ export async function chatStream(
   if (pool.size() === 0) throw new RagNoTokenError();
 
   return callGeminiWithRetry(async (state) => {
-    // eslint-disable-next-line no-console
-    console.log(`[Gemini] /models/${CHAT_MODEL}:streamGenerateContent`);
+    console.warn(`[Gemini] /models/${CHAT_MODEL}:streamGenerateContent`);
     const res = await fetch(
       `${API_BASE}/models/${CHAT_MODEL}:streamGenerateContent?alt=sse&key=${encodeURIComponent(state.key)}`,
       {

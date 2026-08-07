@@ -15,7 +15,7 @@ const AUTH_URL = import.meta.env.VITE_SUPABASE_AUTH_URL as string | undefined;
 const AUTH_ANON_KEY = import.meta.env.VITE_SUPABASE_AUTH_ANON_KEY as string | undefined;
 
 if (!AUTH_URL || !AUTH_ANON_KEY) {
-  // eslint-disable-next-line no-console
+   
   console.error(
     '[authClient] Missing VITE_SUPABASE_AUTH_URL or VITE_SUPABASE_AUTH_ANON_KEY. Login sẽ fail.',
   );
@@ -73,4 +73,4 @@ export async function resolveEmailForLogin(identifier: string): Promise<string> 
   const data = (await res.json()) as { email?: string };
   if (!data.email) throw new Error('Sai thông tin đăng nhập');
   return data.email;
-}
+}

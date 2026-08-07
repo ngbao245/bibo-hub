@@ -2,13 +2,13 @@ import type { Config } from 'tailwindcss';
 import animate from 'tailwindcss-animate';
 
 // ============================================================
-// Tailwind config - shadcn/ui style vß╗¢i theme dark + vu├┤ng vß╗⌐c
+// Tailwind config - shadcn/ui style với theme dark + vuông vức
 // ============================================================
 //
-// Theme d├╣ng CSS variables (─æß╗ïnh ngh─⌐a trong index.css) ΓÇö chuß║⌐n shadcn,
-// dß╗à thay theme runtime nß║┐u sau n├áy muß╗æn light mode.
+// Theme dùng CSS variables (định nghĩa trong index.css) — chuẩn shadcn,
+// dễ thay theme runtime nếu sau này muốn light mode.
 //
-// borderRadius giß╗» 0 tuyß╗çt ─æß╗æi ΓÇö shadcn components vß║½n render OK.
+// borderRadius giữ 0 tuyệt đói — shadcn components vẫn render OK.
 // ============================================================
 
 export default {
@@ -20,9 +20,9 @@ export default {
       padding: '2rem',
       screens: { '2xl': '1400px' },
     },
-    // Override ho├án to├án: chß╗ë cho ph├⌐p radius = 0
-    // Exception: `full` giß╗» = 9999px cho avatar tr├▓n (avatar l├á data element,
-    // kh├┤ng phß║úi chrome UI ΓÇö theme "vu├┤ng vß╗⌐c" kh├┤ng ├íp dß╗Ñng).
+    // Override hoàn toàn: chỉ cho phép radius = 0
+    // Exception: `full` giữ = 9999px cho avatar tròn (avatar là data element,
+    // không phải chrome UI — theme "vuông vức" không áp dụng).
     borderRadius: {
       none: '0',
       DEFAULT: '0',
@@ -34,7 +34,7 @@ export default {
     },
     extend: {
       colors: {
-        // shadcn semantic tokens (─æß╗ìc tß╗½ CSS vars)
+        // shadcn semantic tokens (đọc từ CSS vars)
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -77,7 +77,7 @@ export default {
           foreground: 'hsl(var(--card-foreground))',
         },
 
-        // Legacy tokens (giß╗» t╞░╞íng th├¡ch vß╗¢i code ─æ├ú viß║┐t)
+        // Legacy tokens (giữ tương thích với code đã viết)
         bg: {
           primary: 'hsl(var(--background))',
           secondary: 'hsl(var(--card))',
@@ -122,17 +122,36 @@ export default {
             transform: 'translateX(400%)',
           },
         },
-        // Beam ├ính s├íng chß║íy 1 lß║ºn tß╗½ tr├íi qua phß║úi container.
-        // ─Éß║╖t overlay ß╗ƒ container level (KH├öNG phß║úi per-block) ─æß╗â 1 dß║úi s├íng
-        // duy nhß║Ñt tr├┤i qua nhiß╗üu block c├╣ng l├║c, kh├┤ng c├│ cß║úm gi├íc flash
-        // per-block. Container cß║ºn: `relative overflow-hidden`. Overlay cß║ºn
-        // width = 40-50% container, d├╣ng translate ─æß╗â chß║íy tß╗½ -100% ΓåÆ 200%.
         shimmer: {
           '0%': { transform: 'translateX(-100%)' },
           '100%': { transform: 'translateX(300%)' },
-          // nghiêng 45 độ
-          // '0%': { transform: 'translateX(-100%) skewX(-45deg)' },
-          // '100%': { transform: 'translateX(300%) skewX(-45deg)' },
+        },
+        breathe: {
+          '50%': { transform: 'scale(0.92, 1.04)' },
+        },
+        mouth: {
+          '50%': { transform: 'scaleY(0.6)' },
+        },
+        bubble: {
+          '50%': { transform: 'scale(1.5)', opacity: '0.6' },
+        },
+        'shadow-pulse': {
+          '50%': { transform: 'translateX(-50%) scaleX(0.75)' },
+        },
+        // Design System v2 — idle float for empty-state icons
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-6px)' },
+        },
+        // Subtle destructive glow pulse for error states
+        'glow-pulse': {
+          '0%, 100%': { boxShadow: '0 0 0 0 hsl(var(--destructive) / 0.18)' },
+          '50%': { boxShadow: '0 0 16px 2px hsl(var(--destructive) / 0.18)' },
+        },
+        // Focus ring scale-in (from inside out)
+        'ring-in': {
+          '0%': { transform: 'scale(0.96)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
         },
       },
       animation: {
@@ -141,6 +160,13 @@ export default {
         indeterminate:
           'indeterminate 1.5s infinite ease-in-out',
         shimmer: 'shimmer 1.8s ease-in-out infinite',
+        breathe: 'breathe 2s ease-in-out infinite',
+        mouth: 'mouth 2s ease-in-out infinite',
+        bubble: 'bubble 2s ease-in-out infinite',
+        'shadow-pulse': 'shadow-pulse 2s ease-in-out infinite',
+        float: 'float 3s ease-in-out infinite',
+        'glow-pulse': 'glow-pulse 2.4s ease-in-out infinite',
+        'ring-in': 'ring-in 0.2s cubic-bezier(0.4,0,0.2,1) both',
       },
     },
   },

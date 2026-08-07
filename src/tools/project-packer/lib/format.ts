@@ -165,7 +165,7 @@ export function parsePackedContent(content: string): PackedFile[] {
             chunkTotal: missing.length === 0 ? undefined : total,
         });
         if (missing.length > 0) {
-            // eslint-disable-next-line no-console
+             
             console.warn(`[packer] File "${path}" thiếu chunk ${missing.join(', ')}/${total}`);
         }
     }

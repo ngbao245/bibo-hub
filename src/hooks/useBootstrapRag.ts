@@ -35,20 +35,20 @@ export function useBootstrapRag(): void {
           fixupTimer = window.setTimeout(() => {
             if (cancelled) return;
             void runLazyFixupNotes({ verbose: true, gc: true }).catch((err) => {
-              // eslint-disable-next-line no-console
+               
               console.warn('[rag] lazy fixup tầng 1 fail:', err);
             });
           }, LAZY_FIXUP_DELAY_MS);
         } else if (result.status === 'needs_setup') {
-          // eslint-disable-next-line no-console
+           
           console.warn('[rag] ⚠ needs setup:', result.errorMessage);
         } else {
-          // eslint-disable-next-line no-console
+           
           console.error('[rag] ❌ bootstrap error:', result.errorMessage);
         }
       } catch (err) {
         if (cancelled) return;
-        // eslint-disable-next-line no-console
+         
         console.error('[rag] unexpected bootstrap error', err);
       }
     })();

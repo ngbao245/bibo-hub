@@ -36,7 +36,7 @@ export async function loadLegacyCredentials(
 
   if (error || !data?.value) return null;
 
-  // eslint-disable-next-line no-console
+   
   console.warn(`[service-registry] legacy fallback for "${mapping.key}"`);
 
   return mapping.transform(data.value as Record<string, unknown>);
@@ -153,4 +153,4 @@ function resolveLegacyKey(toolCode: string, capability: string): LegacyMapping |
   }
 
   return null;
-}
+}

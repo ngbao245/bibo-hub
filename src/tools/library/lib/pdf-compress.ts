@@ -492,13 +492,13 @@ export async function compressPdf(
 
       if (err.code === 'quota_exceeded') {
         markExhausted(entry.public_key);
-        // eslint-disable-next-line no-console
+         
         console.warn(
           `[ilovepdf] Key#${config.keys.indexOf(entry) + 1} exhausted (${entry.public_key.slice(0, 20)}...). Fail-over.`,
         );
       } else if (err.code === 'auth_failed') {
         sessionInvalid.add(entry.public_key);
-        // eslint-disable-next-line no-console
+         
         console.warn(
           `[ilovepdf] Key#${config.keys.indexOf(entry) + 1} invalid session (${err.message}). Fail-over.`,
         );
@@ -550,4 +550,4 @@ export async function testConnection(config: CompressConfig): Promise<boolean> {
   const first = config.keys.find((k) => k.public_key.trim().length > 0);
   if (!first) return false;
   return testKey(first.public_key);
-}
+}

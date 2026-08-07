@@ -31,7 +31,7 @@ export function parseMoney(input: string | number | null | undefined): number {
   if (typeof input === 'number') return Math.round(input);
   if (!input) return 0;
 
-  let s = String(input).trim().toLowerCase();
+  const s = String(input).trim().toLowerCase();
   if (!s) return 0;
 
   // "?" = sellPrice unknown — handled riêng ở keycap

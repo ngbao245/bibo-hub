@@ -562,7 +562,7 @@ export function useUploadBook() {
 
       report({ stage: 'done', percent: 100, compressSummary });
       // Optimistic invalidate snapshot — onSuccess refetch sẽ ghi lại
-      try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
+      try { localStorage.removeItem(SNAPSHOT_KEY); } catch { /* ignore */ }
       return data as Book;
     },
     onSuccess: () => {
@@ -601,7 +601,7 @@ export function useDeleteBook() {
       // Evict blob cache để khỏi giữ rác
       await deleteCached(STORE_FILES, book.file_path);
       if (book.cover_url) await deleteCached(STORE_COVERS, book.cover_url);
-      try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
+      try { localStorage.removeItem(SNAPSHOT_KEY); } catch { /* ignore */ }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['reader', 'books'] });
@@ -713,7 +713,7 @@ export function useReplaceBookFile() {
       }
 
       report({ stage: 'done', percent: 100, compressSummary });
-      try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
+      try { localStorage.removeItem(SNAPSHOT_KEY); } catch { /* ignore */ }
       return data as Book;
     },
     onSuccess: (updatedBook) => {
@@ -750,7 +750,7 @@ export function useRenameBook() {
         if (!old) return old;
         return old.map((b) => (b.id === bookId ? { ...b, title: newTitle } : b));
       });
-      try { localStorage.removeItem(SNAPSHOT_KEY); } catch {}
+      try { localStorage.removeItem(SNAPSHOT_KEY); } catch { /* ignore */ }
     },
   });
 }

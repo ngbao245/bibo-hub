@@ -505,7 +505,7 @@ export default function PackPanel() {
       : `pack_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
     const baseTitle = `Project Packed - ${new Date().toLocaleString('vi-VN')}`;
 
-    let savedSet = new Set<number>(isResume ? saveState.savedIndices : []);
+    const savedSet = new Set<number>(isResume ? saveState.savedIndices : []);
     let pendingIndices: number[] = isResume
       ? [...saveState.failedIndices]
       : parts.map((_, i) => i);

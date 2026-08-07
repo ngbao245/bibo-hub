@@ -73,7 +73,7 @@ export default function VaultMain() {
 
     decryptAll(entriesQuery.data, masterKey);
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [entriesQuery.data, masterKey]);
 
   const filteredEntries = useMemo(() => {

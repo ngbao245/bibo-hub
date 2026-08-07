@@ -125,7 +125,7 @@ export async function uploadToDrive(
   config: DriveBackupConfig,
 ): Promise<void> {
   if (!navigator.onLine) {
-    // eslint-disable-next-line no-console
+     
     console.warn('[drive-backup] Offline, skipping upload');
     return;
   }
@@ -150,7 +150,7 @@ export async function uploadToDrive(
         return attempt(true);
       }
       // Final fail — silent log
-      // eslint-disable-next-line no-console
+       
       console.warn(
         `[drive-backup] Failed: ${filename} —`,
         err instanceof Error ? err.message : err,
@@ -177,4 +177,4 @@ export async function testDriveConnection(config: DriveBackupConfig): Promise<bo
   } catch {
     return false;
   }
-}
+}

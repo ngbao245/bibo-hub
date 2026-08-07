@@ -8,7 +8,7 @@ import { TOOLS, TOOL_GROUPS, type Tool, type ToolGroup } from '@/lib/tools';
 import { useToolAction } from '@/hooks/useToolAction';
 import { useHubFavorites, useSaveHubFavorites } from '@/api/hubFavorites';
 import { useToolCategories } from '@/api/toolCategories';
-import { useSaveTheme, useThemeStore } from '@/tools/theme';
+import { useThemeControls } from '@/tools/theme';
 import type { ThemeId } from '@/tools/theme';
 import { cn } from '@/lib/cn';
 import WidgetArea from '@/tools/home-widgets/components/WidgetArea';
@@ -93,7 +93,7 @@ export default function HubPro() {
     if (localIds.length === 0 && supabaseIds.length > 0) {
       // New device / cleared cache → pull from Supabase
       setFavoriteIdsLocal(supabaseIds);
-      try { localStorage.setItem(LS_KEY, JSON.stringify(supabaseIds)); } catch {}
+      try { localStorage.setItem(LS_KEY, JSON.stringify(supabaseIds)); } catch { /* ignore */ }
     } else if (localIds.length > 0 && supabaseIds.length === 0) {
       // localStorage has data, Supabase empty → push up (retry sync)
       saveMut.mutate({ ids: localIds, recordId: null });
@@ -107,7 +107,7 @@ export default function HubPro() {
     (ids: string[]) => {
       setFavoriteIdsLocal(ids);
       // Instant localStorage backup
-      try { localStorage.setItem(LS_KEY, JSON.stringify(ids)); } catch {}
+      try { localStorage.setItem(LS_KEY, JSON.stringify(ids)); } catch { /* ignore */ }
       // Debounce Supabase sync (500ms)
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => {
@@ -603,28 +603,7 @@ const THEME_PREVIEWS: { id: ThemeId; label: string; bg: string; accent: string; 
 ];
 
 function ThemeMenuSection() {
-  const theme = useThemeStore((s) => s.theme);
-  const is3d = useThemeStore((s) => s.is3d);
-  const isRounded = useThemeStore((s) => s.isRounded);
-  const isRetro = useThemeStore((s) => s.isRetro);
-  const isPill = useThemeStore((s) => s.isPill);
-  const setTheme = useThemeStore((s) => s.setTheme);
-  const setIs3d = useThemeStore((s) => s.setIs3d);
-  const setIsRounded = useThemeStore((s) => s.setIsRounded);
-  const setIsRetro = useThemeStore((s) => s.setIsRetro);
-  const setIsPill = useThemeStore((s) => s.setIsPill);
-  const saveTheme = useSaveTheme();
-
-  const persist = (patch: Partial<{ theme: ThemeId; is3d: boolean; isRounded: boolean; isRetro: boolean; isPill: boolean }>) => {
-    const next = {
-      theme: patch.theme ?? theme,
-      is3d: patch.is3d ?? is3d,
-      isRounded: patch.isRounded ?? isRounded,
-      isRetro: patch.isRetro ?? isRetro,
-      isPill: patch.isPill ?? isPill,
-    };
-    saveTheme.save(next);
-  };
+  const tc = useThemeControls();
 
   return (
     <div className="border-b border-border px-3 py-2 space-y-2">
@@ -636,19 +615,16 @@ function ThemeMenuSection() {
           <button
             key={t.id}
             data-flat
-            onClick={() => {
-              setTheme(t.id);
-              persist({ theme: t.id });
-            }}
+            onClick={() => tc.setTheme(t.id)}
             className={cn(
               'relative flex flex-col items-center gap-1.5 rounded-lg p-1.5 transition-all duration-150',
-              theme === t.id
+              tc.theme === t.id
                 ? 'ring-2'
                 : 'ring-1 ring-border hover:ring-foreground/20',
             )}
             style={{
               backgroundColor: t.bg,
-              ...(theme === t.id ? { '--tw-ring-color': t.ring } as React.CSSProperties : {}),
+              ...(tc.theme === t.id ? { '--tw-ring-color': t.ring } as React.CSSProperties : {}),
             }}
           >
             <div
@@ -675,13 +651,10 @@ function ThemeMenuSection() {
         {/* Lift */}
         <button
           data-flat
-          onClick={() => {
-            setIs3d(!is3d);
-            persist({ is3d: !is3d });
-          }}
+          onClick={tc.toggleLift}
           className={cn(
             'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
-            is3d
+            tc.is3d
               ? 'ring-2 ring-primary bg-primary/5'
               : 'ring-1 ring-border hover:ring-foreground/20',
           )}
@@ -693,24 +666,19 @@ function ThemeMenuSection() {
           </div>
           <span className={cn(
             'text-[10px] font-medium',
-            is3d ? 'text-primary' : 'text-muted-foreground',
+            tc.is3d ? 'text-primary' : 'text-muted-foreground',
           )}>
             Lift
           </span>
         </button>
 
-        {/* Subtle (was Rounded) — radio with Pill */}
+        {/* Subtle — radio với Pill */}
         <button
           data-flat
-          onClick={() => {
-            const next = !isRounded;
-            setIsRounded(next);
-            if (next) { setIsPill(false); }
-            persist({ isRounded: next, isPill: next ? false : isPill });
-          }}
+          onClick={tc.toggleRounded}
           className={cn(
             'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
-            isRounded
+            tc.isRounded
               ? 'ring-2 ring-primary bg-primary/5'
               : 'ring-1 ring-border hover:ring-foreground/20',
           )}
@@ -722,7 +690,7 @@ function ThemeMenuSection() {
           </div>
           <span className={cn(
             'text-[10px] font-medium',
-            isRounded ? 'text-primary' : 'text-muted-foreground',
+            tc.isRounded ? 'text-primary' : 'text-muted-foreground',
           )}>
             Subtle
           </span>
@@ -733,57 +701,47 @@ function ThemeMenuSection() {
       <div className="grid grid-cols-2 gap-2">
         <button
           data-flat
-          disabled={!is3d}
-          onClick={() => {
-            setIsRetro(!isRetro);
-            persist({ isRetro: !isRetro });
-          }}
+          disabled={!tc.is3d}
+          onClick={tc.toggleRetro}
           className={cn(
             'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
-            !is3d
+            !tc.is3d
               ? 'opacity-40 cursor-not-allowed ring-1 ring-border'
-              : isRetro
+              : tc.isRetro
                 ? 'ring-2 ring-primary bg-primary/5'
                 : 'ring-1 ring-border hover:ring-foreground/20',
           )}
         >
-          {/* Preview: colored shadow vs gray shadow */}
           <div className="flex items-end gap-1.5 h-4">
             <div className="h-3 w-7 rounded-sm bg-primary/30" style={{ boxShadow: '0 2px 0 0 hsl(var(--primary) / 0.5)' }} />
             <div className="h-3 w-7 rounded-sm bg-primary/30" style={{ boxShadow: '0 2px 0 0 hsl(0 0% 0% / 0.4)' }} />
           </div>
           <span className={cn(
             'text-[10px] font-medium',
-            isRetro ? 'text-primary' : 'text-muted-foreground',
+            tc.isRetro ? 'text-primary' : 'text-muted-foreground',
           )}>
             Retro
           </span>
         </button>
 
-        {/* Pill — radio with Subtle */}
+        {/* Pill — radio với Subtle */}
         <button
           data-flat
-          onClick={() => {
-            const next = !isPill;
-            setIsPill(next);
-            if (next) { setIsRounded(false); }
-            persist({ isPill: next, isRounded: next ? false : isRounded });
-          }}
+          onClick={tc.togglePill}
           className={cn(
             'flex flex-col items-center gap-1.5 rounded-lg p-2 transition-all duration-150',
-            isPill
+            tc.isPill
               ? 'ring-2 ring-primary bg-primary/5'
               : 'ring-1 ring-border hover:ring-foreground/20',
           )}
         >
-          {/* Preview: subtle rounded vs pill */}
           <div className="flex items-center gap-1.5 h-4">
             <div className="h-4 w-6 border border-primary/30 bg-primary/10" style={{ borderRadius: '0.375rem' }} />
             <div className="h-4 w-6 border border-primary/50 bg-primary/20" style={{ borderRadius: '9999px' }} />
           </div>
           <span className={cn(
             'text-[10px] font-medium',
-            isPill ? 'text-primary' : 'text-muted-foreground',
+            tc.isPill ? 'text-primary' : 'text-muted-foreground',
           )}>
             Pill
           </span>

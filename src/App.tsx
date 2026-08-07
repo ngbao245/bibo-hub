@@ -9,6 +9,7 @@ import { useThemeHydration } from './tools/theme';
 import { useThemeStore } from './tools/theme';
 import AuthGuard from './components/auth/AuthGuard';
 import ToolGuard from './components/auth/ToolGuard';
+import { LoadingState } from './components/shared';
 
 // ============================================================
 // Lazy routes - mỗi page load chunk riêng khi navigate tới.
@@ -19,7 +20,9 @@ const Hub = lazy(() => import('./routes/HubPro'));
 const Login = lazy(() => import('./routes/Login'));
 const Notes = lazy(() => import('./routes/Notes'));
 const Tasks = lazy(() => import('./routes/Tasks'));
-const Bookmarks = lazy(() => import('./tools/bookmarks/route'));
+const Watchlist = lazy(() => import('./tools/watchlist/route'));
+const BookmarksEdit = lazy(() => import('./tools/bookmarks/route'));
+const BookmarksPublic = lazy(() => import('./tools/bookmarks/route-public'));
 const Expense = lazy(() => import('./tools/expense/route'));
 const ProjectPacker = lazy(() => import('./tools/project-packer/route'));
 const P2PTransfer = lazy(() => import('./tools/p2p-transfer/route'));
@@ -32,7 +35,9 @@ const JsonStudio = lazy(() => import('./tools/json-studio/route'));
 const AgencyStudio = lazy(() => import('./routes/AgencyStudio'));
 const AgencyUnsubscribe = lazy(() => import('./routes/AgencyStudio/Unsubscribe'));
 const Vault = lazy(() => import('./tools/vault/route'));
-const DesignSystem = lazy(() => import('./routes/DesignSystem'));
+const DesignSystemV2 = lazy(() => import('./routes/DesignSystemV2'));
+const PdfStudio = lazy(() => import('./tools/pdf-studio/route'));
+const ImageStudio = lazy(() => import('./tools/image-studio/route'));
 // Modals - vẫn eager load vì chúng mount ở App level + cần shortcut lúc nào cũng sẵn.
 import Calculator from './tools/calculator/modal';
 import Translate from './tools/translate/modal';
@@ -51,7 +56,7 @@ import AudioFloatingHost from './tools/audio/components/AudioFloatingHost';
 function PageLoader() {
   return (
     <div className="flex h-screen items-center justify-center">
-      <div className="h-5 w-5 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30" />
+      <LoadingState label="Đang tải..." />
     </div>
   );
 }
@@ -121,6 +126,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/portfolio" element={<Landing />} />
           <Route path="/agency-studio/unsubscribe" element={<AgencyUnsubscribe />} />
+          <Route path="/bookmarks/:slug" element={<BookmarksPublic />} />
 
           {/* Protected routes — wrap AuthGuard */}
           <Route
@@ -132,8 +138,9 @@ export default function App() {
                   <Route path="/notes" element={<Notes />} />
                   <Route path="/tasks" element={<Tasks />} />
                   <Route path="/sources" element={<Navigate to="/project-packer" replace />} />
-                  <Route path="/bookmarks" element={<Bookmarks />} />
-                  <Route path="/movies" element={<Navigate to="/bookmarks" replace />} />
+                  <Route path="/watchlist" element={<Watchlist />} />
+                  <Route path="/bookmarks" element={<BookmarksEdit />} />
+                  <Route path="/movies" element={<Navigate to="/watchlist" replace />} />
                   <Route path="/expense" element={<Expense />} />
                   <Route path="/project-packer" element={<ProjectPacker />} />
                   <Route
@@ -152,7 +159,10 @@ export default function App() {
                   <Route path="/json-viewer" element={<LegacyJsonViewerRedirect />} />
                   <Route path="/agency-studio/*" element={<AgencyStudio />} />
                   <Route path="/vault" element={<Vault />} />
-                  <Route path="/design-system" element={<DesignSystem />} />
+                  <Route path="/design-system" element={<DesignSystemV2 />} />
+                  <Route path="/design-system-v2" element={<DesignSystemV2 />} />
+                  <Route path="/pdf-studio" element={<PdfStudio />} />
+                  <Route path="/image-studio" element={<ImageStudio />} />
                   {/* Legacy redirect: /setting → /config */}
                   <Route path="/setting" element={<Navigate to="/config" replace />} />
                   <Route

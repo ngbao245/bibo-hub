@@ -8,7 +8,7 @@
  * Reference: https://developers.google.com/youtube/iframe_api_reference
  */
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 
 interface YTPlayer {
   playVideo(): void;

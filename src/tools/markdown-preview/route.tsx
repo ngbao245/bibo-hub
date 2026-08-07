@@ -53,7 +53,7 @@ export default function MarkdownPreviewPage() {
           if (next !== md) setMd(next);
         })
         .catch((err) => {
-          // eslint-disable-next-line no-console
+           
           console.error('[markdown-preview] auto-format failed', err);
         })
         .finally(() => {
@@ -122,7 +122,7 @@ export default function MarkdownPreviewPage() {
         toast.success('Đã format markdown');
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.error('[markdown-preview] format failed', err);
       toast.error('Format thất bại');
     } finally {

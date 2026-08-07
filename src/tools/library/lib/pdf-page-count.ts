@@ -15,7 +15,7 @@ export async function getPdfPageCount(file: File): Promise<number | null> {
     // Worker path đã config ở nơi khác (Reader). Nếu chưa, fallback dùng
     // fake worker (chậm hơn nhưng work).
     if (!GlobalWorkerOptions.workerSrc) {
-      // eslint-disable-next-line no-console
+       
       console.warn('[pdf-page-count] worker chưa config, dùng fake worker');
     }
 
@@ -23,10 +23,10 @@ export async function getPdfPageCount(file: File): Promise<number | null> {
     const pdf = await getDocument({ data: arrayBuffer }).promise;
     return pdf.numPages;
   } catch (err) {
-    // eslint-disable-next-line no-console
+     
     console.warn(
       `[pdf-page-count] fail parse ${file.name}: ${err instanceof Error ? err.message : 'unknown'}`,
     );
     return null;
   }
-}
+}

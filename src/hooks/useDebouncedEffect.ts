@@ -28,7 +28,7 @@ export function useDebouncedEffect(
   deps: React.DependencyList,
   delay: number,
 ) {
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   useEffect(() => {
     const timer = setTimeout(effect, delay);
     return () => clearTimeout(timer);

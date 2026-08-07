@@ -336,7 +336,7 @@ function softBreakLongTokens(text: string): string {
   // Break trước ký tự thường gây token dài: /  -  _  .  :  ,  ;  = 
   // Chỉ break khi run không space > 12 char.
   return text.replace(/[^\s]{12,}/g, (run) => {
-    return run.replace(/([\/\-_.:,;=@])/g, `${ZWSP}$1`);
+    return run.replace(/([/\-_.:,;=@])/g, `${ZWSP}$1`);
   });
 }
 

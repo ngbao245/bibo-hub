@@ -142,7 +142,7 @@ export async function exportAllNotes(): Promise<{ blob: Blob; filename: string; 
       zip.file(`${safeFilename(b.title)}-notes.json`, text);
       bookCount++;
     } catch (err) {
-      // eslint-disable-next-line no-console
+       
       console.warn(`[note-pack] skip book ${b.id}: ${err instanceof Error ? err.message : 'unknown'}`);
     }
   }
@@ -210,7 +210,7 @@ export async function parseNotePack(file: File): Promise<NotePackV1[]> {
         const raw = JSON.parse(text);
         packs.push(validatePack(raw));
       } catch (err) {
-        // eslint-disable-next-line no-console
+         
         console.warn(`[note-pack] skip zip entry ${name}: ${err instanceof Error ? err.message : 'unknown'}`);
       }
     }
@@ -416,4 +416,4 @@ export function downloadBlob(blob: Blob, filename: string): void {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
+}

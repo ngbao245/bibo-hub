@@ -116,6 +116,13 @@ export const TOOLS: Tool[] = [
     action: { kind: 'modal', modalId: 'rag' },
     description: 'Semantic search + AI chat trênn notes / tasks / highlights',
   },
+  {
+    id: 'bookmarks',
+    label: 'Bookmarks',
+    group: 'Productivity',
+    action: { kind: 'route', path: '/bookmarks' },
+    description: 'Quick links dashboard theo phong cách Superdense — favicon grid + public profile',
+  },
 
   // Finance
   {
@@ -135,11 +142,11 @@ export const TOOLS: Tool[] = [
     description: 'Theo d├╡i đ╞ín hăng SPX',
   },
   {
-    id: 'bookmarks',
-    label: 'Bookmarks',
+    id: 'watchlist',
+    label: 'Watchlist',
     group: 'Tracking',
-    action: { kind: 'route', path: '/bookmarks' },
-    description: 'Theo d├╡i phim, series, manga, anime',
+    action: { kind: 'route', path: '/watchlist' },
+    description: 'Theo dõi phim, series, manga, anime',
   },
   {
     id: 'agency-studio',
@@ -223,6 +230,20 @@ export const TOOLS: Tool[] = [
     group: 'Admin',
     action: { kind: 'route', path: '/project-packer' },
     description: '─Éống gối project source code',
+  },
+  {
+    id: 'pdf-studio',
+    label: 'PDF Studio',
+    group: 'Utilities',
+    action: { kind: 'route', path: '/pdf-studio' },
+    description: 'Chuyen doi PDF 12 chieu — Word, Excel, PPTX, PNG, JPG, EPUB',
+  },
+  {
+    id: 'image-studio',
+    label: 'Image Studio',
+    group: 'Utilities',
+    action: { kind: 'route', path: '/image-studio' },
+    description: 'Gộp ảnh, nén ảnh, trích xuất text từ ảnh (OCR)',
   },
   {
     id: 'setting',
