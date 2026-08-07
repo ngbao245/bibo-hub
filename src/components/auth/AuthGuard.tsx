@@ -16,7 +16,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { authClient } from '@/lib/authClient';
 import { useAuthStore, type Profile } from '@/stores/authStore';
-import { ErrorState, EmptyState } from '@/components/shared';
+import { ErrorState, EmptyState, LoadingState } from '@/components/shared';
 import { Lock } from 'lucide-react';
 
 /**
@@ -123,7 +123,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   if (initializing) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-5 w-5 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30" />
+        <LoadingState label="Đang khởi tạo..." />
       </div>
     );
   }
@@ -138,7 +138,7 @@ export default function AuthGuard({ children }: { children: ReactNode }) {
   if (profileQuery.isLoading) {
     return (
       <div className="flex h-screen items-center justify-center">
-        <div className="h-5 w-5 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30" />
+        <LoadingState label="Đang tải hồ sơ..." />
       </div>
     );
   }

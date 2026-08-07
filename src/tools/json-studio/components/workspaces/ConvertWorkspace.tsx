@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Copy, ArrowRightLeft } from 'lucide-react';
+import { Copy, ArrowRightLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ErrorState } from '@/components/shared';
 import { useJsonStudioStore } from '@/tools/json-studio/store';
@@ -79,9 +79,7 @@ export function ConvertWorkspace() {
             </option>
           ))}
         </select>
-        {converting && (
-          <div className="h-3 w-3 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30" />
-        )}
+        {converting && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" aria-label="Converting" />}
         {output && (
           <Button
             variant="ghost"

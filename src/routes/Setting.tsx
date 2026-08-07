@@ -47,7 +47,7 @@ import ArtifactManager from '@/components/setting/ArtifactManager';
 import CreditPoolManager from '@/components/setting/CreditPoolManager';
 import CacheInspectorPanel from '@/components/setting/CacheInspectorPanel';
 import BackupPanel from '@/components/setting/BackupPanel';
-import DesignSystemPanel from '@/routes/DesignSystem';
+import DesignSystemPanel from '@/routes/DesignSystemV2';
 import LibraryStorageNodes from '@/tools/library-storage-pool/components/StorageNodesManager';
 import AttentionPanel, { BatchCredentialTest } from '@/components/setting/AttentionPanel';
 import ReEmbedPanel from '@/components/setting/ReEmbedPanel';

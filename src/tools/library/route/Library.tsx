@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Download, Eye, Plus, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { EmptyState as SharedEmptyState } from '@/components/shared';
 
 import {
   useBooks,
@@ -223,7 +224,7 @@ export default function ReaderLibrary() {
 
   return (
     <div className="flex h-full flex-col bg-zinc-950 text-zinc-100">
-      <header className="flex items-center justify-between border-b border-zinc-800 px-6 py-3">
+      <header data-flat className="flex items-center justify-between border-b border-zinc-800 px-6 py-3">
         <div className="flex items-center gap-3">
           <Link to="/" className="flex items-center gap-1 text-zinc-400 hover:text-zinc-100">
             <ArrowLeft className="h-4 w-4" />
@@ -496,12 +497,12 @@ function BookCard({
 
 function EmptyState() {
   return (
-    <div className="flex flex-col items-center justify-center border border-dashed border-zinc-800 py-20 text-center">
-      <Upload className="mb-3 h-8 w-8 text-zinc-600" />
-      <p className="text-sm text-zinc-400">Drop PDF files here, or click Upload</p>
-      <p className="mt-1 text-xs text-zinc-600">
-        Sách bạn upload sẽ có trong thư viện chung cho mọi người
-      </p>
+    <div className="border border-dashed border-border">
+      <SharedEmptyState
+        icon={Upload}
+        title="Drop PDF files here, or click Upload"
+        description="Sách bạn upload sẽ có trong thư viện chung cho mọi người"
+      />
     </div>
   );
 }

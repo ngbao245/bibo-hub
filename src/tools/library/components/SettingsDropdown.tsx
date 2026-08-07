@@ -130,7 +130,7 @@ export default function SettingsDropdown({
                   onClick={onTogglePageNavButtons}
                   className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
                     showPageNavButtons
-                      ? 'bg-blue-500/20 text-blue-400'
+                      ? 'bg-sky-500/20 text-sky-400'
                       : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
                   }`}
                 >
@@ -150,7 +150,7 @@ export default function SettingsDropdown({
               >
                 {selectionMaskEnabled ? (
                   <>
-                    <Eye className="h-4 w-4 text-blue-400" />
+                    <Eye className="h-4 w-4 text-sky-400" />
                     <span>ON</span>
                   </>
                 ) : (
@@ -202,7 +202,7 @@ export default function SettingsDropdown({
                     onClick={onToggleIosCallout}
                     className={`flex items-center gap-2 rounded px-2 py-1 text-sm ${
                       disableIosCallout
-                        ? 'bg-blue-500/20 text-blue-400'
+                        ? 'bg-sky-500/20 text-sky-400'
                         : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
                     }`}
                   >

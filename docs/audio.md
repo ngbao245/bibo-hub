@@ -111,3 +111,16 @@ Mở DevTools → Application → LocalStorage:
 - `audio_player_state` — kiểm tra current index, position, size
 
 Reset toàn bộ: `localStorage.removeItem('audio_player_queue')` + `removeItem('audio_player_state')` → reload.
+
+
+## Chrome exception (theme)
+
+`AudioFloatingWindow` + `ConfigModal` cố tình dùng dark cứng (`bg-zinc-*`, `border-zinc-*`, `text-zinc-*`) thay vì semantic token (`bg-card`, `bg-muted`, `text-muted-foreground`). Lý do:
+
+- Floating audio là **media PiP overlay** — theo convention của Spotify/YouTube PiP, media control giữ dark cứng để tách khỏi content chính, không bị đè khi user đổi theme.
+- Window nổi trên mọi route → nếu follow theme sáng, contrast với ảnh thumbnail/video có thể tệ.
+- Text overlay trên thumbnail buộc phải dark backdrop để đọc được ở mọi tình huống.
+
+Được ghi trong `.kiro/steering/system.md` mục "Ngoại lệ" — không refactor sang semantic token.
+
+Các phần **không** thuộc chrome (VD button `Delete` / `Cancel` trong dialog Audio) vẫn phải dùng semantic token nếu có.

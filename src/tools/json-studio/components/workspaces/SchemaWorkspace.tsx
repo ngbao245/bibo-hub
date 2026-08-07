@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ShieldCheck, Copy, Sparkles } from 'lucide-react';
+import { ShieldCheck, Copy, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState } from '@/components/shared';
 import { useJsonStudioStore } from '@/tools/json-studio/store';
@@ -142,12 +142,7 @@ export function SchemaWorkspace() {
     <div className="flex h-full min-h-0 flex-col bg-background">
       {/* Header: actions */}
       <div className="flex items-center gap-2 border-b border-border bg-card px-3 py-2">
-        {running && (
-          <div
-            className="h-3 w-3 shrink-0 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30"
-            aria-label="Validating"
-          />
-        )}
+        {running && <Loader2 className="h-3 w-3 shrink-0 animate-spin text-muted-foreground" aria-label="Validating" />}
         {/* Valid result inline compact */}
         {result && result.valid && !error && !running && (
           <div className="flex items-center gap-1.5 text-xs text-success">

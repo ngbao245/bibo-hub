@@ -7,7 +7,28 @@ User toggle trong Setting / Design System / HubPro avatar menu. Apply qua `data-
 | Attribute | Effect | Toggle store |
 |---|---|---|
 | `data-3d` | Lift elevation cho surfaces (buttons, cards) | `useThemeStore.is3d` |
-| `data-rounded` | Tang border-radius toan app | `useThemeStore.isRounded` |
+| `data-rounded` | Tang border-radius toan app (Subtle) | `useThemeStore.isRounded` |
+| `data-pill` | Border-radius manh hon (Pill) — loai tru voi rounded | `useThemeStore.isPill` |
+| `data-retro` | Lift shadow xam thay vi themed (chi khi 3d) | `useThemeStore.isRetro` |
+
+## Elevation tokens (kieu Apple/ChatGPT — minimal polished)
+
+Shadow mem ro, blur rong (8-40px), alpha thap, tone den trung tinh (khong tint theo primary). Khong glow, khong glass, khong gradient.
+
+| Var | Role |
+|---|---|
+| `--elevation-surface` | Card/panel: 1px+10px double-layer, blur mem |
+| `--elevation-floating` | Dropdown/popover/tooltip: 6px+24px, ro hon |
+| `--elevation-overlay` | Dialog/modal: 12px+48px, ambient |
+| `--hover-lift` | `-2px` translateY khi hover (.lift-on-hover) |
+
+Dark theme override: alpha shadow tang len (0.30-0.55) de van thay tren nen toi.
+
+Utility tieu thu var (thay hardcode shadow-[...] trong TSX):
+- `.elev-surface` / `.elev-floating` / `.elev-overlay` — box-shadow
+- `.lift-on-hover` — hover translateY + shadow tang (respect reduced-motion)
+
+Control UI: logic o hook `useThemeControls` (`src/tools/theme/use-theme-controls.ts`), dung boi DesignSystemV2 (chip) va HubPro (card). Subtle/Pill la 2 nut mutual exclusive (bat 1 → tat kia).
 
 ## Lift Eligibility
 

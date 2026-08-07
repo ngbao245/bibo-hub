@@ -235,6 +235,32 @@
     box-shadow: 0 3px 0 0 hsl(var(--border)), 0 2px 4px hsl(0 0% 0% / 0.15);
   }
 
+  /* ============================================================
+     Elevation tokens — kiểu Apple/ChatGPT (calm, polished).
+     Shadow mềm rõ hơn "phẳng-tuyệt-đối" nhưng không glow màu.
+     Blur rộng (8-40px) với alpha thấp → cảm giác "surface nổi nhẹ",
+     không thô, không expressive. Tone đen trung tính (không tint).
+     Utility tiêu thụ: .elev-surface, .elev-floating, .elev-overlay.
+     ============================================================ */
+  :root {
+    /* Card/panel: bóng đôi lớp — sub-shadow rõ chân, blur mềm tách khỏi bg */
+    --elevation-surface: 0 1px 2px rgb(0 0 0 / 0.06), 0 4px 10px -2px rgb(0 0 0 / 0.08);
+    /* Dropdown/popover/tooltip: bóng rõ, blur 20px */
+    --elevation-floating: 0 4px 6px -2px rgb(0 0 0 / 0.05), 0 12px 24px -4px rgb(0 0 0 / 0.12);
+    /* Dialog/overlay: cao, blur 40px, ambient */
+    --elevation-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.08), 0 24px 48px -8px rgb(0 0 0 / 0.18);
+    /* Hover lift: -2px, dùng chung .lift-on-hover */
+    --hover-lift: -2px;
+  }
+
+  /* Dark theme: shadow tăng alpha 1 chút để vẫn thấy trên bg tối */
+  :root:not([data-theme]),
+  [data-theme='dark'] {
+    --elevation-surface: 0 1px 2px rgb(0 0 0 / 0.35), 0 4px 10px -2px rgb(0 0 0 / 0.30);
+    --elevation-floating: 0 4px 6px -2px rgb(0 0 0 / 0.30), 0 12px 24px -4px rgb(0 0 0 / 0.45);
+    --elevation-overlay: 0 8px 12px -4px rgb(0 0 0 / 0.35), 0 24px 48px -8px rgb(0 0 0 / 0.55);
+  }
+
   * {
     @apply border-border;
   }
@@ -311,136 +337,56 @@ input[type='number'] {
   appearance: textfield;
 }
 
+
 /* ============================================================
-   PDF Reader theme — Apply filter l├¬n toàn bộ page container
-   để canvas vă text layer cùng bß╗ï transform, tránh misalignment.
+   Dot grid background — subtle depth texture (Design System v2,
+   Linear/Vercel style). Uses border token so it adapts per theme.
+   Apply via class `.bg-dot-grid`.
    ============================================================ */
-[data-pdf-theme='dark'] .react-pdf__Page {
-  filter: invert(1) hue-rotate(180deg);
-}
-[data-pdf-theme='sepia'] .react-pdf__Page {
-  filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
-}
-
-/* Snapshot canvas cũng cần filter ri├¬ng v├¼ nằm ngoăi .react-pdf__Page */
-[data-pdf-theme='dark'] [data-pdf-snapshot] {
-  filter: invert(1) hue-rotate(180deg);
-}
-[data-pdf-theme='sepia'] [data-pdf-snapshot] {
-  filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
-}
-
-/* Text layer giữ nguy├¬n transparent, selection highlight tự nhi├¬n */
-.react-pdf__Page__textContent span {
-  color: transparent !important;
-}
-
-.react-pdf__Page__textContent ::selection {
-  background-color: rgba(100, 150, 255, 0.3);
-  color: transparent;
+.bg-dot-grid {
+  background-image: radial-gradient(
+    circle,
+    hsl(var(--border) / 0.5) 1px,
+    transparent 1px
+  );
+  background-size: 22px 22px;
 }
 
 /* ============================================================
-   RAG chat markdown rendering
-   Render markdown trong message bubble (.rag-md) + citation [n] (.rag-cite).
-   Style minimal, theo token theme.
+   Elevation utilities — tiêu thụ CSS var. Thay cho hardcode shadow-[...].
+   Kiểu Apple/ChatGPT: shadow mềm rõ, blur rộng, tone trung tính.
    ============================================================ */
-.rag-md > *:first-child {
-  margin-top: 0;
-}
-.rag-md > *:last-child {
-  margin-bottom: 0;
-}
-.rag-md p {
-  margin: 0.5em 0;
-}
-.rag-md h1,
-.rag-md h2,
-.rag-md h3,
-.rag-md h4 {
-  margin: 0.8em 0 0.4em;
-  font-weight: 600;
-  line-height: 1.3;
-}
-.rag-md h1 { font-size: 1.05em; }
-.rag-md h2 { font-size: 1em; }
-.rag-md h3,
-.rag-md h4 { font-size: 0.95em; }
-.rag-md ul,
-.rag-md ol {
-  margin: 0.5em 0;
-  padding-left: 1.4em;
-}
-.rag-md li {
-  margin: 0.2em 0;
-}
-.rag-md code {
-  background: hsl(var(--muted));
-  padding: 0.1em 0.3em;
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 0.9em;
-}
-.rag-md pre {
-  background: hsl(var(--muted));
-  padding: 0.6em 0.8em;
-  margin: 0.6em 0;
-  overflow-x: auto;
-  font-size: 0.85em;
-  line-height: 1.45;
-}
-.rag-md pre code {
-  background: transparent;
-  padding: 0;
-}
-.rag-md blockquote {
-  border-left: 2px solid hsl(var(--primary));
-  padding-left: 0.7em;
-  margin: 0.5em 0;
-  color: hsl(var(--muted-foreground));
-}
-.rag-md a {
-  color: hsl(var(--primary));
-  text-decoration: underline;
-}
-.rag-md strong {
-  font-weight: 600;
-  color: hsl(var(--foreground));
-}
-.rag-md hr {
-  border: 0;
-  border-top: 1px solid hsl(var(--border));
-  margin: 0.8em 0;
-}
-.rag-md table {
-  border-collapse: collapse;
-  margin: 0.5em 0;
-  font-size: 0.9em;
-}
-.rag-md th,
-.rag-md td {
-  border: 1px solid hsl(var(--border));
-  padding: 0.3em 0.6em;
-}
-.rag-md th {
-  background: hsl(var(--muted));
-  font-weight: 600;
+@layer utilities {
+  .elev-surface {
+    box-shadow: var(--elevation-surface);
+  }
+  .elev-floating {
+    box-shadow: var(--elevation-floating);
+  }
+  .elev-overlay {
+    box-shadow: var(--elevation-overlay);
+  }
+
+  /* Hover lift: transform -2px + shadow tăng nhẹ. Respect reduced-motion. */
+  .lift-on-hover {
+    transition: transform 200ms ease-out, box-shadow 200ms ease-out, border-color 200ms ease-out;
+  }
+  .lift-on-hover:hover {
+    transform: translateY(var(--hover-lift));
+    box-shadow: var(--elevation-floating);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lift-on-hover:hover {
+      transform: none;
+    }
+  }
 }
 
-/* Citation [n] button — inline nhỏ, theo primary */
-.rag-cite {
-  display: inline;
-  background: transparent;
-  border: none;
-  padding: 0 0.1em;
-  color: hsl(var(--primary));
-  font-weight: 600;
-  font-size: 0.85em;
-  cursor: pointer;
-  vertical-align: baseline;
-}
-.rag-cite:hover {
-  text-decoration: underline;
-}
-.rag-cite:focus-visible {
-  outline: 1px solid hsl(var(--ring));
+
+/* pdf.js internal canvas — ẩn để không hiện lù lù trên viewport.
+   pdf.js 4.x tạo canvas với class="hiddenCanvasElement" đính vào body cho
+   font metrics của TextLayer, nhưng KHÔNG kèm inline style display:none.
+   Ẩn bằng CSS global. */
+.hiddenCanvasElement {
+  display: none !important;
 }

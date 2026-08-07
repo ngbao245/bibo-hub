@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Loader2, Search, X } from 'lucide-react';
 
 import { Input } from '@/components/ui/input';
+import { EmptyState } from '@/components/shared';
 import { cn } from '@/lib/cn';
 
 import { useRagSearch } from '@/api/rag';
@@ -115,13 +116,11 @@ function Body({
   if (status === 'needs_setup') {
     return (
       <EmptyState
+        icon={Search}
         title="Chưa setup RAG"
-        message="Cần ít nhất 1 Gemini API key để dùng semantic search."
-        cta={
-          <a
-            href="/config"
-            className="text-primary hover:underline"
-          >
+        description="Cần ít nhất 1 Gemini API key để dùng semantic search."
+        action={
+          <a href="/config" className="text-xs text-primary hover:underline">
             Mở Config → AI Agentic
           </a>
         }
@@ -132,8 +131,9 @@ function Body({
   if (status === 'error') {
     return (
       <EmptyState
+        icon={Search}
         title="Lỗi bootstrap"
-        message="RAG không khởi động được. Check console để xem chi tiết."
+        description="RAG không khởi động được. Check console để xem chi tiết."
       />
     );
   }
@@ -150,8 +150,9 @@ function Body({
   if (!query) {
     return (
       <EmptyState
+        icon={Search}
         title="Bắt đầu gõ để search"
-        message="Hỏi câu tự nhiên, AI sẽ tìm note / task / highlight liên quan."
+        description="Hỏi câu tự nhiên, AI sẽ tìm note / task / highlight liên quan."
       />
     );
   }
@@ -168,8 +169,9 @@ function Body({
   if (isError) {
     return (
       <EmptyState
+        icon={Search}
         title="Search lỗi"
-        message={error instanceof Error ? error.message : 'Unknown error'}
+        description={error instanceof Error ? error.message : 'Unknown error'}
       />
     );
   }
@@ -177,8 +179,9 @@ function Body({
   if (results.length === 0) {
     return (
       <EmptyState
+        icon={Search}
         title="Không tìm thấy"
-        message={`Không có kết quả cho "${query}". Thử query khác hoặc giảm filter.`}
+        description={`Không có kết quả cho "${query}". Thử query khác hoặc giảm filter.`}
       />
     );
   }
@@ -192,31 +195,3 @@ function Body({
   );
 }
 
-// ============================================================
-// EmptyState
-// ============================================================
-
-function EmptyState({
-  title,
-  message,
-  cta,
-}: {
-  title: string;
-  message: string;
-  cta?: React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
-      <div className="flex h-12 w-12 items-center justify-center border border-border bg-muted">
-        <Search className="h-5 w-5 text-muted-foreground" />
-      </div>
-      <div className="space-y-1">
-        <p className="text-sm font-medium text-foreground">{title}</p>
-        <p className="mx-auto max-w-sm text-xs leading-relaxed text-muted-foreground">
-          {message}
-        </p>
-      </div>
-      {cta && <div className="mt-1 text-xs">{cta}</div>}
-    </div>
-  );
-}

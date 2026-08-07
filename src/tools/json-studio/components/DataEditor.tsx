@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { PanelLeftClose } from 'lucide-react';
+import { PanelLeftClose, Loader2 } from 'lucide-react';
 import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { Button } from '@/components/ui/button';
@@ -119,10 +119,9 @@ export function DataEditor() {
             {formatSize(text.length)}
           </span>
           {parsing && (
-            <div
-              className="h-3 w-3 shrink-0 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30"
+            <Loader2
+              className="h-3 w-3 shrink-0 animate-spin text-muted-foreground"
               aria-label="Đang parse..."
-              title="Đang parse..."
             />
           )}
         </div>

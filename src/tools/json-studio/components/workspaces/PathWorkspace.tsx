@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, Copy, Info } from 'lucide-react';
+import { Search, Copy, Info, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EmptyState, ErrorState } from '@/components/shared';
 import { useJsonStudioStore } from '@/tools/json-studio/store';
@@ -125,12 +125,7 @@ export function PathWorkspace() {
           placeholder="$..name  |  $.users[*]  |  $.items[?(@.price>10)]"
           className="h-8 flex-1 border border-border bg-background px-2 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-ring"
         />
-        {running && (
-          <div
-            className="h-3.5 w-3.5 shrink-0 animate-spin border-2 border-primary border-b-primary/30 border-r-primary/30"
-            aria-label="Running query"
-          />
-        )}
+        {running && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground" aria-label="Running query" />}
         <Button
           variant="ghost"
           size="sm"
