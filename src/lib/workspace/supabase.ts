@@ -2,7 +2,7 @@
 // Workspace Supabase client — auth-aware factory
 // ============================================================
 // Connects to biboHub-workspace project. Used by: notes, tasks,
-// bookmarks (and future workspace tools).
+// watchlist (and future workspace tools).
 //
 // Auth flow:
 //   Core Supabase (authClient) login → JWT stored in authStore.session
@@ -39,7 +39,7 @@ export const WORKSPACE_URL_PUBLIC = WORKSPACE_URL;
 // Query keys owned by workspace project. Auth change -> invalidate
 // so hooks refetch with correct token / user_id scope.
 // ============================================================
-const WORKSPACE_QUERY_KEYS = ['notes', 'tasks', 'bookmarks'] as const;
+const WORKSPACE_QUERY_KEYS = ['notes', 'tasks', 'watchlist'] as const;
 
 // ============================================================
 // Internal cache

@@ -3,7 +3,7 @@
 // ============================================================
 //
 // Pure functions, no side effects.
-// Used by api/notes.ts, api/tasks.ts, api/bookmarks.ts to translate
+// Used by api/notes.ts, api/tasks.ts, tools/watchlist/api.ts to translate
 // between Supabase workspace rows and application domain types.
 // ============================================================
 
@@ -252,17 +252,20 @@ export function listInputToRow(title: string, userId: string): { user_id: string
 }
 
 // ============================================================
-// Bookmarks
+// Watchlist (formerly Bookmarks / Movies)
+// ============================================================
+// DB table `watchlist` (renamed from `bookmarks` in Task 0.2 migration).
+// Application layer dùng Watchlist* naming.
 // ============================================================
 
-export type BookmarkCategory = 'movie' | 'series' | 'manga' | 'anime' | 'other';
-export type BookmarkStatus = 'plan' | 'watching' | 'completed' | 'dropped';
+export type WatchlistCategory = 'movie' | 'series' | 'manga' | 'anime' | 'other';
+export type WatchlistStatus = 'plan' | 'watching' | 'completed' | 'dropped';
 
-export interface Bookmark {
+export interface WatchlistItem {
   id: string;
   title: string;
-  category: BookmarkCategory;
-  status: BookmarkStatus;
+  category: WatchlistCategory;
+  status: WatchlistStatus;
   rating: number | null;
   note: string;
   url: string;
@@ -272,7 +275,7 @@ export interface Bookmark {
   updatedAt: string | null;
 }
 
-export interface BookmarkRow {
+export interface WatchlistRow {
   id: string;
   user_id: string;
   title: string;
@@ -287,12 +290,12 @@ export interface BookmarkRow {
   updated_at: string;
 }
 
-export function bookmarkRowToDomain(row: BookmarkRow): Bookmark {
+export function watchlistRowToDomain(row: WatchlistRow): WatchlistItem {
   return {
     id: row.id,
     title: row.title,
-    category: (row.category as BookmarkCategory) ?? 'movie',
-    status: (row.status as BookmarkStatus) ?? 'plan',
+    category: (row.category as WatchlistCategory) ?? 'movie',
+    status: (row.status as WatchlistStatus) ?? 'plan',
     rating: row.rating ?? null,
     note: row.note ?? '',
     url: row.url ?? '',
@@ -303,7 +306,7 @@ export function bookmarkRowToDomain(row: BookmarkRow): Bookmark {
   };
 }
 
-export interface BookmarkInsertRow {
+export interface WatchlistInsertRow {
   user_id: string;
   title: string;
   category?: string;
@@ -315,10 +318,10 @@ export interface BookmarkInsertRow {
   year?: number | null;
 }
 
-export function bookmarkInputToRow(
-  input: Omit<Bookmark, 'id' | 'createdAt' | 'updatedAt'>,
+export function watchlistInputToRow(
+  input: Omit<WatchlistItem, 'id' | 'createdAt' | 'updatedAt'>,
   userId: string,
-): BookmarkInsertRow {
+): WatchlistInsertRow {
   return {
     user_id: userId,
     title: input.title,
@@ -333,18 +336,18 @@ export function bookmarkInputToRow(
 }
 
 /** Build row for UPDATE. */
-export function bookmarkToUpdateRow(
-  bookmark: Bookmark,
-): Omit<BookmarkInsertRow, 'user_id'> & { id: string } {
+export function watchlistToUpdateRow(
+  item: WatchlistItem,
+): Omit<WatchlistInsertRow, 'user_id'> & { id: string } {
   return {
-    id: bookmark.id,
-    title: bookmark.title,
-    category: bookmark.category,
-    status: bookmark.status,
-    rating: bookmark.rating ?? null,
-    note: bookmark.note || null,
-    url: bookmark.url || null,
-    image_url: bookmark.imageUrl ?? null,
-    year: bookmark.year ?? null,
+    id: item.id,
+    title: item.title,
+    category: item.category,
+    status: item.status,
+    rating: item.rating ?? null,
+    note: item.note || null,
+    url: item.url || null,
+    image_url: item.imageUrl ?? null,
+    year: item.year ?? null,
   };
 }

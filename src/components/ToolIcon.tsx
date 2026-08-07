@@ -21,6 +21,7 @@ import {
   Music,
   Library,
   FolderLock,
+  Bookmark,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -41,6 +42,8 @@ const ICON_MAP: Record<string, LucideIcon> = {
   expense: Wallet,
   spx: Truck,
   movies: Film,
+  watchlist: Film,
+  bookmarks: Bookmark,
   translate: Languages,
   calculator: Calculator,
   encoder: KeyRound,

@@ -35,14 +35,67 @@ kKy5s/bvYjhOWp5HRQrp1+cdHPxUZ9WtAxuEj0FRbjtcWrBPh7quWYuq2w==
 // ── Types ──
 
 interface ProxyRequest {
-  table: 'notes' | 'tasks' | 'task_lists' | 'bookmarks' | 'vault_meta' | 'vault_entries' | 'highlights' | 'reading_progress';
-  action: 'select' | 'insert' | 'update' | 'delete' | 'upsert';
+  table: 'notes' | 'tasks' | 'task_lists' | 'watchlist' | 'vault_meta' | 'vault_entries' | 'highlights' | 'reading_progress' | 'bookmark_profiles' | 'bookmark_categories' | 'bookmarks' | 'bookmark_css_presets';
+  action: 'select' | 'insert' | 'update' | 'delete' | 'upsert' | 'rpc';
   data?: Record<string, unknown> | Record<string, unknown>[];
   filters?: Record<string, unknown>;
   order?: { column: string; ascending?: boolean };
   limit?: number;
   single?: boolean;
-  onConflict?: string;
+  onConflict?: string; // ignored for bookmark tables — server decides conflict target
+  rpcName?: string; // only for action='rpc'
+  rpcArgs?: Record<string, unknown>; // only for action='rpc'
+}
+
+// ── Security: field allowlists & conflict targets ──
+// Fields that clients are NEVER allowed to set/change via proxy.
+const IMMUTABLE_FIELDS = new Set(['user_id', 'id', 'created_at']);
+
+// Per-table writable field allowlists for bookmark domain.
+// Tables not listed here have no field restriction (legacy behavior for non-bookmark tables).
+const WRITABLE_FIELDS: Record<string, Set<string> | undefined> = {
+  bookmark_profiles: new Set([
+    'slug', 'space_name', 'column_count', 'is_public', 'theme',
+    'display_name', 'bio', 'webpage', 'icon_size',
+    'background_type', 'background_value',
+    'background_overlay_color', 'background_overlay_opacity', 'background_blend_mode',
+    'icon_backdrop', 'category_label_color', 'category_bg_color', 'bookmark_title_color',
+    'hero_title_color', 'hero_space_color', 'hero_url_color',
+    'custom_css', 'open_in_same_tab', 'active_preset_id', 'custom_css_draft',
+    'header_mode',
+  ]),
+  bookmark_categories: new Set([
+    'name', 'column_index', 'order_index', 'hidden_from_public',
+  ]),
+  bookmarks: new Set([
+    'category_id', 'url', 'title', 'note', 'favicon_url', 'order_index',
+    'icon_type', 'icon_text', 'icon_rounded', 'icon_background',
+  ]),
+  bookmark_css_presets: new Set([
+    'name', 'css', 'includes_settings', 'settings_snapshot',
+  ]),
+};
+
+// Fixed conflict targets per table (client cannot choose).
+const UPSERT_CONFLICT: Record<string, string> = {
+  bookmark_profiles: 'user_id',
+  bookmark_css_presets: 'id',
+  // Non-bookmark tables keep legacy behavior (client-supplied or default 'user_id').
+};
+
+/**
+ * Strip disallowed fields from client data.
+ * Returns sanitized copy — does NOT mutate input.
+ */
+function sanitizeData(table: string, data: Record<string, unknown>): Record<string, unknown> {
+  const allowed = WRITABLE_FIELDS[table];
+  const clean: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (IMMUTABLE_FIELDS.has(key)) continue; // always strip
+    if (allowed && !allowed.has(key)) continue; // not in allowlist
+    clean[key] = value;
+  }
+  return clean;
 }
 
 // ── CORS ──
@@ -99,7 +152,7 @@ Deno.serve(async (req) => {
   const { table, action, data, filters, order, limit, single, onConflict } = body;
 
   // Validate table name (whitelist)
-  const ALLOWED_TABLES = ['notes', 'tasks', 'task_lists', 'bookmarks', 'vault_meta', 'vault_entries', 'highlights', 'reading_progress'];
+  const ALLOWED_TABLES = ['notes', 'tasks', 'task_lists', 'watchlist', 'vault_meta', 'vault_entries', 'highlights', 'reading_progress', 'bookmark_profiles', 'bookmark_categories', 'bookmarks', 'bookmark_css_presets'];
   if (!ALLOWED_TABLES.includes(table)) {
     return json({ error: `Table "${table}" not allowed` }, 400);
   }
@@ -129,10 +182,10 @@ Deno.serve(async (req) => {
 
       case 'insert': {
         if (!data) return json({ error: 'Missing data for insert' }, 400);
-        // Inject user_id
+        // Sanitize + inject user_id
         const rows = Array.isArray(data)
-          ? data.map((r) => ({ ...r, user_id: userId }))
-          : { ...data, user_id: userId };
+          ? data.map((r) => ({ ...sanitizeData(table, r), user_id: userId }))
+          : { ...sanitizeData(table, data), user_id: userId };
         let query = supabase.from(table).insert(rows).select();
         if (single) query = query.single();
         result = await query;
@@ -141,10 +194,15 @@ Deno.serve(async (req) => {
 
       case 'update': {
         if (!data || !filters?.id) return json({ error: 'Missing data or filters.id for update' }, 400);
+        // Sanitize data — immutable + disallowed fields stripped
+        const sanitized = sanitizeData(table, data as Record<string, unknown>);
+        if (Object.keys(sanitized).length === 0) {
+          return json({ error: 'No writable fields in update payload' }, 400);
+        }
         // Ensure user can only update own rows
         let query = supabase
           .from(table)
-          .update(data as Record<string, unknown>)
+          .update(sanitized)
           .eq('id', filters.id as string)
           .eq('user_id', userId)
           .select();
@@ -175,13 +233,32 @@ Deno.serve(async (req) => {
 
       case 'upsert': {
         if (!data) return json({ error: 'Missing data for upsert' }, 400);
+        // Sanitize + inject user_id
         const upsertRow = Array.isArray(data)
-          ? data.map((r) => ({ ...r, user_id: userId }))
-          : { ...data, user_id: userId };
-        const conflictCols = onConflict ?? 'user_id';
+          ? data.map((r) => ({ ...sanitizeData(table, r), user_id: userId }))
+          : { ...sanitizeData(table, data), user_id: userId };
+        // Conflict target is server-decided for bookmark tables; legacy tables may use client hint or default.
+        const conflictCols = UPSERT_CONFLICT[table] ?? onConflict ?? 'user_id';
         let query = supabase.from(table).upsert(upsertRow, { onConflict: conflictCols }).select();
         if (single) query = query.single();
         result = await query;
+        break;
+      }
+
+      case 'rpc': {
+        // Invoke a database function (RPC). Only whitelisted functions allowed.
+        const ALLOWED_RPCS = new Set([
+          'bookmark_batch_update',
+          'bookmark_bulk_import',
+          'bookmark_enrich_meta',
+        ]);
+        const { rpcName, rpcArgs } = body;
+        if (!rpcName || !ALLOWED_RPCS.has(rpcName)) {
+          return json({ error: `RPC "${rpcName}" not allowed` }, 400);
+        }
+        // Always inject p_user_id from JWT — client cannot override
+        const args = { ...(rpcArgs ?? {}), p_user_id: userId };
+        result = await supabase.rpc(rpcName, args);
         break;
       }
 

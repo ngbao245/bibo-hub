@@ -26,16 +26,17 @@ const PROXY_URL = `${WORKSPACE_URL}/functions/v1/workspace-proxy`;
 // Types
 // ============================================================
 
-type AllowedTable = 'notes' | 'tasks' | 'task_lists' | 'bookmarks';
+type AllowedTable = 'notes' | 'tasks' | 'task_lists' | 'watchlist' | 'bookmark_profiles' | 'bookmark_categories' | 'bookmarks' | 'bookmark_css_presets';
 
 interface ProxyRequest {
   table: AllowedTable;
-  action: 'select' | 'insert' | 'update' | 'delete';
+  action: 'select' | 'insert' | 'update' | 'delete' | 'upsert';
   data?: Record<string, unknown> | Record<string, unknown>[];
   filters?: Record<string, unknown>;
   order?: { column: string; ascending?: boolean };
   limit?: number;
   single?: boolean;
+  onConflict?: string;
 }
 
 interface ProxyResponse<T = unknown> {
@@ -130,4 +131,51 @@ export async function workspaceDelete(
     action: 'delete',
     filters: { id },
   });
+}
+
+/** UPSERT INTO {table} ON CONFLICT ({onConflict}) DO UPDATE ... RETURNING * */
+export async function workspaceUpsert<T = unknown>(
+  table: AllowedTable,
+  data: Record<string, unknown>,
+  options?: { onConflict?: string; single?: boolean },
+): Promise<T> {
+  return proxyFetch<T>({
+    table,
+    action: 'upsert',
+    data,
+    single: options?.single ?? true,
+    onConflict: options?.onConflict ?? 'user_id',
+  });
+}
+
+/** Call a whitelisted database RPC function via proxy. p_user_id injected server-side. */
+export async function workspaceRpc<T = unknown>(
+  rpcName: string,
+  rpcArgs: Record<string, unknown>,
+): Promise<T> {
+  const token = useAuthStore.getState().session?.access_token;
+  if (!token) throw new Error('Chưa đăng nhập — không thể gọi workspace');
+
+  const res = await fetch(PROXY_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      apikey: WORKSPACE_ANON_KEY,
+    },
+    body: JSON.stringify({
+      table: 'bookmarks', // table field required by proxy schema; rpc ignores it
+      action: 'rpc',
+      rpcName,
+      rpcArgs,
+    }),
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+    throw new Error((err as { error?: string }).error ?? `Workspace RPC error: ${res.status}`);
+  }
+
+  const json = (await res.json()) as { data: T };
+  return json.data;
 }
