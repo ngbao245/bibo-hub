@@ -8,7 +8,7 @@
 // ============================================================
 
 import { useState, type FormEvent } from 'react';
-import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
+import { useSearchParams, Navigate } from 'react-router-dom';
 import { Loader2, LogIn } from 'lucide-react';
 
 import { authClient, isAuthConfigured, resolveEmailForLogin } from '@/lib/authClient';
@@ -33,7 +33,6 @@ function safeNext(raw: string | null): string {
 }
 
 export default function LoginPage() {
-  const navigate = useNavigate();
   const [params] = useSearchParams();
   const session = useAuthStore((s) => s.session);
 

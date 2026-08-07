@@ -35,9 +35,7 @@ export function BookmarkStatusBar({
   onEnablePublic,
   className,
 }: Props) {
-  // Detect basename để hiển thị path đúng
-  const basename = window.location.pathname.startsWith('/hubibo') ? '/hubibo' : '';
-  const displayPath = `${basename}/bookmarks/${slug}`;
+  const displayPath = `${getBasename()}/bookmarks/${slug}`;
 
   function copy() {
     if (!publicUrl) return;
