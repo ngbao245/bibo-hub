@@ -68,67 +68,106 @@ export function wrapPart(body: string): string {
 
 /**
  * Parse text → mảng PackedFile.
- * Dùng indexOf để nhanh + chịu lỗi tốt (v1 đã verify).
- * Bỏ qua marker PACK_START/PACK_END (chỉ cần FILE_START/END markers).
+ * Dùng sequential indexOf scan để tránh split nhầm khi content file
+ * chứa literal markers (VD project-packer pack chính nó).
  *
- * Nếu nhiều block có cùng PATH và có line `CHUNK: i/N` → gom theo index
- * rồi concat content thành 1 file duy nhất.
+ * Algorithm:
+ * 1. Tìm FILE_START marker
+ * 2. Ngay sau đó tìm PATH: (dòng kế)
+ * 3. Optional: tìm CHUNK: i/N
+ * 4. Tìm CONTENT_START:
+ * 5. Tìm FILE_END — content = text giữa CONTENT_START:\n và \n trước FILE_END
+ * 6. Nhảy cursor tới sau FILE_END, lặp lại
+ *
+ * Cách này KHÔNG scan markers bên trong content area → an toàn khi file
+ * chứa ===FILE_START=== / PATH: / CONTENT_START: trong source code.
+ *
+ * Nếu nhiều block có cùng PATH và có CHUNK: i/N → gom + concat.
  */
 export function parsePackedContent(content: string): PackedFile[] {
     type Chunk = { index: number; total: number; content: string };
     const single: PackedFile[] = [];
     const chunked = new Map<string, Chunk[]>();
 
-    // Normalize: nếu text không có newline giữa markers (copy-paste bị flatten),
-    // thêm \n trước mỗi marker để các regex bên dưới hoạt động.
-    let normalized = content;
-    // Đảm bảo \n trước FILE_START
-    normalized = normalized.replace(/([^\n])===FILE_START===/g, '$1\n===FILE_START===');
-    // Đảm bảo \n sau FILE_START
-    normalized = normalized.replace(/===FILE_START===([^\n])/g, '===FILE_START===\n$1');
-    // Đảm bảo \n trước FILE_END
-    normalized = normalized.replace(/([^\n])===FILE_END===/g, '$1\n===FILE_END===');
-    // Đảm bảo \n sau FILE_END
-    normalized = normalized.replace(/===FILE_END===([^\n])/g, '===FILE_END===\n$1');
-    // Đảm bảo \n sau PATH: ... (trước CHUNK: hoặc CONTENT_START:)
-    normalized = normalized.replace(/(PATH:\s*[^\n]+?)(\s+)(CHUNK:|CONTENT_START:)/g, '$1\n$3');
-    // Đảm bảo \n sau CONTENT_START:
-    normalized = normalized.replace(/CONTENT_START:([^\n])/g, 'CONTENT_START:\n$1');
+    let cursor = 0;
 
-    // Tách theo FILE_START marker (chấp nhận whitespace trước)
-    const blocks = normalized.split(new RegExp(`\\s*${MARKERS.FILE_START}\\s*`, 'g'));
+    while (cursor < content.length) {
+        // Step 1: Tìm FILE_START
+        const startIdx = content.indexOf(MARKERS.FILE_START, cursor);
+        if (startIdx === -1) break;
 
-    for (let i = 0; i < blocks.length; i++) {
-        const block = blocks[i];
-        if (!block.trim()) continue;
+        // Di chuyển cursor qua FILE_START marker
+        const afterStart = startIdx + MARKERS.FILE_START.length;
 
-        // Tìm PATH:
-        const pathMatch = block.match(new RegExp(`${MARKERS.PATH_PREFIX}\\s*(.+?)\\s*\\n`, 'm'));
-        if (!pathMatch) continue;
+        // Step 2: Tìm PATH: — scan tối đa 200 chars sau FILE_START (đủ cho whitespace/newlines)
+        const searchRegion = content.substring(afterStart, afterStart + 500);
+
+        // Tìm PATH: dòng đầu tiên (skip whitespace/newlines trước)
+        const pathMatch = searchRegion.match(/^\s*PATH:\s*(.+?)[ \t]*(?:\r?\n|$)/m);
+        if (!pathMatch) {
+            // Không tìm thấy PATH: → skip marker này, có thể là marker giả trong content
+            cursor = afterStart;
+            continue;
+        }
         const path = pathMatch[1].trim();
-        if (!path) continue;
+        if (!path) {
+            cursor = afterStart;
+            continue;
+        }
 
-        // Tìm CHUNK: i/N (optional — file thường không có)
-        const chunkMatch = block.match(
-            new RegExp(`${MARKERS.CHUNK_PREFIX}\\s*(\\d+)\\s*/\\s*(\\d+)\\s*\\n`, 'm'),
-        );
+        // Vị trí tuyệt đối sau PATH line
+        const afterPathLine = afterStart + (pathMatch.index ?? 0) + pathMatch[0].length;
 
-        // Tìm CONTENT_START:
-        const contentStartIdx = block.indexOf(MARKERS.CONTENT_START);
-        if (contentStartIdx === -1) continue;
+        // Step 3: Tìm CHUNK: (optional) — ngay sau PATH line
+        const chunkRegion = content.substring(afterPathLine, afterPathLine + 100);
+        const chunkMatch = chunkRegion.match(/^\s*CHUNK:\s*(\d+)\s*\/\s*(\d+)\s*(?:\r?\n|$)/m);
 
-        // Tìm FILE_END (có thể có whitespace trước)
-        const fileEndMatch = block.match(new RegExp(`\\n\\s*${MARKERS.FILE_END}`, 'm'));
-        if (!fileEndMatch) continue;
+        let afterChunkLine = afterPathLine;
+        if (chunkMatch) {
+            afterChunkLine = afterPathLine + (chunkMatch.index ?? 0) + chunkMatch[0].length;
+        }
 
-        const fileEndIdx = block.indexOf(fileEndMatch[0]);
+        // Step 4: Tìm CONTENT_START: — tìm trong 200 chars sau path/chunk
+        const contentStartRegion = content.substring(afterChunkLine, afterChunkLine + 200);
+        const csIdx = contentStartRegion.indexOf(MARKERS.CONTENT_START);
+        if (csIdx === -1) {
+            // Không có CONTENT_START → block không hợp lệ, skip
+            cursor = afterStart;
+            continue;
+        }
+        // Content bắt đầu sau "CONTENT_START:" + optional \n
+        let contentBegin = afterChunkLine + csIdx + MARKERS.CONTENT_START.length;
+        if (content[contentBegin] === '\n') contentBegin++;
+        else if (content[contentBegin] === '\r' && content[contentBegin + 1] === '\n') contentBegin += 2;
 
-        // Extract content giữa CONTENT_START và FILE_END
-        const contentStart = contentStartIdx + MARKERS.CONTENT_START.length;
-        let fileContent = block.substring(contentStart, fileEndIdx);
-        // Trim leading newline sau CONTENT_START:
-        fileContent = fileContent.replace(/^\n/, '');
+        // Step 5: Tìm FILE_END — SAU contentBegin
+        // Tìm ===FILE_END=== ở đầu dòng (hoặc sau newline + optional whitespace)
+        const fileEndIdx = findFileEnd(content, contentBegin);
+        if (fileEndIdx === -1) {
+            // Không tìm thấy FILE_END → coi như block bị cắt, lấy tới hết text
+            cursor = content.length;
+            // Vẫn cố extract content (incomplete file)
+            const fileContent = content.substring(contentBegin);
+            single.push({
+                path,
+                content: fileContent,
+                size: new Blob([fileContent]).size,
+            });
+            break;
+        }
 
+        // Content = text giữa contentBegin và trước FILE_END
+        // Trim trailing \n ngay trước FILE_END marker (1 \n là separator, không phải content)
+        let contentEnd = fileEndIdx;
+        if (content[contentEnd - 1] === '\n') contentEnd--;
+        if (content[contentEnd - 1] === '\r') contentEnd--;
+
+        const fileContent = content.substring(contentBegin, contentEnd);
+
+        // Step 6: Di chuyển cursor qua FILE_END
+        cursor = fileEndIdx + MARKERS.FILE_END.length;
+
+        // Accumulate
         if (chunkMatch) {
             const idx = parseInt(chunkMatch[1], 10);
             const total = parseInt(chunkMatch[2], 10);
@@ -165,12 +204,45 @@ export function parsePackedContent(content: string): PackedFile[] {
             chunkTotal: missing.length === 0 ? undefined : total,
         });
         if (missing.length > 0) {
-             
+            // eslint-disable-next-line no-console
             console.warn(`[packer] File "${path}" thiếu chunk ${missing.join(', ')}/${total}`);
         }
     }
 
     return [...single, ...merged];
+}
+
+/**
+ * Tìm FILE_END marker sau vị trí `from`.
+ * FILE_END phải đứng ở đầu dòng (sau \n hoặc optional whitespace).
+ * Trả về index bắt đầu của marker, hoặc -1 nếu không tìm thấy.
+ */
+function findFileEnd(content: string, from: number): number {
+    let pos = from;
+    while (pos < content.length) {
+        const idx = content.indexOf(MARKERS.FILE_END, pos);
+        if (idx === -1) return -1;
+
+        // Validate: marker phải ở đầu dòng (idx === 0, hoặc ký tự trước là \n,
+        // hoặc giữa \n và marker chỉ có whitespace)
+        if (idx === 0) return idx;
+
+        // Tìm ngược từ idx-1 tới \n gần nhất
+        let lineStart = idx - 1;
+        while (lineStart >= from && content[lineStart] !== '\n') {
+            lineStart--;
+        }
+        // lineStart bây giờ là vị trí \n (hoặc < from nếu không có \n)
+        // Kiểm tra giữa \n+1 và idx chỉ có whitespace
+        const between = content.substring(lineStart + 1, idx);
+        if (between.trim() === '') {
+            return idx;
+        }
+
+        // Không hợp lệ (FILE_END nằm giữa dòng, có thể là content) → skip
+        pos = idx + MARKERS.FILE_END.length;
+    }
+    return -1;
 }
 
 /**

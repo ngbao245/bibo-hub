@@ -20,10 +20,6 @@ export function unpackText(text: string): {
   files: PackedFile[];
   partsDetected: number;
 } {
-  // Đếm số FILE_START thay vì PACK_START (vì PACK markers đã bỏ)
-  const partsDetected = (text.match(new RegExp(MARKERS.FILE_START, 'g')) ?? [])
-    .length;
-
   // Strip PACK_START/PACK_END nếu có (backward compat với v1 cũ có markers)
   // Nếu PACK markers rỗng thì không ảnh hưởng
   const cleaned = text
@@ -31,7 +27,10 @@ export function unpackText(text: string): {
     .replace(new RegExp(MARKERS.PACK_END, 'g'), '');
 
   const files = parsePackedContent(cleaned);
-  return { files, partsDetected };
+
+  // partsDetected = số file thực tế parse được (chính xác hơn regex count
+  // vì regex count sẽ nhầm marker giả trong content)
+  return { files, partsDetected: files.length };
 }
 
 // ============================================================
