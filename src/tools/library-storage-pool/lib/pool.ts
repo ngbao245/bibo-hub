@@ -20,17 +20,25 @@ import { StoragePoolFullError } from '../types';
 export function parseNodes(credentials: StorageNodeCredential[]): StorageNode[] {
   return credentials
     .filter((c) => c.secret_data_json?.url && c.secret_data_json?.service_role_key)
-    .map((c) => ({
-      id: c.id,
-      name: c.name || c.identifier || 'Unnamed',
-      url: c.secret_data_json!.url!,
-      serviceRoleKey: c.secret_data_json!.service_role_key!,
-      anonKey: c.secret_data_json!.anon_key ?? '',
-      bucketName: c.secret_data_json!.bucket_name ?? 'books',
-      capacityBytes: c.storage_capacity_bytes ?? 1073741824, // default 1GB
-      usedBytes: c.storage_used_bytes ?? 0,
-      status: c.status === 'active' ? 'active' : 'disabled',
-    }));
+    .map((c) => {
+      const lastTestOk = c.secret_data_json!.last_test_ok;
+      const connectionStatus: 'connected' | 'failed' | 'untested' =
+        lastTestOk === true ? 'connected' : lastTestOk === false ? 'failed' : 'untested';
+
+      return {
+        id: c.id,
+        name: c.name || c.identifier || 'Unnamed',
+        url: c.secret_data_json!.url!,
+        serviceRoleKey: c.secret_data_json!.service_role_key!,
+        anonKey: c.secret_data_json!.anon_key ?? '',
+        bucketName: c.secret_data_json!.bucket_name ?? 'books',
+        capacityBytes: c.storage_capacity_bytes ?? 1073741824, // default 1GB
+        usedBytes: c.storage_used_bytes ?? 0,
+        status: c.status === 'active' ? 'active' : 'disabled',
+        connectionStatus,
+        lastTestedAt: c.secret_data_json!.last_tested_at ?? null,
+      };
+    });
 }
 
 // ── Best-Fit Algorithm ──
@@ -39,15 +47,17 @@ export function parseNodes(credentials: StorageNodeCredential[]): StorageNode[] 
  * Pick the best storage node for a file of given size.
  *
  * Algorithm: best-fit
- *   1. Filter active nodes where remaining >= fileSize
+ *   1. Filter active nodes with connectionStatus === 'connected' where remaining >= fileSize
  *   2. Sort by remaining ASC (smallest remaining first)
  *   3. Return first (fills tightest fit)
  *
  * Returns null if no node can fit the file.
+ * Nodes that are disabled, untested, or have failed connection are excluded.
  */
 export function pickNode(nodes: StorageNode[], fileSize: number): StorageNode | null {
   const candidates = nodes
     .filter((n) => n.status === 'active')
+    .filter((n) => n.connectionStatus === 'connected')
     .filter((n) => (n.capacityBytes - n.usedBytes) >= fileSize)
     .sort((a, b) => {
       const remainA = a.capacityBytes - a.usedBytes;

@@ -108,6 +108,7 @@ function NodeCard({ node }: { node: StorageNode }) {
   async function handleTest() {
     try {
       await testNode.mutateAsync({
+        id: node.id,
         url: node.url,
         serviceRoleKey: node.serviceRoleKey,
         bucketName: node.bucketName,
@@ -137,6 +138,15 @@ function NodeCard({ node }: { node: StorageNode }) {
           <span className="truncate text-sm font-medium">{node.name}</span>
           <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${isActive ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
             {isActive ? 'active' : 'disabled'}
+          </span>
+          <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
+            node.connectionStatus === 'connected'
+              ? 'bg-success/10 text-success'
+              : node.connectionStatus === 'failed'
+                ? 'bg-destructive/10 text-destructive'
+                : 'bg-warning/10 text-warning'
+          }`}>
+            {node.connectionStatus === 'connected' ? 'connected' : node.connectionStatus === 'failed' ? 'failed' : 'untested'}
           </span>
         </div>
         <div className="mt-1 flex items-center gap-2 text-[11px] text-muted-foreground">

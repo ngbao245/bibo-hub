@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
+import './reader.css';
 import { ChevronLeft, ChevronRight, Menu, Minus, Moon, Plus, Sun, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -78,6 +79,11 @@ export default function PdfReader({ book, initialPage }: { book: Book; initialPa
   const saveProgress = useSaveProgress();
   const highlightsQuery = useHighlights(book.id);
   const createHighlight = useCreateHighlight();
+
+  // True khi đã biết page nào cần hiện: hoặc có initialPage (deep link),
+  // hoặc progress query đã settled (loaded/error). Dùng để tránh flash page 1
+  // trong lúc chờ progress fetch từ server.
+  const pageResolved = initialPage !== undefined || !progressQuery.isLoading;
 
   type PdfSource =
     | { kind: 'data'; data: ArrayBuffer }
@@ -943,24 +949,28 @@ export default function PdfReader({ book, initialPage }: { book: Book; initialPa
                       : undefined
                   }
                 >
-                  <Page
-                    pageNumber={pageNumber}
-                    scale={scale}
-                    renderAnnotationLayer={false}
-                    renderTextLayer
-                    loading={null}
-                    onRenderSuccess={() => {
-                      clearSnapshot();
-                      // Show lại page wrap SYNCHRONOUSLY qua DOM ref.
-                      if (pageWrapRef.current) {
-                        pageWrapRef.current.style.visibility = 'visible';
-                      }
-                      if (pageTransitionTimerRef.current) {
-                        clearTimeout(pageTransitionTimerRef.current);
-                        pageTransitionTimerRef.current = null;
-                      }
-                    }}
-                  />
+                  {pageResolved ? (
+                    <Page
+                      pageNumber={pageNumber}
+                      scale={scale}
+                      renderAnnotationLayer={false}
+                      renderTextLayer
+                      loading={null}
+                      onRenderSuccess={() => {
+                        clearSnapshot();
+                        // Show lại page wrap SYNCHRONOUSLY qua DOM ref.
+                        if (pageWrapRef.current) {
+                          pageWrapRef.current.style.visibility = 'visible';
+                        }
+                        if (pageTransitionTimerRef.current) {
+                          clearTimeout(pageTransitionTimerRef.current);
+                          pageTransitionTimerRef.current = null;
+                        }
+                      }}
+                    />
+                  ) : (
+                    <ReaderSkeleton withHeader={false} />
+                  )}
                   <HighlightOverlay highlights={pageHighlights} />
                   {disableIosCallout &&
                     selection &&

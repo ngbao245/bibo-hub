@@ -175,8 +175,9 @@ export function useRemoveStorageNode() {
 // ── Mutation: Test node connection ──
 
 export function useTestStorageNode() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (node: { url: string; serviceRoleKey: string; bucketName: string }) => {
+    mutationFn: async (node: { id?: string; url: string; serviceRoleKey: string; bucketName: string }) => {
       // Try listing files in bucket to verify connection
       const { createClient } = await import('@supabase/supabase-js');
       const client = createClient(node.url, node.serviceRoleKey, {
@@ -187,8 +188,47 @@ export function useTestStorageNode() {
         .from(node.bucketName || 'books')
         .list('', { limit: 1 });
 
+      const testOk = !error;
+      const now = new Date().toISOString();
+
+      // Persist test result into secret_data_json if node has an id (existing node)
+      if (node.id) {
+        try {
+          // Read current secret_data_json to merge
+          const { data: current } = await authClient
+            .from('service_credentials')
+            .select('secret_data_json')
+            .eq('id', node.id)
+            .single();
+
+          if (current?.secret_data_json) {
+            const updated = {
+              ...current.secret_data_json,
+              last_test_ok: testOk,
+              last_tested_at: now,
+            };
+            await authClient
+              .from('service_credentials')
+              .update({ secret_data_json: updated })
+              .eq('id', node.id);
+          }
+        } catch {
+          // Best-effort persist — don't fail the test mutation
+        }
+      }
+
       if (error) throw new Error(`Connection failed: ${error.message}`);
       return true;
+    },
+    onSuccess: () => {
+      clearClientCache();
+      qc.invalidateQueries({ queryKey: ['library', 'storage-nodes'] });
+    },
+    onError: (_err, variables) => {
+      // On failure, still invalidate to reflect the failed status in UI
+      if (variables.id) {
+        qc.invalidateQueries({ queryKey: ['library', 'storage-nodes'] });
+      }
     },
   });
 }

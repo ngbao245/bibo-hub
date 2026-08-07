@@ -20,8 +20,21 @@ export interface StorageNode {
   capacityBytes: number;
   /** Bytes currently used */
   usedBytes: number;
-  /** Node status */
+  /** Node status (admin toggle) */
   status: 'active' | 'disabled';
+  /**
+   * Connection health from last test.
+   * - 'connected' = test passed
+   * - 'failed' = test failed
+   * - 'untested' = never tested
+   *
+   * Only nodes with connectionStatus === 'connected' are eligible for
+   * new uploads. Read/delete of existing files still works regardless
+   * (since the file is already there).
+   */
+  connectionStatus: 'connected' | 'failed' | 'untested';
+  /** ISO timestamp of last connection test (if any). */
+  lastTestedAt: string | null;
 }
 
 /** Credential row shape from service_credentials table. */
@@ -34,6 +47,10 @@ export interface StorageNodeCredential {
     service_role_key?: string;
     anon_key?: string;
     bucket_name?: string;
+    /** Persisted connection test result */
+    last_test_ok?: boolean;
+    /** ISO timestamp of last test */
+    last_tested_at?: string;
   } | null;
   status: 'active' | 'disabled' | 'revoked';
   storage_capacity_bytes: number | null;

@@ -1,0 +1,28 @@
+/* ============================================================
+   PDF Reader theme — Apply filter on page container
+   so canvas and text layer transform together, preventing misalignment.
+   ============================================================ */
+[data-pdf-theme='dark'] .react-pdf__Page {
+  filter: invert(1) hue-rotate(180deg);
+}
+[data-pdf-theme='sepia'] .react-pdf__Page {
+  filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
+}
+
+/* Snapshot canvas needs its own filter since it's outside .react-pdf__Page */
+[data-pdf-theme='dark'] [data-pdf-snapshot] {
+  filter: invert(1) hue-rotate(180deg);
+}
+[data-pdf-theme='sepia'] [data-pdf-snapshot] {
+  filter: invert(0.92) hue-rotate(180deg) sepia(0.35);
+}
+
+/* Text layer stays transparent, selection highlight natural */
+.react-pdf__Page__textContent span {
+  color: transparent !important;
+}
+
+.react-pdf__Page__textContent ::selection {
+  background-color: rgba(100, 150, 255, 0.3);
+  color: transparent;
+}
