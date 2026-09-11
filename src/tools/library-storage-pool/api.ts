@@ -127,6 +127,11 @@ interface UpdateNodeInput {
   name?: string;
   status?: 'active' | 'disabled';
   capacityBytes?: number;
+  // Thêm hỗ trợ update keys và config
+  url?: string;
+  serviceRoleKey?: string;
+  anonKey?: string;
+  bucketName?: string;
 }
 
 export function useUpdateStorageNode() {
@@ -137,6 +142,24 @@ export function useUpdateStorageNode() {
       if (input.name !== undefined) patch.name = input.name;
       if (input.status !== undefined) patch.status = input.status;
       if (input.capacityBytes !== undefined) patch.storage_capacity_bytes = input.capacityBytes;
+
+      // Nếu update url/keys/bucket → merge vào secret_data_json
+      if (input.url || input.serviceRoleKey || input.anonKey || input.bucketName) {
+        // Read current secret_data_json để merge
+        const { data: current } = await authClient
+          .from('service_credentials')
+          .select('secret_data_json')
+          .eq('id', input.id)
+          .single();
+
+        const secretData = current?.secret_data_json ?? {};
+        if (input.url) secretData.url = input.url;
+        if (input.serviceRoleKey) secretData.service_role_key = input.serviceRoleKey;
+        if (input.anonKey !== undefined) secretData.anon_key = input.anonKey;
+        if (input.bucketName) secretData.bucket_name = input.bucketName;
+
+        patch.secret_data_json = secretData;
+      }
 
       const { error } = await authClient
         .from('service_credentials')

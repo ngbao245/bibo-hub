@@ -3,7 +3,7 @@
 // ============================================================
 
 import { useState } from 'react';
-import { HardDrive, Plus, Trash2, ToggleLeft, ToggleRight, Wifi } from 'lucide-react';
+import { HardDrive, Plus, Trash2, ToggleLeft, ToggleRight, Wifi, Pencil } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +90,7 @@ function NodeCard({ node }: { node: StorageNode }) {
   const updateNode = useUpdateStorageNode();
   const removeNode = useRemoveStorageNode();
   const testNode = useTestStorageNode();
+  const [editing, setEditing] = useState(false);
 
   const remaining = node.capacityBytes - node.usedBytes;
   const usedPct = Math.round((node.usedBytes / node.capacityBytes) * 100) || 0;
@@ -129,6 +130,10 @@ function NodeCard({ node }: { node: StorageNode }) {
     }
   }
 
+  if (editing) {
+    return <EditNodeForm node={node} onClose={() => setEditing(false)} />;
+  }
+
   return (
     <div className="flex items-center gap-3 rounded border border-border p-3">
       <HardDrive className="h-5 w-5 shrink-0 text-muted-foreground" />
@@ -139,13 +144,12 @@ function NodeCard({ node }: { node: StorageNode }) {
           <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${isActive ? 'bg-success/10 text-success' : 'bg-muted text-muted-foreground'}`}>
             {isActive ? 'active' : 'disabled'}
           </span>
-          <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-            node.connectionStatus === 'connected'
-              ? 'bg-success/10 text-success'
-              : node.connectionStatus === 'failed'
-                ? 'bg-destructive/10 text-destructive'
-                : 'bg-warning/10 text-warning'
-          }`}>
+          <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${node.connectionStatus === 'connected'
+            ? 'bg-success/10 text-success'
+            : node.connectionStatus === 'failed'
+              ? 'bg-destructive/10 text-destructive'
+              : 'bg-warning/10 text-warning'
+            }`}>
             {node.connectionStatus === 'connected' ? 'connected' : node.connectionStatus === 'failed' ? 'failed' : 'untested'}
           </span>
         </div>
@@ -163,14 +167,117 @@ function NodeCard({ node }: { node: StorageNode }) {
       </div>
 
       <div className="flex shrink-0 gap-1">
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleTest} disabled={testNode.isPending}>
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleTest} disabled={testNode.isPending} title="Test Connection">
           {testNode.isPending ? <Wifi className="h-3.5 w-3.5 animate-pulse" /> : <Wifi className="h-3.5 w-3.5" />}
         </Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleToggle}>
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setEditing(true)} title="Edit">
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={handleToggle} title={isActive ? 'Disable' : 'Enable'}>
           {isActive ? <ToggleRight className="h-3.5 w-3.5 text-success" /> : <ToggleLeft className="h-3.5 w-3.5" />}
         </Button>
-        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={handleRemove}>
+        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={handleRemove} title="Remove">
           <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Edit Node Form ──
+
+function EditNodeForm({ node, onClose }: { node: StorageNode; onClose: () => void }) {
+  const updateNode = useUpdateStorageNode();
+  const testNode = useTestStorageNode();
+
+  const [name, setName] = useState(node.name);
+  const [url, setUrl] = useState(node.url);
+  const [serviceRoleKey, setServiceRoleKey] = useState(node.serviceRoleKey);
+  const [anonKey, setAnonKey] = useState(node.anonKey);
+  const [bucketName, setBucketName] = useState(node.bucketName);
+  const [capacityGb, setCapacityGb] = useState((node.capacityBytes / 1073741824).toFixed(2));
+  const [tested, setTested] = useState<boolean | null>(null);
+
+  const valid = name.trim() && url.trim() && serviceRoleKey.trim();
+
+  async function handleTest() {
+    setTested(null);
+    try {
+      await testNode.mutateAsync({
+        id: node.id,
+        url: url.trim(),
+        serviceRoleKey: serviceRoleKey.trim(),
+        bucketName: bucketName.trim() || 'books'
+      });
+      setTested(true);
+      toast.success('Connection OK');
+    } catch (err) {
+      setTested(false);
+      toast.error(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
+  async function handleSave() {
+    if (!valid) return;
+    try {
+      await updateNode.mutateAsync({
+        id: node.id,
+        name: name.trim(),
+        url: url.trim(),
+        serviceRoleKey: serviceRoleKey.trim(),
+        anonKey: anonKey.trim(),
+        bucketName: bucketName.trim() || 'books',
+        capacityBytes: Math.round(parseFloat(capacityGb) * 1073741824),
+      });
+      toast.success('Node updated');
+      onClose();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed');
+    }
+  }
+
+  return (
+    <div className="space-y-3 rounded border border-border bg-card p-4">
+      <h4 className="text-sm font-medium">Edit Storage Node</h4>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">Name</label>
+          <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Node Alpha" />
+        </div>
+        <div>
+          <label className="mb-1 block text-xs text-muted-foreground">Capacity (GB)</label>
+          <Input value={capacityGb} onChange={(e) => setCapacityGb(e.target.value)} placeholder="1" />
+        </div>
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-muted-foreground">Supabase URL</label>
+        <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxx.supabase.co" />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-muted-foreground">Service Role Key</label>
+        <Input type="password" value={serviceRoleKey} onChange={(e) => setServiceRoleKey(e.target.value)} placeholder="eyJ..." />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-muted-foreground">Anon Key (for signed URLs)</label>
+        <Input type="password" value={anonKey} onChange={(e) => setAnonKey(e.target.value)} placeholder="eyJ..." />
+      </div>
+      <div>
+        <label className="mb-1 block text-xs text-muted-foreground">Bucket Name</label>
+        <Input value={bucketName} onChange={(e) => setBucketName(e.target.value)} placeholder="books" />
+      </div>
+
+      <div className="flex items-center gap-2">
+        <Button variant="outline" size="sm" onClick={handleTest} disabled={!url || !serviceRoleKey || testNode.isPending}>
+          {testNode.isPending ? 'Testing...' : 'Test Connection'}
+        </Button>
+        {tested === true && <span className="text-xs text-success">OK</span>}
+        {tested === false && <span className="text-xs text-destructive">Failed</span>}
+      </div>
+
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={onClose}>Cancel</Button>
+        <Button size="sm" onClick={handleSave} disabled={!valid || updateNode.isPending}>
+          {updateNode.isPending ? 'Saving...' : 'Save Changes'}
         </Button>
       </div>
     </div>

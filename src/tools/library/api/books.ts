@@ -427,7 +427,26 @@ async function prepareAndUploadBook(
   try {
     const nodes = await loadStorageNodes();
     if (nodes.length > 0) {
-      storageNode = pickNodeOrThrow(nodes, file.size);
+      // Check if there are any active & connected nodes
+      const connectedNodes = nodes.filter(
+        (n) => n.status === 'active' && n.connectionStatus === 'connected'
+      );
+
+      if (connectedNodes.length === 0) {
+        // Có nodes nhưng không có node nào connected
+        const untested = nodes.filter((n) => n.connectionStatus === 'untested').length;
+        const failed = nodes.filter((n) => n.connectionStatus === 'failed').length;
+        const disabled = nodes.filter((n) => n.status === 'disabled').length;
+
+        throw new Error(
+          `Không có storage node khả dụng. ` +
+          `Tổng ${nodes.length} node: ` +
+          `${untested} chưa test, ${failed} test failed, ${disabled} disabled. ` +
+          `Vào Settings → Storage Pool để test connection.`
+        );
+      }
+
+      storageNode = pickNodeOrThrow(connectedNodes, file.size);
     }
   } catch (err) {
     if (err instanceof StoragePoolFullError) {
@@ -439,6 +458,8 @@ async function prepareAndUploadBook(
         `Vui lòng chọn file nhỏ hơn hoặc thêm storage node mới.`
       );
     }
+    // Re-throw other errors (như error message mới về connection)
+    if (err instanceof Error) throw err;
     // loadStorageNodes network error → fallback to Core
   }
 
