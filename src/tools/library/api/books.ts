@@ -44,10 +44,11 @@ export interface UploadVars {
 
 /**
  * Ngưỡng size: file dưới ngưỡng skip compress (không đáng tốn quota).
- * File vượt ngưỡng trên skip vì Cloud Run request body limit 32 MB.
+ * MAX 80MB: balance giữa compress được file lớn và tránh timeout iLovePDF.
+ * File > 80MB sẽ bị reject bởi storage node limit (50MB).
  */
 const COMPRESS_MIN_BYTES = 2 * 1024 * 1024;   // 2 MB
-const COMPRESS_MAX_BYTES = 30 * 1024 * 1024;  // 30 MB (Phase 1 limit)
+const COMPRESS_MAX_BYTES = 80 * 1024 * 1024;  // 80 MB
 
 async function loadCompressConfig(): Promise<CompressConfigValue | null> {
   // Try service registry first
@@ -429,18 +430,26 @@ async function prepareAndUploadBook(
       storageNode = pickNodeOrThrow(nodes, file.size);
     }
   } catch (err) {
-    if (err instanceof StoragePoolFullError) throw err;
+    if (err instanceof StoragePoolFullError) {
+      // Thêm context message để user hiểu
+      const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+      throw new Error(
+        `File quá lớn (${sizeMB}MB sau khi nén). ` +
+        `Storage nodes chỉ hỗ trợ tối đa 50MB. ` +
+        `Vui lòng chọn file nhỏ hơn hoặc thêm storage node mới.`
+      );
+    }
     // loadStorageNodes network error → fallback to Core
   }
 
   // Upload opts for storage pool node
   const poolUploadOpts = storageNode
     ? {
-        supabaseUrl: storageNode.url,
-        authKey: storageNode.serviceRoleKey,
-        useServiceRole: true,
-        bucket: storageNode.bucketName,
-      }
+      supabaseUrl: storageNode.url,
+      authKey: storageNode.serviceRoleKey,
+      useServiceRole: true,
+      bucket: storageNode.bucketName,
+    }
     : {};
 
   // Stage 2: upload PDF (8..85%)
@@ -584,7 +593,7 @@ export function useDeleteBook() {
           await client.storage.from(node.bucketName).remove(paths);
           // Update usage tracking
           if (book.file_size_bytes) {
-            await updateUsage(node.id, -(book.file_size_bytes)).catch(() => {});
+            await updateUsage(node.id, -(book.file_size_bytes)).catch(() => { });
           }
         }
       } else {
@@ -675,10 +684,10 @@ export function useReplaceBookFile() {
 
       // Track usage: +new file, -old file (if same node or cross-node)
       if (storageNode) {
-        await updateUsage(storageNode.id, fileSize).catch(() => {});
+        await updateUsage(storageNode.id, fileSize).catch(() => { });
       }
       if (book.storage_node_id && book.file_size_bytes) {
-        await updateUsage(book.storage_node_id, -(book.file_size_bytes)).catch(() => {});
+        await updateUsage(book.storage_node_id, -(book.file_size_bytes)).catch(() => { });
       }
 
       // Stage 5: cleanup file cũ (best effort, không throw nếu fail).
